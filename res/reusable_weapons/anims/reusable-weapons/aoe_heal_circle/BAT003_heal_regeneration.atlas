@@ -1,0 +1,37 @@
+df45fc575daf951a.png
+	size: 552, 1520
+	filter: Linear, Linear
+PlayerCharacter
+	bounds: 3, 990, 520, 527
+	offsets: 21, 8, 566, 541
+floor_circle
+	bounds: 3, 226, 416, 331
+	offsets: 10, 10, 436, 351
+glow
+	bounds: 3, 560, 428, 427
+	offsets: 12, 12, 454, 453
+heal_cloud_A
+	bounds: 228, 49, 244, 174
+	offsets: 3, 3, 249, 181
+heal_cloud_B
+	bounds: 3, 3, 220, 222
+	offsets: 2, 3, 225, 227
+	rotate: 90
+heal_cloud_C
+	bounds: 422, 226, 125, 128
+	offsets: 2, 2, 130, 132
+line_particle_A
+	bounds: 486, 107, 8, 64
+	offsets: 1, 1, 10, 66
+line_particle_B
+	bounds: 266, 4, 8, 42
+	offsets: 1, 0, 10, 42
+line_particle_C
+	bounds: 475, 36, 8, 135
+	offsets: 1, 1, 10, 137
+plus_particle_A
+	bounds: 475, 174, 49, 49
+	offsets: 1, 1, 51, 51
+plus_particle_B
+	bounds: 228, 11, 35, 35
+	offsets: 1, 1, 37, 37

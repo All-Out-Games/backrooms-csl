@@ -1,0 +1,219 @@
+MSL(OSX)
+Vertex Shader:
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct type_params
+{
+    float4x4 mvp;
+    float4 resolution_time;
+    int matrix_image_size;
+};
+
+struct vs_main_out
+{
+    float2 out_var_UV [[user(locn0)]];
+    float4 out_var_COLOR0 [[user(locn1)]];
+    float4 gl_Position [[position]];
+};
+
+struct vs_main_in
+{
+    float2 in_var_POS [[attribute(0)]];
+    float2 in_var_UV [[attribute(1)]];
+    float4 in_var_COLOR [[attribute(3)]];
+    int in_var_MATRIX_INDEX [[attribute(4)]];
+};
+
+vertex vs_main_out vs_main(vs_main_in in [[stage_in]], constant type_params& params [[buffer(0)]], texture2d<float> matrices [[texture(0)]])
+{
+    vs_main_out out = {};
+    int _44 = in.in_var_MATRIX_INDEX * 4;
+    int _53 = _44 + 1;
+    int _59 = _44 + 2;
+    int _65 = _44 + 3;
+    out.gl_Position = params.mvp * (float4(in.in_var_POS, 0.0, 1.0) * float4x4(matrices.read(uint2(int3(_44 - params.matrix_image_size * (_44 / params.matrix_image_size), _44 / params.matrix_image_size, 0).xy), 0), matrices.read(uint2(int3(_53 - params.matrix_image_size * (_53 / params.matrix_image_size), _53 / params.matrix_image_size, 0).xy), 0), matrices.read(uint2(int3(_59 - params.matrix_image_size * (_59 / params.matrix_image_size), _59 / params.matrix_image_size, 0).xy), 0), matrices.read(uint2(int3(_65 - params.matrix_image_size * (_65 / params.matrix_image_size), _65 / params.matrix_image_size, 0).xy), 0)));
+    out.out_var_UV = in.in_var_UV;
+    out.out_var_COLOR0 = in.in_var_COLOR;
+    return out;
+}
+
+
+
+Fragment Shader:
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct type_user_input
+{
+    packed_float3 fill_rgb;
+    float fill_alpha;
+    packed_float3 edge_rgb;
+    float edge_strength;
+    float edge_width;
+};
+
+struct type_params
+{
+    float4x4 mvp;
+    float4 resolution_time;
+    int matrix_image_size;
+};
+
+struct ps_main_out
+{
+    float4 out_var_SV_Target0 [[color(0)]];
+};
+
+struct ps_main_in
+{
+    float2 in_var_UV [[user(locn0)]];
+    float4 in_var_COLOR0 [[user(locn1)]];
+};
+
+fragment ps_main_out ps_main(ps_main_in in [[stage_in]], constant type_params& params [[buffer(0)]], constant type_user_input& user_input [[buffer(1)]], texture2d<float> albedo [[texture(0)]], sampler albedo_smp [[sampler(0)]])
+{
+    ps_main_out out = {};
+    float4 _96;
+    do
+    {
+        float4 _58 = albedo.sample(albedo_smp, in.in_var_UV);
+        float4 _59 = in.in_var_COLOR0 * _58;
+        float _60 = _59.w;
+        if (_60 < 0.001000000047497451305389404296875)
+        {
+            _96 = float4(0.0);
+            break;
+        }
+        _96 = float4(fast::clamp((float3(user_input.fill_rgb) * user_input.fill_alpha) + (((float3(user_input.edge_rgb) * fast::clamp(length(float2(dfdx(_60), dfdy(_60))) * user_input.edge_width, 0.0, 1.0)) * user_input.edge_strength) * fma(0.119999997317790985107421875, sin(params.resolution_time.z * 2.7999999523162841796875), 0.87999999523162841796875)), float3(0.0), float3(1.0)) * _60, _60);
+        break;
+    } while(false);
+    out.out_var_SV_Target0 = _96;
+    return out;
+}
+
+
+MSL(iOS)
+Vertex Shader:
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct type_params
+{
+    float4x4 mvp;
+    float4 resolution_time;
+    int matrix_image_size;
+};
+
+struct vs_main_in
+{
+    float2 in_var_POS [[attribute(0)]];
+    float2 in_var_UV [[attribute(1)]];
+    float4 in_var_COLOR [[attribute(3)]];
+    int in_var_MATRIX_INDEX [[attribute(4)]];
+};
+
+struct vs_main_out
+{
+    float2 out_out_var_UV [[user(locn0)]];
+    float4 out_out_var_COLOR0 [[user(locn1)]];
+    float4 out_gl_Position [[position]];
+};
+
+struct vs_main_in_1
+{
+    float2 in_in_var_POS [[attribute(0)]];
+    float2 in_in_var_UV [[attribute(1)]];
+    float4 in_in_var_COLOR [[attribute(3)]];
+    int in_in_var_MATRIX_INDEX [[attribute(4)]];
+};
+
+vertex vs_main_out vs_main(vs_main_in_1 in [[stage_in]], constant type_params& params [[buffer(0)]], texture2d<float> matrices [[texture(0)]])
+{
+    vs_main_out out = {};
+    vs_main_out out_1 = {};
+    int _44 = in.in.in_var_MATRIX_INDEX * 4;
+    int _53 = _44 + 1;
+    int _59 = _44 + 2;
+    int _65 = _44 + 3;
+    out.gl_Position = params.mvp * (float4(in.in.in_var_POS, 0.0, 1.0) * float4x4(matrices.read(uint2(int3(_44 - params.matrix_image_size * (_44 / params.matrix_image_size), _44 / params.matrix_image_size, 0).xy), 0), matrices.read(uint2(int3(_53 - params.matrix_image_size * (_53 / params.matrix_image_size), _53 / params.matrix_image_size, 0).xy), 0), matrices.read(uint2(int3(_59 - params.matrix_image_size * (_59 / params.matrix_image_size), _59 / params.matrix_image_size, 0).xy), 0), matrices.read(uint2(int3(_65 - params.matrix_image_size * (_65 / params.matrix_image_size), _65 / params.matrix_image_size, 0).xy), 0)));
+    out.out.out_var_UV = in.in.in_var_UV;
+    out.out.out_var_COLOR0 = in.in.in_var_COLOR;
+    return out_1;
+}
+
+
+
+Fragment Shader:
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct type_user_input
+{
+    packed_float3 fill_rgb;
+    float fill_alpha;
+    packed_float3 edge_rgb;
+    float edge_strength;
+    float edge_width;
+};
+
+struct type_params
+{
+    float4x4 mvp;
+    float4 resolution_time;
+    int matrix_image_size;
+};
+
+struct ps_main_out
+{
+    float4 out_var_SV_Target0 [[color(0)]];
+};
+
+struct ps_main_in
+{
+    float2 in_var_UV [[user(locn0)]];
+    float4 in_var_COLOR0 [[user(locn1)]];
+};
+
+struct ps_main_out_1
+{
+    float4 out_out_var_SV_Target0 [[color(0)]];
+};
+
+struct ps_main_in_1
+{
+    float2 in_in_var_UV [[user(locn0)]];
+    float4 in_in_var_COLOR0 [[user(locn1)]];
+};
+
+fragment ps_main_out_1 ps_main(ps_main_in_1 in [[stage_in]], constant type_params& params [[buffer(0)]], constant type_user_input& user_input [[buffer(1)]], texture2d<float> albedo [[texture(0)]], sampler albedo_smp [[sampler(0)]])
+{
+    ps_main_out out = {};
+    ps_main_out_1 out_1 = {};
+    float4 _96;
+    do
+    {
+        float4 _58 = albedo.sample(albedo_smp, in.in.in_var_UV);
+        float4 _59 = in.in.in_var_COLOR0 * _58;
+        float _60 = _59.w;
+        if (_60 < 0.001000000047497451305389404296875)
+        {
+            _96 = float4(0.0);
+            break;
+        }
+        _96 = float4(fast::clamp((float3(user_input.fill_rgb) * user_input.fill_alpha) + (((float3(user_input.edge_rgb) * fast::clamp(length(float2(dfdx(_60), dfdy(_60))) * user_input.edge_width, 0.0, 1.0)) * user_input.edge_strength) * fma(0.119999997317790985107421875, sin(params.resolution_time.z * 2.7999999523162841796875), 0.87999999523162841796875)), float3(0.0), float3(1.0)) * _60, _60);
+        break;
+    } while(false);
+    out.out.out_var_SV_Target0 = _96;
+    return out_1;
+}
+
+

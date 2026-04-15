@@ -1,0 +1,738 @@
+{
+"skeleton": { "hash": "6sb6/Qylx3k", "spine": "4.0.64", "x": -150.02, "y": -176.19, "width": 389.53, "height": 411.1 },
+"bones": [
+	{ "name": "root" },
+	{ "name": "cannon_root", "parent": "root", "x": 16.77, "y": -42.04 },
+	{ "name": "bomb shooter/front wheel", "parent": "cannon_root", "x": -20.09, "y": -24.59 },
+	{ "name": "cannon_root3", "parent": "cannon_root", "x": -24.66, "y": 64.64 },
+	{ "name": "bomb shooter/canon", "parent": "cannon_root3", "x": 1.81, "y": 0.17 },
+	{ "name": "bomb shooter/back wheel", "parent": "cannon_root", "x": 11.96, "y": 17.65 },
+	{ "name": "fx_smoke_root", "parent": "root", "x": 144.08, "y": 55.64 },
+	{ "name": "smoke", "parent": "fx_smoke_root", "x": 251.52, "y": 40.37 },
+	{ "name": "smoke2", "parent": "fx_smoke_root", "x": 216.36, "y": -2.83 },
+	{ "name": "smoke3", "parent": "fx_smoke_root", "x": 199.28, "y": 75.53 },
+	{ "name": "smoke4", "parent": "fx_smoke_root", "x": 66.42, "y": 8.73 },
+	{ "name": "explo_adjust", "parent": "root", "x": 3.75, "y": 2.79, "skin": true },
+	{ "name": "small Expl", "parent": "root" },
+	{ "name": "Second Expl", "parent": "small Expl" },
+	{ "name": "Third Expl", "parent": "root" },
+	{ "name": "Explosion_HitSpark_3_Big_1", "parent": "Third Expl", "x": -26.65, "y": 82.22 },
+	{ "name": "Explosion_HitSpark_3_Big_7", "parent": "Third Expl", "x": -74.36, "y": -45.64 },
+	{ "name": "Explosion_HitSpark_3_Big_8", "parent": "Third Expl", "x": -87.72, "y": 24.97 },
+	{ "name": "recursive_cluster_cannon_base", "parent": "root", "x": 7.16, "y": -95.42, "skin": true },
+	{ "name": "recursive_cluster_cannon", "parent": "recursive_cluster_cannon_base", "x": 13.22, "y": 60.58, "skin": true },
+	{ "name": "recursive_cluster_cannon_hinge", "parent": "recursive_cluster_cannon_base", "x": 14.32, "y": 33.05, "skin": true },
+	{ "name": "bone3", "parent": "bomb shooter/front wheel", "x": 0.58, "y": -7.2, "scaleY": 0.9092 },
+	{ "name": "bone2", "parent": "bone3", "length": 110.11, "x": -0.45, "y": 0.23 },
+	{ "name": "bone4", "parent": "bomb shooter/front wheel", "x": 0.97, "y": -6.84 },
+	{ "name": "bone", "parent": "root", "x": 33.61, "y": -96.94, "scaleX": 1.3064, "scaleY": 1.2383 },
+	{ "name": "AIM", "parent": "root", "x": 1627.74, "y": -26.96 },
+	{ "name": "cannon_root2", "parent": "cannon_root", "length": 396.35, "rotation": 0.3, "x": -22.52, "y": 24.02 },
+	{ "name": "cannon_root4", "parent": "cannon_root2", "rotation": 89.19, "x": 199.31, "y": -0.23, "transform": "onlyTranslation" },
+	{ "name": "cannon_root5", "parent": "cannon_root4", "x": 58.36, "y": -0.85, "transform": "noScale" }
+],
+"slots": [
+	{ "name": "bomb shooter/shadow", "bone": "bone", "attachment": "bomb shooter/shadow" },
+	{ "name": "cannon_cluster_base", "bone": "recursive_cluster_cannon_base", "attachment": "cannon_cluster_base" },
+	{ "name": "bomb shooter/back wheel", "bone": "bomb shooter/back wheel", "attachment": "bomb shooter/back wheel" },
+	{ "name": "recursive_cluster_cannon", "bone": "recursive_cluster_cannon", "attachment": "canon" },
+	{ "name": "bomb shooter/canon", "bone": "bomb shooter/canon", "attachment": "bomb shooter/canon" },
+	{ "name": "recursive_cluster_cannon_base", "bone": "recursive_cluster_cannon_hinge", "attachment": "base front" },
+	{ "name": "bomb shooter/front wheel", "bone": "bomb shooter/front wheel", "attachment": "front wheel" },
+	{ "name": "smoke/smoke 1", "bone": "smoke" },
+	{ "name": "smoke/smoke 2", "bone": "smoke2" },
+	{ "name": "smoke/smoke 3", "bone": "smoke3" },
+	{ "name": "smoke/smoke 4", "bone": "smoke4" },
+	{ "name": "Explosion_HitSpark_3_Big_6", "bone": "Explosion_HitSpark_3_Big_8" },
+	{ "name": "Explosion_HitSpark_1_Outside", "bone": "small Expl" },
+	{ "name": "Explosion_HitSpark_1_Inside", "bone": "small Expl" },
+	{ "name": "Explosion_HitSpark_2_Outside", "bone": "Second Expl" },
+	{ "name": "Explosion_HitSpark_2_Inside", "bone": "Second Expl" },
+	{ "name": "Explosion_HitSpark_3_Big_1", "bone": "Explosion_HitSpark_3_Big_1" },
+	{ "name": "Explosion_HitSpark_3_Big_5", "bone": "Explosion_HitSpark_3_Big_7" },
+	{ "name": "bomb shooter/Spokes", "bone": "bone2", "attachment": "bomb shooter/Spokes" },
+	{ "name": "bomb shooter/Cap", "bone": "bone4", "attachment": "bomb shooter/Cap" }
+],
+"ik": [
+	{
+		"name": "AIM",
+		"bones": [ "cannon_root2" ],
+		"target": "AIM",
+		"compress": true,
+		"stretch": true
+	},
+	{
+		"name": "Arc angle",
+		"order": 3,
+		"bones": [ "cannon_root3" ],
+		"target": "cannon_root5"
+	}
+],
+"transform": [
+	{
+		"name": "Arc",
+		"order": 2,
+		"bones": [ "cannon_root4" ],
+		"target": "cannon_root2",
+		"mixRotate": 0,
+		"mixX": 0,
+		"mixScaleX": 2.1682,
+		"mixScaleY": 0,
+		"mixShearY": 0
+	},
+	{
+		"name": "explo_adjust",
+		"order": 1,
+		"skin": true,
+		"bones": [ "small Expl", "Third Expl" ],
+		"target": "explo_adjust",
+		"x": 339.27,
+		"y": 116.22,
+		"scaleX": 0.5706,
+		"scaleY": 0.5706,
+		"mixRotate": 0,
+		"mixX": 0,
+		"mixScaleX": 0,
+		"mixShearY": 0
+	}
+],
+"skins": [
+	{
+		"name": "default",
+		"attachments": {
+			"bomb shooter/Cap": {
+				"bomb shooter/Cap": { "width": 38, "height": 38 }
+			},
+			"bomb shooter/shadow": {
+				"bomb shooter/shadow": { "width": 244, "height": 128 }
+			},
+			"bomb shooter/Spokes": {
+				"bomb shooter/Spokes": { "x": 0.5, "y": 0.5, "width": 119, "height": 119 }
+			},
+			"Explosion_HitSpark_1_Inside": {
+				"explosion/Explosion_HitSpark_1_Inside": { "y": -0.21, "width": 50, "height": 51 }
+			},
+			"Explosion_HitSpark_1_Outside": {
+				"explosion/Explosion_HitSpark_1_Outside": { "y": 5.29, "width": 110, "height": 115 }
+			},
+			"Explosion_HitSpark_2_Inside": {
+				"explosion/Explosion_HitSpark_2_Inside": { "x": -0.72, "y": -0.16, "width": 163, "height": 170 }
+			},
+			"Explosion_HitSpark_2_Outside": {
+				"explosion/Explosion_HitSpark_2_Outside": { "x": 2.78, "y": 9.2, "width": 309, "height": 324 }
+			},
+			"Explosion_HitSpark_3_Big_1": {
+				"explosion/Explosion_HitSpark_3_Big_1": { "x": -13.16, "y": 38.79, "width": 96, "height": 149 }
+			},
+			"Explosion_HitSpark_3_Big_5": {
+				"explosion/Explosion_HitSpark_3_Big_5": { "x": -44.95, "y": -25.85, "width": 170, "height": 105 }
+			},
+			"Explosion_HitSpark_3_Big_6": {
+				"explosion/Explosion_HitSpark_3_Big_6": { "x": -40.09, "y": 16.54, "width": 179, "height": 100 }
+			},
+			"smoke/smoke 1": {
+				"smoke/smoke 1": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 2, 3, 1, 3, 0 ],
+					"vertices": [ 42, -39, -42, -39, -42, 39, 42, 39 ],
+					"hull": 4
+				}
+			},
+			"smoke/smoke 2": {
+				"smoke/smoke 2": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 2, 3, 1, 3, 0 ],
+					"vertices": [ 58, -53, -57, -53, -57, 54, 58, 54 ],
+					"hull": 4
+				}
+			},
+			"smoke/smoke 3": {
+				"smoke/smoke 3": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 2, 3, 1, 3, 0 ],
+					"vertices": [ 47, -47, -46, -47, -46, 47, 47, 47 ],
+					"hull": 4
+				}
+			},
+			"smoke/smoke 4": {
+				"smoke/smoke 4": {
+					"type": "mesh",
+					"uvs": [ 0.75899, 1, 0, 1, 0, 0, 0.75898, 0 ],
+					"triangles": [ 1, 2, 3, 1, 3, 0 ],
+					"vertices": [ 82.43, -58.42, -68.61, -58.42, -68.61, 91.58, 82.43, 91.58 ],
+					"hull": 4
+				}
+			}
+		}
+	},
+	{
+		"name": "A_standard",
+		"attachments": {
+			"bomb shooter/back wheel": {
+				"bomb shooter/back wheel": { "x": -1.46, "y": -2.91, "width": 138, "height": 138 }
+			},
+			"bomb shooter/canon": {
+				"bomb shooter/canon": { "x": 62.63, "y": 11.65, "width": 322, "height": 228 }
+			},
+			"bomb shooter/front wheel": {
+				"front wheel": { "name": "bomb shooter/front wheelnospoke", "x": 0.5, "y": 0.5, "width": 157, "height": 157 }
+			}
+		}
+	},
+	{
+		"name": "B_faster",
+		"attachments": {
+			"bomb shooter/back wheel": {
+				"bomb shooter/back wheel": { "x": -1.46, "y": -2.91, "width": 138, "height": 138 }
+			},
+			"bomb shooter/canon": {
+				"bomb shooter/canon": { "name": "faster bomb shooter/canon", "x": 46.28, "y": 19.41, "width": 357, "height": 245 }
+			},
+			"bomb shooter/front wheel": {
+				"front wheel": { "name": "bomb shooter/front wheel", "x": 1.96, "y": 4.87, "width": 157, "height": 157 }
+			}
+		}
+	},
+	{
+		"name": "C_recursive",
+		"bones": [ "explo_adjust", "recursive_cluster_cannon", "recursive_cluster_cannon_base", "recursive_cluster_cannon_hinge" ],
+		"transform": [ "explo_adjust" ],
+		"attachments": {
+			"cannon_cluster_base": {
+				"cannon_cluster_base": { "name": "Recursive Cluster/base back", "x": 22.07, "y": 71.03, "width": 229, "height": 184 }
+			},
+			"recursive_cluster_cannon": {
+				"canon": { "name": "Recursive Cluster/canon", "x": 35.71, "y": 82.52, "rotation": -144.78, "width": 292, "height": 222 }
+			},
+			"recursive_cluster_cannon_base": {
+				"base front": { "name": "Recursive Cluster/base front", "x": 1.64, "y": 17.17, "width": 130, "height": 123 }
+			}
+		}
+	}
+],
+"animations": {
+	"idle": {
+		"bones": {
+			"smoke": {
+				"translate": [
+					{ "x": -185.63, "y": -28.82 }
+				]
+			},
+			"smoke2": {
+				"translate": [
+					{ "x": -141.82, "y": 18.45 }
+				]
+			},
+			"smoke3": {
+				"translate": [
+					{ "x": -65.5, "y": -83.22 }
+				]
+			}
+		}
+	},
+	"roll_loop": {
+		"bones": {
+			"bomb shooter/canon": {
+				"rotate": [
+					{
+						"value": -1.88,
+						"curve": [ 0.057, -0.83, 0.112, 0 ]
+					},
+					{
+						"time": 0.1667,
+						"curve": [ 0.333, 0, 0.5, -7.18 ]
+					},
+					{
+						"time": 0.6667,
+						"value": -7.18,
+						"curve": [ 0.778, -7.18, 0.89, -4.01 ]
+					},
+					{ "time": 1, "value": -1.88 }
+				],
+				"translate": [
+					{
+						"curve": [ 0.167, 0, 0.333, 0, 0.167, 0, 0.333, -12.61 ]
+					},
+					{
+						"time": 0.5,
+						"y": -12.61,
+						"curve": [ 0.667, 0, 0.833, 0, 0.667, -12.61, 0.833, 0 ]
+					},
+					{ "time": 1 }
+				]
+			},
+			"bomb shooter/front wheel": {
+				"translate": [
+					{
+						"curve": [ 0.167, 0, 0.333, 0, 0.167, 0, 0.333, -7.17 ]
+					},
+					{ "time": 0.5, "y": -7.17 },
+					{ "time": 1 }
+				],
+				"scale": [
+					{
+						"curve": [ 0.167, 1, 0.333, 1.072, 0.167, 1, 0.333, 0.908 ]
+					},
+					{ "time": 0.5, "x": 1.072, "y": 0.908 },
+					{ "time": 1 }
+				]
+			},
+			"bomb shooter/back wheel": {
+				"translate": [
+					{
+						"curve": [ 0.167, 0, 0.333, 0, 0.167, 0, 0.333, -5.12 ]
+					},
+					{
+						"time": 0.5,
+						"y": -5.12,
+						"curve": [ 0.667, 0, 0.833, 0, 0.667, -5.12, 0.833, 0 ]
+					},
+					{ "time": 1 }
+				],
+				"scale": [
+					{
+						"curve": [ 0.167, 1, 0.333, 1.092, 0.167, 1, 0.333, 0.928 ]
+					},
+					{
+						"time": 0.5,
+						"x": 1.092,
+						"y": 0.928,
+						"curve": [ 0.667, 1.092, 0.833, 1, 0.667, 0.928, 0.833, 1 ]
+					},
+					{ "time": 1 }
+				]
+			},
+			"bone2": {
+				"rotate": [
+					{},
+					{ "time": 1, "value": -360 }
+				]
+			}
+		}
+	},
+	"shoot": {
+		"slots": {
+			"Explosion_HitSpark_1_Inside": {
+				"rgba": [
+					{ "time": 0.0667, "color": "ffffffff" },
+					{ "time": 0.1667, "color": "ffffff00" }
+				],
+				"attachment": [
+					{ "time": 0.0667, "name": "explosion/Explosion_HitSpark_1_Inside" },
+					{ "time": 0.4, "name": null }
+				]
+			},
+			"Explosion_HitSpark_1_Outside": {
+				"rgba": [
+					{ "time": 0.0667, "color": "ffffffff" },
+					{ "time": 0.1667, "color": "ffffff00" }
+				],
+				"attachment": [
+					{ "time": 0.0667, "name": "explosion/Explosion_HitSpark_1_Outside" },
+					{ "time": 0.4, "name": null }
+				]
+			},
+			"Explosion_HitSpark_2_Inside": {
+				"rgba": [
+					{
+						"time": 0.0667,
+						"color": "ffffffff",
+						"curve": [ 0.098, 1, 0.169, 1, 0.098, 1, 0.169, 1, 0.098, 1, 0.169, 1, 0.098, 0.38, 0.169, 0 ]
+					},
+					{ "time": 0.2, "color": "ffffff00" }
+				],
+				"attachment": [
+					{ "time": 0.0667, "name": "explosion/Explosion_HitSpark_2_Inside" },
+					{ "time": 0.4, "name": null }
+				]
+			},
+			"Explosion_HitSpark_2_Outside": {
+				"rgba": [
+					{
+						"time": 0.0667,
+						"color": "ffffffff",
+						"curve": [ 0.098, 1, 0.169, 1, 0.098, 1, 0.169, 1, 0.098, 1, 0.169, 1, 0.098, 0.38, 0.169, 0 ]
+					},
+					{ "time": 0.2, "color": "ffffff00" }
+				],
+				"attachment": [
+					{ "time": 0.0667, "name": "explosion/Explosion_HitSpark_2_Outside" },
+					{ "time": 0.4, "name": null }
+				]
+			},
+			"Explosion_HitSpark_3_Big_1": {
+				"rgba": [
+					{ "time": 0.0667, "color": "ffffffff" },
+					{ "time": 0.1333, "color": "ffffff00" }
+				],
+				"attachment": [
+					{ "time": 0.0667, "name": "explosion/Explosion_HitSpark_3_Big_1" },
+					{ "time": 0.4, "name": null }
+				]
+			},
+			"Explosion_HitSpark_3_Big_5": {
+				"rgba": [
+					{ "time": 0.0333, "color": "ffffff00" },
+					{ "time": 0.0667, "color": "ffffffff", "curve": "stepped" },
+					{
+						"time": 0.1333,
+						"color": "ffffffff",
+						"curve": [ 0.233, 1, 0.133, 1, 0.233, 1, 0.133, 1, 0.233, 1, 0.133, 1, 0.233, -1, 0.133, 0 ]
+					},
+					{ "time": 0.2333, "color": "ffffff00" }
+				],
+				"attachment": [
+					{ "time": 0.0667, "name": "explosion/Explosion_HitSpark_3_Big_5" },
+					{ "time": 0.2333, "name": null }
+				]
+			},
+			"Explosion_HitSpark_3_Big_6": {
+				"rgba": [
+					{ "time": 0.0667, "color": "ffffffff" },
+					{ "time": 0.1333, "color": "ffffff00" }
+				],
+				"attachment": [
+					{ "time": 0.0667, "name": "explosion/Explosion_HitSpark_3_Big_6" },
+					{ "time": 0.4, "name": null }
+				]
+			},
+			"smoke/smoke 1": {
+				"rgba": [
+					{ "time": 0.0667, "color": "ffffffff" },
+					{ "time": 0.1667, "color": "ffffff00" }
+				],
+				"attachment": [
+					{ "time": 0.0667, "name": "smoke/smoke 1" },
+					{ "time": 0.3333, "name": null }
+				]
+			},
+			"smoke/smoke 2": {
+				"rgba": [
+					{ "time": 0.1, "color": "ffffffff" },
+					{ "time": 0.3, "color": "ffffff00" }
+				],
+				"attachment": [
+					{ "time": 0.0667, "name": "smoke/smoke 2" },
+					{ "time": 0.5333, "name": null }
+				]
+			},
+			"smoke/smoke 3": {
+				"rgba": [
+					{ "time": 0.1333, "color": "ffffffff" },
+					{ "time": 0.3, "color": "ffffff00" }
+				],
+				"attachment": [
+					{ "time": 0.0667, "name": "smoke/smoke 3" },
+					{ "time": 0.5333, "name": null }
+				]
+			},
+			"smoke/smoke 4": {
+				"rgba": [
+					{ "time": 0.1, "color": "ffffffff" },
+					{ "time": 0.2333, "color": "ffffff00" }
+				],
+				"attachment": [
+					{ "time": 0.0333, "name": "smoke/smoke 4" },
+					{ "time": 0.5333, "name": null }
+				]
+			}
+		},
+		"bones": {
+			"small Expl": {
+				"translate": [
+					{ "time": 0.0667, "x": 343.02, "y": 119.01 }
+				],
+				"scale": [
+					{ "time": 0.0667 },
+					{ "time": 0.1333, "x": 1.16, "y": 1.16 },
+					{ "time": 0.4, "x": 1.571, "y": 1.571 }
+				]
+			},
+			"Second Expl": {
+				"scale": [
+					{ "time": 0.4, "x": 0.86, "y": 0.86 }
+				]
+			},
+			"Explosion_HitSpark_3_Big_1": {
+				"rotate": [
+					{ "time": 0.0667, "value": -63.22 }
+				],
+				"translate": [
+					{ "time": 0.0667, "x": 1.46, "y": -64.81 },
+					{ "time": 0.1667, "x": 406.92, "y": 182.05 }
+				],
+				"scale": [
+					{ "time": 0.0667, "x": 0.54, "y": 1.727 },
+					{ "time": 0.1667, "x": 0.892, "y": 0.734 }
+				]
+			},
+			"Explosion_HitSpark_3_Big_7": {
+				"rotate": [
+					{ "time": 0.0333, "value": -205.21 },
+					{ "time": 0.0667, "value": -174.29 }
+				],
+				"translate": [
+					{ "time": 0.0667, "x": 127.53, "y": 44.52 },
+					{ "time": 0.1667, "x": 498.22, "y": 126.14 }
+				],
+				"scale": [
+					{ "time": 0.0667, "y": 0.395 },
+					{ "time": 0.1667, "x": 1.638, "y": 0.395 }
+				]
+			},
+			"Explosion_HitSpark_3_Big_8": {
+				"rotate": [
+					{ "time": 0.0667, "value": -200.86 },
+					{ "time": 0.1333, "value": -183.17 }
+				],
+				"translate": [
+					{ "time": 0.0667, "x": 102.14, "y": -118.09 },
+					{ "time": 0.1333, "x": 342.54, "y": -250.23 }
+				]
+			},
+			"smoke": {
+				"rotate": [
+					{ "time": 0.0333 },
+					{ "time": 0.3333, "value": 107.16 }
+				],
+				"translate": [
+					{ "x": -185.63, "y": -28.82 },
+					{
+						"time": 0.0333,
+						"x": -103.5,
+						"y": 63.1,
+						"curve": [ 0.044, -93.57, 0.056, -51.26, 0.043, 67.08, 0.055, 85.97 ]
+					},
+					{
+						"time": 0.0667,
+						"x": -42.8,
+						"y": 92.39,
+						"curve": [ 0.137, 6.77, 0.224, 15.77, 0.148, 132.8, 0.293, 280.17 ]
+					},
+					{ "time": 0.3, "x": 15.77, "y": 280.17 }
+				],
+				"scale": [
+					{
+						"curve": [ 0.094, 1.151, 0.222, 1.448, 0.094, 1.151, 0.222, 1.448 ]
+					},
+					{ "time": 0.3333, "x": 1.448, "y": 1.448 }
+				]
+			},
+			"smoke2": {
+				"rotate": [
+					{ "time": 0.0667, "value": -65.02 },
+					{ "time": 0.5333, "value": 140.82 }
+				],
+				"translate": [
+					{ "x": -141.82, "y": 18.45 },
+					{
+						"time": 0.0667,
+						"x": 19.04,
+						"y": 102.51,
+						"curve": [ 0.156, 66.5, 0.288, 151.09, 0.156, 146.53, 0.288, 290.18 ]
+					},
+					{ "time": 0.4, "x": 151.09, "y": 290.18 }
+				],
+				"scale": [
+					{
+						"curve": [ 0.021, 1.034, 0.044, 0.752, 0.021, 1.034, 0.044, 1.542 ]
+					},
+					{
+						"time": 0.0667,
+						"x": 0.786,
+						"y": 1.576,
+						"curve": [ 0.189, 0.965, 0.036, 1.227, 0.189, 1.754, 0.036, 1.227 ]
+					},
+					{ "time": 0.1667, "x": 1.227, "y": 1.227 },
+					{ "time": 0.5333, "x": 1.448, "y": 1.448 }
+				]
+			},
+			"smoke3": {
+				"rotate": [
+					{ "time": 0.0333 },
+					{ "time": 0.5333, "value": -150.24 }
+				],
+				"translate": [
+					{ "x": -65.5, "y": -83.22 },
+					{
+						"time": 0.0333,
+						"x": -18.78,
+						"y": -147.48,
+						"curve": [ 0.132, 42.6, 0.277, 220.89, 0.132, -159.63, 0.277, -201.14 ]
+					},
+					{ "time": 0.4, "x": 220.89, "y": -201.14 }
+				],
+				"scale": [
+					{
+						"curve": [ 0.132, 1.211, 0.222, 1.448, 0.132, 1.211, 0.222, 1.448 ]
+					},
+					{ "time": 0.5333, "x": 1.448, "y": 1.448 }
+				]
+			},
+			"smoke4": {
+				"translate": [
+					{},
+					{ "time": 0.0333, "x": 8.29, "y": -22.1 },
+					{
+						"time": 0.0667,
+						"x": 151.51,
+						"y": 26.27,
+						"curve": [ 0.167, 342.96, 0.182, 502.2, 0.167, 50.39, 0.182, 56.23 ]
+					},
+					{ "time": 0.4, "x": 502.2, "y": 56.23 }
+				],
+				"scale": [
+					{
+						"curve": [ 0.011, 1.018, 0.022, 0.927, 0.011, 1.018, 0.022, 2.284 ]
+					},
+					{ "time": 0.0333, "x": 0.945, "y": 2.302 },
+					{
+						"time": 0.0667,
+						"x": 1.689,
+						"y": 0.816,
+						"curve": [ 0.186, 1.693, 0.27, 1.448, 0.19, 0.814, 0.273, 1.448 ]
+					},
+					{ "time": 0.5333, "x": 1.448, "y": 1.448 }
+				]
+			},
+			"cannon_root": {
+				"translate": [
+					{},
+					{ "time": 0.0333, "x": 4.92, "y": -20.95 },
+					{
+						"time": 0.1,
+						"x": -43.34,
+						"y": 77.41,
+						"curve": [ 0.12, -55.28, 0.182, -81.66, 0.125, 62.32, 0.167, 4.14 ]
+					},
+					{
+						"time": 0.2,
+						"x": -92.11,
+						"y": 2.76,
+						"curve": [ 0.262, -110.63, 0.324, 11.05, 0.267, 0, 0.267, 0 ]
+					},
+					{
+						"time": 0.4,
+						"x": 11.05,
+						"curve": [ 0.438, 5.84, 0.489, 0, 0.444, 0, 0.489, 0 ]
+					},
+					{ "time": 0.5333 }
+				],
+				"scale": [
+					{},
+					{ "time": 0.0333, "x": 1.083, "y": 0.889 },
+					{ "time": 0.1, "x": 1.083, "y": 1.065 },
+					{ "time": 0.2 }
+				]
+			},
+			"bomb shooter/front wheel": {
+				"rotate": [
+					{},
+					{ "time": 0.0333, "value": -15.11 },
+					{
+						"time": 0.1333,
+						"value": 26.06,
+						"curve": [ 0.157, 25.94, 0.178, 18.06 ]
+					},
+					{
+						"time": 0.2,
+						"value": 12.87,
+						"curve": [ 0.228, 6.27, 0.3, -32.22 ]
+					},
+					{ "time": 0.3333, "value": -32.22 },
+					{ "time": 0.4667 }
+				]
+			},
+			"bomb shooter/back wheel": {
+				"rotate": [
+					{},
+					{ "time": 0.0333, "value": -13.65 },
+					{ "time": 0.2, "value": 19.62 },
+					{ "time": 0.4, "value": -14.23 },
+					{ "time": 0.5333 }
+				]
+			},
+			"bomb shooter/canon": {
+				"rotate": [
+					{},
+					{
+						"time": 0.0333,
+						"value": -7.32,
+						"curve": [ 0.057, -7.32, 0.114, 14.89 ]
+					},
+					{
+						"time": 0.1333,
+						"value": 14.89,
+						"curve": [ 0.18, 14.89, 0.296, -16.82 ]
+					},
+					{
+						"time": 0.3333,
+						"value": -16.82,
+						"curve": [ 0.385, -20.36, 0.444, 0 ]
+					},
+					{ "time": 0.5333 }
+				],
+				"translate": [
+					{},
+					{ "time": 0.0333, "x": 1.2, "y": 9.32 },
+					{ "time": 0.1333 }
+				],
+				"scale": [
+					{},
+					{ "time": 0.0333, "x": 0.884, "y": 1.406 },
+					{ "time": 0.0667, "x": 1.336, "y": 1.012 },
+					{ "time": 0.1333, "x": 0.981, "y": 1.089 },
+					{ "time": 0.2667 }
+				]
+			},
+			"Third Expl": {
+				"translate": [
+					{ "time": 0.0667, "x": 271.43, "y": 118.75 }
+				]
+			},
+			"explo_adjust": {
+				"rotate": [
+					{ "time": 0.0167, "value": 7.56 }
+				],
+				"translate": [
+					{ "time": 0.0167, "x": -98.01, "y": -35.45 }
+				]
+			},
+			"recursive_cluster_cannon": {
+				"rotate": [
+					{
+						"time": 0.0333,
+						"curve": [ 0.047, 5.89, 0.067, 12.49 ]
+					},
+					{
+						"time": 0.0833,
+						"value": 12.49,
+						"curve": [ 0.111, 12.49, 0.139, -11.55 ]
+					},
+					{ "time": 0.1666 }
+				],
+				"translate": [
+					{
+						"time": 0.0333,
+						"curve": [ 0.047, 0, 0.067, 0, 0.05, 0, 0.067, 4.17 ]
+					},
+					{
+						"time": 0.0833,
+						"y": 4.17,
+						"curve": [ 0.111, 0, 0.139, 0, 0.111, 4.17, 0.139, 0 ]
+					},
+					{ "time": 0.1666 }
+				]
+			}
+		},
+		"transform": {
+			"explo_adjust": [
+				{ "mixScaleX": 0, "mixShearY": 0 }
+			]
+		}
+	}
+}
+}

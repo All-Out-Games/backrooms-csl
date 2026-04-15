@@ -1,0 +1,151 @@
+012MIM_Player_VFX_particles.png
+	size: 4096, 512
+	filter: Linear, Linear
+	scale: 0.5
+Healing FX/glow
+	bounds: 832, 114, 214, 214
+	offsets: 6, 6, 227, 227
+Healing FX/heal_cloud_A
+	bounds: 1676, 205, 123, 87
+	offsets: 1, 2, 125, 91
+	rotate: 90
+Healing FX/heal_cloud_B
+	bounds: 1559, 217, 111, 111
+	offsets: 1, 2, 113, 114
+Healing FX/heal_cloud_C
+	bounds: 2442, 264, 63, 64
+	offsets: 1, 1, 65, 66
+Healing FX/line_particle_A
+	bounds: 3723, 295, 5, 33
+Healing FX/line_particle_B
+	bounds: 3734, 307, 5, 21
+Healing FX/line_particle_C
+	bounds: 3693, 259, 5, 69
+Healing FX/plus_particle_A
+	bounds: 3549, 302, 26, 26
+Healing FX/plus_particle_B
+	bounds: 3668, 309, 19, 19
+Ice Particles/snow_flake1
+	bounds: 3581, 302, 23, 26
+Ice Particles/snow_flake2
+	bounds: 3430, 296, 28, 32
+Ice Particles/sparkle
+	bounds: 3520, 298, 23, 30
+Ice_Smoke/breath_big
+	bounds: 1251, 150, 178, 172
+	offsets: 6, 6, 190, 182
+	rotate: 90
+Ice_Smoke/breath_middle
+	bounds: 1429, 182, 146, 124
+	offsets: 6, 6, 159, 136
+	rotate: 90
+Ice_Smoke/breath_small
+	bounds: 2050, 235, 92, 93
+	offsets: 7, 6, 105, 105
+Ice_Smoke/breath_tiny1
+	bounds: 2619, 265, 63, 59
+	offsets: 4, 5, 72, 68
+	rotate: 90
+Ice_Smoke/breath_tiny2
+	bounds: 2373, 262, 66, 63
+	offsets: 5, 5, 76, 72
+	rotate: 90
+Ice_Smoke/breath_tiny3
+	bounds: 2814, 269, 59, 59
+	offsets: 5, 5, 68, 69
+PE-Buff/1
+	bounds: 3096, 276, 52, 38
+	offsets: 1, 1, 54, 40
+	rotate: 90
+PE-Buff/2
+	bounds: 2565, 249, 48, 79
+	offsets: 1, 1, 50, 81
+PE-Buff/3
+	bounds: 3230, 283, 45, 37
+	offsets: 1, 1, 47, 39
+	rotate: 90
+PE-Buff/4
+	bounds: 3492, 291, 37, 22
+	offsets: 1, 1, 39, 24
+	rotate: 90
+PE-Debuff/1
+	bounds: 3052, 276, 52, 38
+	offsets: 1, 1, 54, 40
+	rotate: 90
+PE-Debuff/2
+	bounds: 2511, 249, 48, 79
+	offsets: 1, 1, 50, 81
+PE-Debuff/3
+	bounds: 3187, 283, 45, 37
+	offsets: 1, 1, 47, 39
+	rotate: 90
+PE-Debuff/4
+	bounds: 3464, 291, 37, 22
+	offsets: 1, 1, 39, 24
+	rotate: 90
+PlayerCharacter
+	bounds: 333, 64, 261, 264
+	offsets: 10, 4, 283, 271
+Poison Sting Particles/Poison Bubble 1
+	bounds: 3358, 297, 31, 31
+Poison Sting Particles/Poison Bubble 2
+	bounds: 3610, 304, 24, 24
+Poison Sting Particles/Poison Bubble 3
+	bounds: 3640, 306, 22, 22
+Poison Sting Particles/Poison Bubble 4
+	bounds: 3704, 315, 13, 13
+Smoke1
+	bounds: 3140, 286, 41, 42
+burning_effect/ember1
+	bounds: 2749, 268, 60, 59
+	offsets: 2, 2, 64, 63
+	rotate: 90
+burning_effect/ember2
+	bounds: 2684, 268, 60, 59
+	offsets: 2, 2, 64, 63
+	rotate: 90
+dust/dust particle
+	bounds: 3273, 286, 42, 37
+	rotate: 90
+dust/dust particle 2
+	bounds: 2148, 186, 142, 58
+	rotate: 90
+dust/dust particle 3
+	bounds: 1962, 219, 109, 82
+	offsets: 0, 0, 110, 82
+	rotate: 90
+dust/dust particle 4
+	bounds: 2938, 273, 55, 54
+	rotate: 90
+dust/dust particle 5
+	bounds: 2879, 266, 62, 53
+	rotate: 90
+dust/dust_cloudA
+	bounds: 1865, 227, 101, 91
+	rotate: 90
+dust/dust_cloudB
+	bounds: 1769, 223, 90, 105
+dust/dust_cloudC
+	bounds: 2303, 262, 64, 66
+goat aura/back part
+	bounds: 6, 6, 321, 322
+goat aura/front part
+	bounds: 1052, 135, 193, 193
+	offsets: 0, 1, 193, 194
+goat aura/middle part
+	bounds: 600, 102, 226, 226
+	offsets: 1, 1, 228, 228
+goat aura/shine 1
+	bounds: 2212, 242, 86, 85
+	offsets: 0, 1, 86, 87
+	rotate: 90
+goat aura/shine 2
+	bounds: 3395, 297, 31, 29
+	offsets: 0, 1, 31, 31
+	rotate: 90
+goat aura/star 1
+	bounds: 3316, 290, 38, 36
+	rotate: 90
+goat aura/star 2
+	bounds: 2998, 278, 50, 48
+	rotate: 90

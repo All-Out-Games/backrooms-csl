@@ -1,0 +1,41 @@
+0cab3828328d020c.png
+	size: 1148, 1148
+	filter: Linear, Linear
+Explosion Frames/explosion1
+	bounds: 6, 720, 419, 422
+	offsets: 2, 2, 421, 445
+Explosion Frames/explosion2
+	bounds: 422, 6, 347, 347
+	offsets: 32, 77, 421, 445
+Explosion Frames/explosion3
+	bounds: 6, 319, 395, 384
+	offsets: 9, 60, 421, 445
+	rotate: 90
+Explosion Frames/explosion4
+	bounds: 6, 11, 318, 302
+	offsets: 51, 69, 421, 445
+Explosion Frames/explosion5
+	bounds: 775, 124, 332, 325
+	offsets: 40, 56, 421, 445
+Explosion Frames/explosion6
+	bounds: 396, 359, 355, 349
+	offsets: 25, 45, 421, 445
+	rotate: 90
+Explosion Frames/explosion7
+	bounds: 431, 792, 350, 350
+	offsets: 32, 45, 421, 445
+Explosion Frames/explosion8
+	bounds: 751, 455, 348, 331
+	offsets: 35, 58, 421, 445
+Explosion Frames/explosion9
+	bounds: 787, 800, 342, 322
+	offsets: 41, 65, 421, 445
+	rotate: 90
+missile/missile
+	bounds: 330, 151, 162, 86
+	offsets: 1, 1, 164, 88
+	rotate: 90
+missile/missile_fire
+	bounds: 330, 85, 60, 38
+	offsets: 1, 1, 62, 40
+	rotate: 90

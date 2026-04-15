@@ -1,0 +1,90 @@
+ice_block.png
+	size: 2348, 356
+	filter: Linear, Linear
+	scale: 0.5
+MOD/Ice Maker/drop 1
+	bounds: 2317, 338, 10, 11
+MOD/Ice Maker/drop 2
+	bounds: 2195, 330, 19, 18
+	rotate: 90
+MOD/Ice Maker/drop 3
+	bounds: 2240, 332, 16, 17
+MOD/Ice Maker/drop 4
+	bounds: 2333, 337, 7, 12
+MOD/Ice Maker/drop 5
+	bounds: 2219, 328, 15, 21
+MOD/Ice Maker/drop 6
+	bounds: 2299, 337, 12, 12
+MOD/Ice Maker/iceblock cracked 1 no cm
+	bounds: 1166, 202, 117, 147
+	offsets: 2, 0, 119, 147
+MOD/Ice Maker/iceblock cracked 2 no cm
+	bounds: 1043, 202, 117, 147
+	offsets: 2, 0, 119, 147
+MOD/Ice Maker/iceblock cracked 3 no cm
+	bounds: 920, 202, 117, 147
+	offsets: 2, 0, 119, 147
+MOD/Ice Maker/iceblock wo cracks
+	bounds: 797, 202, 117, 147
+	offsets: 2, 0, 119, 147
+MOD/Ice Maker/melting icecblock 1
+	bounds: 1483, 234, 115, 44
+	rotate: 90
+MOD/Ice Maker/melting icecblock 2
+	bounds: 1435, 222, 127, 42
+	rotate: 90
+MOD/Ice Maker/melting icecblock 3
+	bounds: 1377, 195, 154, 52
+	rotate: 90
+MOD/Ice Maker/melting puddle
+	bounds: 1289, 149, 200, 82
+	rotate: 90
+MOD/Ice Maker/shard 1
+	bounds: 1698, 282, 45, 67
+	offsets: 3, 0, 48, 67
+MOD/Ice Maker/shard 10
+	bounds: 1592, 274, 41, 75
+MOD/Ice Maker/shard 2
+	bounds: 2071, 315, 29, 34
+MOD/Ice Maker/shard 3
+	bounds: 1639, 291, 53, 58
+MOD/Ice Maker/shard 4
+	bounds: 1996, 306, 32, 43
+MOD/Ice Maker/shard 5
+	bounds: 1907, 299, 39, 50
+MOD/Ice Maker/shard 6
+	bounds: 2169, 324, 20, 25
+MOD/Ice Maker/shard 7
+	bounds: 2034, 313, 31, 36
+MOD/Ice Maker/shard 8
+	bounds: 1854, 301, 48, 47
+	rotate: 90
+MOD/Ice Maker/shard 9
+	bounds: 1749, 284, 45, 65
+	offsets: 0, 0, 46, 65
+MOD/Ice Particles/cloud 6
+	bounds: 1800, 295, 54, 48
+	rotate: 90
+MOD/Ice Particles/cloud 7
+	bounds: 1533, 281, 68, 53
+	rotate: 90
+MOD/Ice Particles/cloud frame 1
+	bounds: 618, 169, 180, 173
+	rotate: 90
+MOD/Ice Particles/cloud frame 2
+	bounds: 358, 86, 263, 254
+	rotate: 90
+MOD/Ice Particles/cloud frame 3
+	bounds: 6, 6, 346, 343
+MOD/Ice Particles/snow_flake1
+	bounds: 2140, 323, 23, 26
+MOD/Ice Particles/snowflake 3
+	bounds: 2280, 335, 14, 13
+	rotate: 90
+MOD/Ice Particles/snowflake 5
+	bounds: 2262, 333, 12, 16
+MOD/Ice Particles/snowflake 7
+	bounds: 2106, 318, 28, 31
+MOD/Ice Particles/snowflake 9
+	bounds: 1952, 308, 38, 41
+	offsets: 1, 1, 40, 43

@@ -1,0 +1,136 @@
+// Melee ability - universal, always available at slot 1
+Melee_Ability :: class : Ability_Base {
+    on_init :: proc(ability: Ability_Base) {
+        ability.name = "Melee";
+        ability.icon = get_asset(Texture_Asset, "reusable_weapons/sprites/reusable-weapons/katana.png");
+        ability.disable_keybind = true;
+        ability.is_aimed_ability = false;
+    }
+
+    can_use :: proc(ability: Ability_Base) -> bool {
+        return true;
+    }
+
+    on_update :: proc(ability: Ability_Base, params: ref Ability_Update_Params) {
+        p := ability.player.(Player);
+
+        if params.pressed && params.can_use && ability.current_cooldown <= 0 {
+            // Trigger melee animation
+            p.animator.state_machine.set_trigger("melee_AL");
+
+            // Enable katana skin briefly
+            p.animator.enable_skin("weapons/katana");
+            p.animator.refresh_skins();
+
+            // Play katana sound
+            sfx_desc := SFX.default_sfx_desc();
+            sfx_desc.set_position(p.entity.world_position);
+            sfx_desc.range_multiplier = 2.0;
+            SFX.play(get_asset(SFX_Asset, "reusable_weapons/sounds/reusable-weapons/katana_slash.wav"), sfx_desc);
+
+            // Damage nearby targets
+            nearby: [..]Weapon_Target;
+            pos := p.entity.world_position;
+            Scene.get_all_components_in_range(pos, 1.5, ref nearby);
+            for hit: nearby {
+                if hit != null {
+                    if hit.entity.id != p.entity.id {
+                        weapon_target_apply_damage(hit, 25.0, p.entity.id);
+                    }
+                }
+            }
+
+            ability.current_cooldown = 1.0;
+        }
+    }
+}
+
+// Special weapon abilities dispatcher
+Special_Ability :: class : Ability_Base {
+    was_shooting: bool;
+    akimbo_pending_shot: bool;
+    akimbo_shot_time: float;
+    akimbo_shot_direction: v2;
+
+    on_init :: proc(ability: Ability_Base) {
+        ability.name = "Special";
+        ability.icon = get_asset(Texture_Asset, "reusable_weapons/sprites/reusable-weapons/weapon_icons/weapon_icons_250x250/akimbo_pistols.png");
+        ability.disable_keybind = true;
+        ability.is_aimed_ability = true;
+    }
+
+    can_use :: proc(ability: Ability_Base) -> bool {
+        p := ability.player.(Player);
+        if p.equipped_weapon_type == .NONE return false;
+        config := get_weapon_config(p.equipped_weapon_type);
+        if config.fire_mode != .SPECIAL return false;
+        return weapon_has_ammo(p, p.equipped_weapon_type);
+    }
+
+    on_update :: proc(ability: Ability_Base, params: ref Ability_Update_Params) {
+        p := ability.player.(Player);
+        self := ability.(Special_Ability);
+        wt := p.equipped_weapon_type;
+        config := get_weapon_config(wt);
+
+        ability.icon = get_asset(Texture_Asset, config.weapon_icon_path);
+
+        aiming := Ability_Utilities.update_aiming_ability(p, ref params);
+
+        if aiming.aim {
+            p.last_aim_direction = aiming.aim_direction;
+            p.set_mouse_ik_enabled(true);
+            p.set_aim_target(p.entity.world_position + aiming.aim_direction * 5.0);
+            draw_thin_aiming_line(p.entity.world_position, aiming.aim_direction, 1.0);
+        } else {
+            p.set_mouse_ik_enabled(false);
+        }
+
+        should_fire := false;
+        if p.device_kind == .PC {
+            should_fire = aiming.activate;
+        } else {
+            should_fire = aiming.aim;
+        }
+
+        // Akimbo Pistols: fire staggered second shot
+        if self.akimbo_pending_shot && get_time() >= self.akimbo_shot_time {
+            weapon_spawn_standard_projectile(p, self.akimbo_shot_direction, .AKIMBO_PISTOLS);
+            weapon_play_fire_sound(p, .AKIMBO_PISTOLS);
+            self.akimbo_pending_shot = false;
+        }
+
+        if should_fire && params.can_use && ability.current_cooldown <= 0 {
+            switch wt {
+                case .AKIMBO_PISTOLS: {
+                    weapon_shoot(p, wt);
+                    weapon_spawn_standard_projectile(p, aiming.aim_direction, wt);
+                    self.akimbo_pending_shot = true;
+                    self.akimbo_shot_time = get_time() + 0.15;
+                    self.akimbo_shot_direction = aiming.aim_direction;
+                }
+                case .WIND_BLASTER: {
+                    weapon_shoot(p, wt);
+                    spawn_tornado_entity(p, aiming.aim_direction, wt);
+                }
+                case .STORMS_EYE: {
+                    weapon_shoot(p, wt);
+                    spawn_storms_eye_tornado(p);
+                }
+            }
+            ability.current_cooldown = config.fire_rate;
+            self.was_shooting = true;
+        }
+
+        if !should_fire && self.was_shooting {
+            weapon_stop_shoot_anim(p, wt);
+            self.was_shooting = false;
+        }
+
+        if should_fire && !weapon_has_ammo(p, wt) {
+            if p.is_local() {
+                Notifier.notify("Out of ammo!");
+            }
+        }
+    }
+}

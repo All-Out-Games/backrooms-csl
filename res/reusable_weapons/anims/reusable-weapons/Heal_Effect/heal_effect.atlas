@@ -1,0 +1,86 @@
+4c5870d259b799dd6ab5d8eb62de82bf.png
+	size: 2010, 1764
+	filter: Linear, Linear
+sfx_cross
+	bounds: 1314, 243, 252, 251
+	offsets: 0, 6, 252, 259
+sfx_lineVertical
+	bounds: 2, 622, 58, 1140
+sfx_sparkle
+	bounds: 1621, 89, 249, 246
+	offsets: 1, 1, 251, 248
+	rotate: 90
+turret02_swirlA_01
+	bounds: 1826, 552, 293, 96
+	offsets: 1, 6, 295, 103
+	rotate: 90
+turret02_swirlA_02
+	bounds: 574, 2, 429, 149
+	offsets: 1, 6, 470, 156
+turret02_swirlA_03
+	bounds: 1372, 839, 469, 238
+	offsets: 1, 6, 470, 244
+	rotate: 90
+turret02_swirlA_04
+	bounds: 1587, 437, 355, 237
+	offsets: 0, 0, 355, 242
+	rotate: 90
+turret02_swirlA_05
+	bounds: 1809, 847, 226, 187
+	offsets: 1, 1, 227, 193
+	rotate: 90
+turret02_swirlA_06
+	bounds: 1612, 794, 666, 195
+	rotate: 90
+turret02_swirlA_07
+	bounds: 882, 1310, 728, 150
+turret02_swirlA_08
+	bounds: 1196, 538, 385, 144
+	offsets: 0, 1, 392, 146
+	rotate: 90
+turret02_swirlA_09
+	bounds: 1809, 1075, 385, 199
+	offsets: 0, 1, 392, 200
+	rotate: 90
+turret02_swirlA_10
+	bounds: 1074, 3, 486, 238
+	rotate: 90
+turret02_swirlA_11
+	bounds: 882, 1462, 709, 300
+	offsets: 0, 1, 709, 301
+turret02_swirlA_12
+	bounds: 62, 1408, 818, 354
+	offsets: 0, 1, 818, 356
+turret02_swirlA_13
+	bounds: 62, 1002, 717, 404
+	offsets: 0, 0, 717, 407
+turret02_swirlA_14
+	bounds: 2, 78, 570, 434
+turret02_swirlA_15
+	bounds: 660, 491, 534, 432
+	offsets: 0, 0, 534, 433
+turret02_swirlA_16
+	bounds: 62, 514, 596, 486
+	offsets: 1, 0, 597, 487
+turret02_swirlA_17
+	bounds: 781, 925, 589, 383
+	offsets: 1, 1, 590, 384
+turret02_swirlA_18
+	bounds: 574, 153, 498, 336
+	offsets: 1, 3, 499, 339
+turret02_swirlA_19
+	bounds: 1593, 1462, 385, 300
+	offsets: 1, 11, 386, 312
+turret02_swirlA_20
+	bounds: 1342, 496, 341, 243
+	offsets: 1, 0, 343, 243
+	rotate: 90
+turret02_swirlA_21
+	bounds: 1314, 44, 305, 197
+	offsets: 1, 0, 307, 197
+turret02_swirlA_22
+	bounds: 1568, 340, 212, 95
+	offsets: 0, 0, 213, 95
+turret02_swirlA_23
+	bounds: 2, 591, 50, 29
+	offsets: 1, 0, 53, 30

@@ -1,0 +1,114 @@
+setup_reusable_weapons_player_state_machine :: proc(player: Player) {
+    sm := player.animator.state_machine;
+    base_layer := sm.try_get_layer("main");
+    additive_layer := sm.create_layer("additive_layer", 1);
+
+    ao_idle := base_layer.try_get_state("Idle");
+    ao_run := base_layer.try_get_state("Run_Fast");
+    moving_var := sm.try_get_variable("moving");
+
+    //--- Base Layer: IK variables ---//
+    use_2h_ik := sm.create_variable("use_2h_ik", .BOOL);
+    use_1h_ik := sm.create_variable("use_1h_ik", .BOOL);
+
+    //--- Base Layer: 2-handed weapon idle/run ---//
+    aim_run_2h := base_layer.create_state("redsun/Run_Fast_mIK_twohands", true);
+    aim_idle_2h := base_layer.create_state("redsun/Idle_mIK_twohands", true);
+
+    base_layer.create_transition(ao_idle, aim_idle_2h, false).create_bool_condition(use_2h_ik, true);
+    base_layer.create_transition(ao_run, aim_run_2h, false).create_bool_condition(use_2h_ik, true);
+    base_layer.create_transition(aim_run_2h, aim_idle_2h, false).create_bool_condition(moving_var, false);
+    base_layer.create_transition(aim_idle_2h, aim_run_2h, false).create_bool_condition(moving_var, true);
+    base_layer.create_transition(aim_idle_2h, ao_idle, false).create_bool_condition(use_2h_ik, false);
+    base_layer.create_transition(aim_run_2h, ao_run, false).create_bool_condition(use_2h_ik, false);
+
+    //--- Base Layer: 1-handed weapon idle/run ---//
+    aim_run_1h := base_layer.create_state("redsun/Run_Fast_mIK", true);
+    aim_idle_1h := base_layer.create_state("redsun/Idle_mIK", true);
+
+    base_layer.create_transition(ao_idle, aim_idle_1h, false).create_bool_condition(use_1h_ik, true);
+    base_layer.create_transition(ao_run, aim_run_1h, false).create_bool_condition(use_1h_ik, true);
+    base_layer.create_transition(aim_run_1h, aim_idle_1h, false).create_bool_condition(moving_var, false);
+    base_layer.create_transition(aim_idle_1h, aim_run_1h, false).create_bool_condition(moving_var, true);
+    base_layer.create_transition(aim_idle_1h, ao_idle, false).create_bool_condition(use_1h_ik, false);
+    base_layer.create_transition(aim_run_1h, ao_run, false).create_bool_condition(use_1h_ik, false);
+
+    //--- Additive Layer ---//
+    idle_state := additive_layer.create_state("__CLEAR_TRACK__", true);
+    additive_layer.set_initial_state(idle_state);
+
+    // Rapid fire 2h: continuous weapons (AR, SMG, BeamMachine, WaterGun, MissileBarrage, HydroCannon)
+    shoot_fast_state := additive_layer.create_state("redsun/Shoot_Gun_mIK_AL_twohands_rapid", true);
+    additive_layer.create_transition(idle_state, shoot_fast_state, false).create_trigger_condition(sm.create_variable("shoot_fast_start", .TRIGGER));
+    additive_layer.create_transition(shoot_fast_state, idle_state, false).create_trigger_condition(sm.create_variable("shoot_fast_end", .TRIGGER));
+
+    // Single shot 2h (ExplosiveShotgun, SunnySideShotty, WaterBalloonRPG, Boomwheel)
+    shoot_2h_state := additive_layer.create_state("redsun/Shoot_Gun_mIK_AL_twohands", false);
+    additive_layer.create_transition(idle_state, shoot_2h_state, false).create_trigger_condition(sm.create_variable("shoot_2h_weapon", .TRIGGER));
+    additive_layer.create_transition(shoot_2h_state, idle_state, true);
+
+    // Single shot 1h (Blunderbuss, RayGun, PlasmaBurst, MegaBlade, Buzzshot, GoldenRocket)
+    shoot_1h_state := additive_layer.create_state("redsun/Shoot_Gun_mIK_AL", false);
+    additive_layer.create_transition(idle_state, shoot_1h_state, false).create_trigger_condition(sm.create_variable("shoot_1h_weapon", .TRIGGER));
+    additive_layer.create_transition(shoot_1h_state, idle_state, true);
+
+    // Throw (PoisonGrenade)
+    throw_state := additive_layer.create_state("redsun/Throw_mIK", false);
+    additive_layer.create_transition(idle_state, throw_state, false).create_trigger_condition(sm.create_variable("throw", .TRIGGER));
+    additive_layer.create_transition(throw_state, idle_state, true);
+
+    // Akimbo pistols
+    shoot_akimbo_state := additive_layer.create_state("redsun/special/Shoot_Akimbo_mIK_AL", false);
+    additive_layer.create_transition(idle_state, shoot_akimbo_state, false).create_trigger_condition(sm.create_variable("shoot_akimbo_pistols", .TRIGGER));
+    additive_layer.create_transition(shoot_akimbo_state, idle_state, true);
+
+    // Gatling gun (continuous loop)
+    shoot_gatling_state := additive_layer.create_state("redsun/special/Shoot_Gatling_Gun_Loop_mIK_AL", true);
+    additive_layer.create_transition(idle_state, shoot_gatling_state, false).create_trigger_condition(sm.create_variable("shoot_gatling_start", .TRIGGER));
+    additive_layer.create_transition(shoot_gatling_state, idle_state, false).create_trigger_condition(sm.create_variable("shoot_gatling_end", .TRIGGER));
+
+    // Fire Ray beam
+    shoot_fire_ray_state := additive_layer.create_state("redsun/special/Shoot_Freeze_Ray_Loop_mIK_AL", true);
+    additive_layer.create_transition(idle_state, shoot_fire_ray_state, false).create_trigger_condition(sm.create_variable("fire_ray_start", .TRIGGER));
+    additive_layer.create_transition(shoot_fire_ray_state, idle_state, false).create_trigger_condition(sm.create_variable("fire_ray_end", .TRIGGER));
+
+    // Ice Launcher / Glaciator beam
+    shoot_ice_state := additive_layer.create_state("redsun/special/Shoot_Ice_Launcher_Loop_mIK_AL", true);
+    additive_layer.create_transition(idle_state, shoot_ice_state, false).create_trigger_condition(sm.create_variable("fire_ice_launcher", .TRIGGER));
+    additive_layer.create_transition(shoot_ice_state, idle_state, false).create_trigger_condition(sm.create_variable("fire_ice_launcher_end", .TRIGGER));
+
+    // Solar Siphoner beam
+    shoot_solar_state := additive_layer.create_state("redsun/special/Shoot_Solar_Siphoner_Loop_mIK_AL", true);
+    additive_layer.create_transition(idle_state, shoot_solar_state, false).create_trigger_condition(sm.create_variable("fire_solar_siphoner", .TRIGGER));
+    additive_layer.create_transition(shoot_solar_state, idle_state, false).create_trigger_condition(sm.create_variable("fire_solar_siphoner_end", .TRIGGER));
+
+    // Octo Siphoner beam
+    shoot_octo_state := additive_layer.create_state("redsun/special/shoot_octo_loop", true);
+    additive_layer.create_transition(idle_state, shoot_octo_state, false).create_trigger_condition(sm.create_variable("fire_octo_siphoner", .TRIGGER));
+    additive_layer.create_transition(shoot_octo_state, idle_state, false).create_trigger_condition(sm.create_variable("fire_octo_siphoner_end", .TRIGGER));
+
+    // Void Splitter beam
+    shoot_void_state := additive_layer.create_state("redsun/special/Shoot_Void_Spitter_Loop", true);
+    additive_layer.create_transition(idle_state, shoot_void_state, false).create_trigger_condition(sm.create_variable("void_splitter_start", .TRIGGER));
+    additive_layer.create_transition(shoot_void_state, idle_state, false).create_trigger_condition(sm.create_variable("void_splitter_end", .TRIGGER));
+
+    // Storms Eye
+    shoot_storms_state := additive_layer.create_state("redsun/special/Storms_Eye_Loop_AL", true);
+    additive_layer.create_transition(idle_state, shoot_storms_state, false).create_trigger_condition(sm.create_variable("storms_eye_start", .TRIGGER));
+    additive_layer.create_transition(shoot_storms_state, idle_state, false).create_trigger_condition(sm.create_variable("storms_eye_end", .TRIGGER));
+
+    // Wind Blaster
+    shoot_wind_state := additive_layer.create_state("redsun/special/Shoot_Wind_Blaster_mIK_AL", false);
+    additive_layer.create_transition(idle_state, shoot_wind_state, false).create_trigger_condition(sm.create_variable("shoot_wind_blaster", .TRIGGER));
+    additive_layer.create_transition(shoot_wind_state, idle_state, true);
+
+    // Hands out (Boomwheel cannon push pose)
+    hands_out_state := additive_layer.create_state("redsun/Hands_Out_AL", true);
+    additive_layer.create_transition(idle_state, hands_out_state, false).create_trigger_condition(sm.create_variable("hands_out_start", .TRIGGER));
+    additive_layer.create_transition(hands_out_state, idle_state, false).create_trigger_condition(sm.create_variable("hands_out_end", .TRIGGER));
+
+    // Melee (katana slash)
+    melee_state := additive_layer.create_state("Attack_Melee_1_mIK_AL2", false);
+    additive_layer.create_transition(idle_state, melee_state, false).create_trigger_condition(sm.create_variable("melee_AL", .TRIGGER));
+    additive_layer.create_transition(melee_state, idle_state, true);
+}

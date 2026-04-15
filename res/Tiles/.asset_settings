@@ -1,0 +1,38 @@
+[
+  {
+    "id": "Tiles/Level1Tile3.png",
+    "texture": {
+      "wrap_repeat": true
+    }
+  },
+  {
+    "id": "Tiles/Level1Tile2.png",
+    "texture": {
+      "wrap_repeat": true
+    }
+  },
+  {
+    "id": "Tiles/Level1WallTop.png",
+    "texture": {
+      "wrap_repeat": true
+    }
+  },
+  {
+    "id": "Tiles/Level1WallNew.png",
+    "texture": {
+      "wrap_repeat": true
+    }
+  },
+  {
+    "id": "Tiles/Level1Wall.png",
+    "texture": {
+      "wrap_repeat": true
+    }
+  },
+  {
+    "id": "Tiles/Level1Tile.png",
+    "texture": {
+      "wrap_repeat": true
+    }
+  }
+]

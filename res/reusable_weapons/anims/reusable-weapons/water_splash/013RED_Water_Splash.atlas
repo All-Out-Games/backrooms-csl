@@ -1,0 +1,30 @@
+013RED_Water_Splash.png
+	size: 932, 188
+	filter: Linear, Linear
+	scale: 0.5
+splash/WaterParticle_A
+	bounds: 800, 120, 51, 59
+splash/WaterParticle_B
+	bounds: 857, 147, 27, 32
+splash/WaterParticle_C
+	bounds: 890, 157, 16, 22
+splash/WaterParticle_D
+	bounds: 912, 164, 14, 15
+splash/WaterSplash_A
+	bounds: 635, 21, 158, 73
+	rotate: 90
+splash/WaterSplash_B
+	bounds: 168, 18, 161, 123
+	rotate: 90
+splash/WaterSplash_C
+	bounds: 297, 6, 98, 173
+splash/WaterSplash_D
+	bounds: 714, 84, 80, 95
+splash/WaterSplash_E
+	bounds: 516, 56, 113, 123
+splash/WaterSplash_F
+	bounds: 6, 33, 156, 146
+splash/Water_Puddle
+	bounds: 401, 25, 154, 109
+	offsets: 5, 4, 164, 117
+	rotate: 90

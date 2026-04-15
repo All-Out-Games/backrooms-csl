@@ -1,0 +1,1567 @@
+{
+"skeleton": { "hash": "0yt7ZXfzHes", "spine": "4.0.64" },
+"bones": [
+	{ "name": "root" },
+	{ "name": "particles", "parent": "root" },
+	{ "name": "yellow_spark_A", "parent": "particles", "x": -236.04, "y": 67.39 },
+	{ "name": "yellow_spark_B", "parent": "particles", "x": -89, "y": 199.99 },
+	{ "name": "yellow_spark_C", "parent": "particles", "x": 108.96, "y": 188.64 },
+	{ "name": "yellow_spark_D", "parent": "particles", "x": 193.59, "y": 49.96 },
+	{ "name": "yellow_spark_E", "parent": "particles", "x": 100.37, "y": -131.46 },
+	{ "name": "yellow_spark_F", "parent": "particles", "x": -128.02, "y": -126.63 },
+	{ "name": "Spark_A", "parent": "particles", "length": 36.49, "rotation": 177.34, "x": -91.56, "y": -4.18 },
+	{ "name": "Spark_B", "parent": "particles", "length": 21.19, "rotation": 163.74, "x": -84.01, "y": 34.41 },
+	{ "name": "Spark_C", "parent": "particles", "length": 25.03, "rotation": 151.7, "x": -67.05, "y": 68.31 },
+	{ "name": "Spark_D", "parent": "particles", "length": 18.41, "rotation": 109.8, "x": -20.59, "y": 86.02 },
+	{ "name": "Spark_E", "parent": "particles", "length": 20.8, "rotation": 91.91, "x": 9.21, "y": 95.03 },
+	{ "name": "Spark_F", "parent": "particles", "length": 35.94, "rotation": 34, "x": 44.55, "y": 74.93 },
+	{ "name": "Spark_G", "parent": "particles", "length": 19.56, "rotation": 22.93, "x": 75.73, "y": 36.82 },
+	{ "name": "Spark_H", "parent": "particles", "length": 23.16, "rotation": 13.63, "x": 78.17, "y": -11.01 },
+	{ "name": "Spark_I", "parent": "particles", "length": 28.75, "rotation": -22.31, "x": 79.53, "y": -51.93 },
+	{ "name": "Spark_J", "parent": "particles", "length": 17.02, "rotation": -34.38, "x": 38.7, "y": -75.46 }
+],
+"slots": [
+	{ "name": "yellow_spark_A", "bone": "yellow_spark_A" },
+	{ "name": "yellow_spark_B", "bone": "yellow_spark_B" },
+	{ "name": "yellow_spark_C", "bone": "yellow_spark_C" },
+	{ "name": "yellow_spark_D", "bone": "yellow_spark_D" },
+	{ "name": "yellow_spark_E", "bone": "yellow_spark_E" },
+	{ "name": "yellow_spark_F", "bone": "yellow_spark_F" },
+	{ "name": "Spark_A", "bone": "Spark_A" },
+	{ "name": "Spark_B", "bone": "Spark_B" },
+	{ "name": "Spark_C", "bone": "Spark_C" },
+	{ "name": "Spark_D", "bone": "Spark_D" },
+	{ "name": "Spark_E", "bone": "Spark_E" },
+	{ "name": "Spark_F", "bone": "Spark_F" },
+	{ "name": "Spark_G", "bone": "Spark_G" },
+	{ "name": "Spark_H", "bone": "Spark_H" },
+	{ "name": "Spark_I", "bone": "Spark_I" },
+	{ "name": "Spark_J", "bone": "Spark_J" }
+],
+"skins": [
+	{
+		"name": "default",
+		"attachments": {
+			"Spark_A": {
+				"electricity/Sparks/Spark_A": { "x": 32.34, "y": -2.47, "rotation": -177.34, "width": 104, "height": 39 }
+			},
+			"Spark_B": {
+				"electricity/Sparks/Spark_B": { "x": 13.08, "y": -0.51, "rotation": -163.74, "width": 31, "height": 12 }
+			},
+			"Spark_C": {
+				"electricity/Sparks/Spark_C": { "x": 15.04, "y": -0.1, "rotation": -151.7, "width": 92, "height": 55 }
+			},
+			"Spark_D": {
+				"electricity/Sparks/Spark_D": { "x": 9.74, "y": -0.45, "rotation": -109.8, "width": 13, "height": 27 }
+			},
+			"Spark_E": {
+				"electricity/Sparks/Spark_E": { "x": 12.37, "y": 1.5, "rotation": -91.91, "width": 30, "height": 68 }
+			},
+			"Spark_F": {
+				"electricity/Sparks/Spark_F": { "x": 22.8, "y": -2.08, "rotation": -34, "width": 68, "height": 59 }
+			},
+			"Spark_G": {
+				"electricity/Sparks/Spark_G": { "x": 15.33, "y": -7.45, "rotation": -22.93, "width": 70, "height": 37 }
+			},
+			"Spark_H": {
+				"electricity/Sparks/Spark_H": { "x": 12.78, "y": -0.35, "rotation": -13.63, "width": 32, "height": 12 }
+			},
+			"Spark_I": {
+				"electricity/Sparks/Spark_I": { "x": 21.6, "y": 4.16, "rotation": 22.31, "width": 80, "height": 44 }
+			},
+			"Spark_J": {
+				"electricity/Sparks/Spark_J": { "x": 9.2, "y": 0.53, "rotation": 34.38, "width": 28, "height": 21 }
+			},
+			"yellow_spark_A": {
+				"electricity/Yellow Shock Sparks/spark_A": { "x": 23.97, "y": -7.53, "width": 173, "height": 203 }
+			},
+			"yellow_spark_B": {
+				"electricity/Yellow Shock Sparks/spark_B": { "x": 4.02, "y": 20.58, "width": 251, "height": 181 }
+			},
+			"yellow_spark_C": {
+				"electricity/Yellow Shock Sparks/spark_C": { "x": 3.22, "y": 13.55, "width": 202, "height": 155 }
+			},
+			"yellow_spark_D": {
+				"electricity/Yellow Shock Sparks/spark_D": { "x": 17.43, "y": 9, "width": 214, "height": 221 }
+			},
+			"yellow_spark_E": {
+				"electricity/Yellow Shock Sparks/spark_E": { "x": -7.65, "y": 10.9, "width": 175, "height": 124 }
+			},
+			"yellow_spark_F": {
+				"electricity/Yellow Shock Sparks/spark_F": { "x": -1.15, "y": 11.63, "width": 99, "height": 128 }
+			}
+		}
+	}
+],
+"animations": {
+	"Electrocuted_Effect_End": {
+		"slots": {
+			"Spark_B": {
+				"attachment": [
+					{ "name": "electricity/Sparks/Spark_B" },
+					{ "time": 0.3, "name": null }
+				]
+			},
+			"Spark_C": {
+				"attachment": [
+					{ "name": "electricity/Sparks/Spark_C" },
+					{ "time": 0.1667, "name": null }
+				]
+			},
+			"Spark_D": {
+				"attachment": [
+					{ "name": "electricity/Sparks/Spark_D" },
+					{ "time": 0.2, "name": null }
+				]
+			},
+			"Spark_E": {
+				"attachment": [
+					{ "name": "electricity/Sparks/Spark_E" },
+					{ "time": 0.2, "name": null }
+				]
+			},
+			"Spark_F": {
+				"attachment": [
+					{ "time": 0.2, "name": "electricity/Sparks/Spark_F" },
+					{ "time": 0.4, "name": null }
+				]
+			},
+			"Spark_G": {
+				"attachment": [
+					{ "name": "electricity/Sparks/Spark_G" },
+					{ "time": 0.1667, "name": null }
+				]
+			},
+			"Spark_I": {
+				"attachment": [
+					{ "time": 0.5333, "name": "electricity/Sparks/Spark_I" },
+					{ "time": 0.7333, "name": null }
+				]
+			},
+			"Spark_J": {
+				"attachment": [
+					{ "time": 0.4, "name": "electricity/Sparks/Spark_J" },
+					{ "time": 0.6333, "name": null }
+				]
+			},
+			"yellow_spark_A": {
+				"attachment": [
+					{ "name": "electricity/Yellow Shock Sparks/spark_A" },
+					{ "time": 0.1333, "name": null }
+				]
+			},
+			"yellow_spark_B": {
+				"attachment": [
+					{ "time": 0.1333, "name": "electricity/Yellow Shock Sparks/spark_B" },
+					{ "time": 0.2667, "name": null }
+				]
+			},
+			"yellow_spark_C": {
+				"attachment": [
+					{ "time": 0.3, "name": "electricity/Yellow Shock Sparks/spark_C" },
+					{ "time": 0.4333, "name": null }
+				]
+			},
+			"yellow_spark_D": {
+				"rgba": [
+					{
+						"time": 0.6,
+						"color": "ffffffff",
+						"curve": [ 0.622, 1, 0.644, 1, 0.622, 1, 0.644, 1, 0.622, 1, 0.644, 1, 0.622, 1, 0.644, 0 ]
+					},
+					{ "time": 0.6667, "color": "ffffff00" }
+				],
+				"attachment": [
+					{ "time": 0.5, "name": "electricity/Yellow Shock Sparks/spark_D" },
+					{ "time": 0.6667, "name": null }
+				]
+			},
+			"yellow_spark_F": {
+				"rgba": [
+					{
+						"time": 0.8333,
+						"color": "ffffffff",
+						"curve": [ 0.867, 1, 0.9, 1, 0.867, 1, 0.9, 1, 0.867, 1, 0.9, 1, 0.867, 1, 0.9, 0 ]
+					},
+					{ "time": 0.9333, "color": "ffffff00" }
+				],
+				"attachment": [
+					{ "time": 0.7667, "name": "electricity/Yellow Shock Sparks/spark_F" },
+					{ "time": 0.9333, "name": null }
+				]
+			}
+		},
+		"bones": {
+			"yellow_spark_A": {
+				"translate": [
+					{ "x": 64.68, "y": -14.06 }
+				],
+				"scale": [
+					{
+						"x": 0.404,
+						"y": 0.404,
+						"curve": [ 0.022, 0.603, 0.111, 1, 0.022, 0.603, 0.111, 1 ]
+					},
+					{ "time": 0.1333 }
+				]
+			},
+			"Spark_B": {
+				"rotate": [
+					{
+						"curve": [ 0.103, 0.5, 0.202, 19.68 ]
+					},
+					{ "time": 0.3, "value": 50.65 }
+				],
+				"translate": [
+					{
+						"x": 32.6,
+						"curve": [ 0.026, 1.1, 0.275, -126.58, 0.049, 53.56, 0.277, 33.17 ]
+					},
+					{ "time": 0.3, "x": -138.08, "y": -5.83 }
+				]
+			},
+			"Spark_C": {
+				"rotate": [
+					{ "value": -16.99 }
+				],
+				"translate": [
+					{
+						"x": 9.65,
+						"y": 9.65,
+						"curve": [ 0.067, -40.63, 0.1, -80.99, 0.067, 60.43, 0.1, 101.4 ]
+					},
+					{ "time": 0.1667, "x": -100.59, "y": 121.01 }
+				],
+				"scale": [
+					{},
+					{ "time": 0.1667, "x": 1.204, "y": 0.886 }
+				]
+			},
+			"Spark_D": {
+				"rotate": [
+					{
+						"value": 17.46,
+						"curve": [ 0.033, 29.11, 0.167, 35.98 ]
+					},
+					{ "time": 0.2, "value": 35.98 }
+				],
+				"translate": [
+					{
+						"x": 0.71,
+						"y": 12.02,
+						"curve": [ 0.041, -36.39, 0.187, -80.18, 0.041, 64.42, 0.187, 98.37 ]
+					},
+					{ "time": 0.2, "x": -96.82, "y": 94.67 }
+				]
+			},
+			"Spark_E": {
+				"rotate": [
+					{ "value": -15.82 }
+				],
+				"translate": [
+					{
+						"x": 17.19,
+						"y": -3.44,
+						"curve": [ 0.067, 42.89, 0.133, 55.74, 0.066, 70.91, 0.133, 142.4 ]
+					},
+					{ "time": 0.2, "x": 55.74, "y": 152.2 }
+				],
+				"scale": [
+					{
+						"curve": [ 0.033, 1, 0.167, 1.452, 0.033, 1, 0.167, 0.691 ]
+					},
+					{ "time": 0.2, "x": 1.452, "y": 0.691 }
+				]
+			},
+			"Spark_F": {
+				"rotate": [
+					{ "time": 0.2, "value": -10.7 }
+				],
+				"translate": [
+					{
+						"time": 0.2,
+						"x": 8.17,
+						"y": -34.73,
+						"curve": [ 0.267, 64.49, 0.333, 100.23, 0.267, -2.42, 0.333, 13.74 ]
+					},
+					{ "time": 0.4, "x": 120.73, "y": 13.74 }
+				],
+				"scale": [
+					{ "time": 0.2 },
+					{ "time": 0.4, "x": 1.317, "y": 0.681 }
+				]
+			},
+			"Spark_G": {
+				"rotate": [
+					{ "value": -36.7 }
+				],
+				"translate": [
+					{
+						"x": -38.58,
+						"y": -30.2,
+						"curve": [ 0.066, 35.9, 0.101, 51.08, 0.067, -49.66, 0.1, -59.39 ]
+					},
+					{ "time": 0.1667, "x": 80.49, "y": -59.39 }
+				],
+				"scale": [
+					{},
+					{ "time": 0.1667, "x": 1.33, "y": 0.78 }
+				]
+			},
+			"Spark_I": {
+				"rotate": [
+					{ "time": 0.5333, "value": -31.24 }
+				],
+				"translate": [
+					{
+						"time": 0.5333,
+						"x": -69.2,
+						"y": 26.66,
+						"curve": [ 0.6, -36.97, 0.667, 14.31, 0.6, -16.96, 0.667, -86.39 ]
+					},
+					{ "time": 0.7333, "x": 14.31, "y": -86.39 }
+				],
+				"scale": [
+					{
+						"time": 0.5333,
+						"curve": [ 0.567, 1, 0.7, 1.271, 0.567, 1, 0.7, 0.808 ]
+					},
+					{ "time": 0.7333, "x": 1.271, "y": 0.808 }
+				]
+			},
+			"Spark_J": {
+				"rotate": [
+					{
+						"time": 0.4,
+						"value": -82.89,
+						"curve": [ 0.456, -73.6, 0.578, -68.95 ]
+					},
+					{ "time": 0.6333, "value": -68.95 }
+				],
+				"translate": [
+					{
+						"time": 0.4,
+						"x": -68.26,
+						"y": 69.21,
+						"curve": [ 0.455, -80.93, 0.578, -106.48, 0.456, -1.7, 0.577, -0.25 ]
+					},
+					{ "time": 0.6333, "x": -120.64, "y": -71.05 }
+				]
+			},
+			"yellow_spark_B": {
+				"translate": [
+					{ "time": 0.1333, "x": 59.04, "y": -292.93 }
+				],
+				"scale": [
+					{
+						"time": 0.1333,
+						"x": 0.488,
+						"y": 0.488,
+						"curve": [ 0.156, 0.829, 0.244, 1, 0.156, 0.829, 0.244, 1 ]
+					},
+					{ "time": 0.2667 }
+				]
+			},
+			"yellow_spark_C": {
+				"rotate": [
+					{ "time": 0.3, "value": -57.41 }
+				],
+				"translate": [
+					{ "time": 0.3, "x": -189.51, "y": -228.1 }
+				],
+				"scale": [
+					{
+						"time": 0.3,
+						"x": 0.444,
+						"y": 0.444,
+						"curve": [ 0.322, 0.815, 0.411, 1, 0.322, 0.815, 0.411, 1 ]
+					},
+					{ "time": 0.4333 }
+				]
+			},
+			"yellow_spark_D": {
+				"translate": [
+					{ "time": 0.5, "x": -93.1, "y": -2.27 }
+				],
+				"scale": [
+					{
+						"time": 0.5,
+						"x": 0.376,
+						"y": 0.376,
+						"curve": [ 0.522, 0.792, 0.644, 1, 0.522, 0.792, 0.644, 1 ]
+					},
+					{ "time": 0.6667 }
+				]
+			},
+			"yellow_spark_F": {
+				"rotate": [
+					{ "time": 0.7667, "value": 31.17 }
+				],
+				"translate": [
+					{ "time": 0.7667, "x": 63.48, "y": 210.61 }
+				],
+				"scale": [
+					{
+						"time": 0.7667,
+						"x": 0.237,
+						"y": 0.237,
+						"curve": [ 0.789, 0.746, 0.911, 1, 0.789, 0.746, 0.911, 1 ]
+					},
+					{ "time": 0.9333 }
+				]
+			}
+		}
+	},
+	"Electrocuted_Effect_Loop": {
+		"slots": {
+			"Spark_A": {
+				"attachment": [
+					{ "time": 0.4, "name": "electricity/Sparks/Spark_A" },
+					{ "time": 0.6, "name": null }
+				]
+			},
+			"Spark_B": {
+				"attachment": [
+					{ "name": "electricity/Sparks/Spark_B" },
+					{ "time": 0.3, "name": null }
+				]
+			},
+			"Spark_C": {
+				"attachment": [
+					{ "name": "electricity/Sparks/Spark_C" },
+					{ "time": 0.1667, "name": null }
+				]
+			},
+			"Spark_D": {
+				"attachment": [
+					{ "name": "electricity/Sparks/Spark_D" },
+					{ "time": 0.2, "name": null },
+					{ "time": 0.6667, "name": "electricity/Sparks/Spark_D" },
+					{ "time": 1, "name": null }
+				]
+			},
+			"Spark_E": {
+				"attachment": [
+					{ "name": "electricity/Sparks/Spark_E" },
+					{ "time": 0.2, "name": null }
+				]
+			},
+			"Spark_F": {
+				"attachment": [
+					{ "time": 0.2, "name": "electricity/Sparks/Spark_F" },
+					{ "time": 0.4, "name": null }
+				]
+			},
+			"Spark_G": {
+				"attachment": [
+					{ "name": "electricity/Sparks/Spark_G" },
+					{ "time": 0.1667, "name": null }
+				]
+			},
+			"Spark_H": {
+				"attachment": [
+					{ "time": 0.4, "name": "electricity/Sparks/Spark_H" },
+					{ "time": 0.6667, "name": null }
+				]
+			},
+			"Spark_I": {
+				"attachment": [
+					{ "time": 0.5333, "name": "electricity/Sparks/Spark_I" },
+					{ "time": 0.7333, "name": null }
+				]
+			},
+			"Spark_J": {
+				"attachment": [
+					{ "time": 0.4, "name": "electricity/Sparks/Spark_J" },
+					{ "time": 0.6333, "name": null }
+				]
+			},
+			"yellow_spark_A": {
+				"attachment": [
+					{ "name": "electricity/Yellow Shock Sparks/spark_A" },
+					{ "time": 0.1333, "name": null }
+				]
+			},
+			"yellow_spark_B": {
+				"attachment": [
+					{ "time": 0.1333, "name": "electricity/Yellow Shock Sparks/spark_B" },
+					{ "time": 0.2667, "name": null }
+				]
+			},
+			"yellow_spark_C": {
+				"attachment": [
+					{ "time": 0.2667, "name": "electricity/Yellow Shock Sparks/spark_C" },
+					{ "time": 0.4, "name": null }
+				]
+			},
+			"yellow_spark_D": {
+				"attachment": [
+					{ "time": 0.4, "name": "electricity/Yellow Shock Sparks/spark_D" },
+					{ "time": 0.5333, "name": null }
+				]
+			},
+			"yellow_spark_E": {
+				"attachment": [
+					{ "time": 0.5333, "name": "electricity/Yellow Shock Sparks/spark_E" },
+					{ "time": 0.6667, "name": null }
+				]
+			},
+			"yellow_spark_F": {
+				"attachment": [
+					{ "time": 0.6667, "name": "electricity/Yellow Shock Sparks/spark_F" },
+					{ "time": 0.8, "name": null }
+				]
+			}
+		},
+		"bones": {
+			"yellow_spark_A": {
+				"translate": [
+					{ "x": 64.68, "y": -14.06 }
+				],
+				"scale": [
+					{
+						"x": 0.404,
+						"y": 0.404,
+						"curve": [ 0.022, 0.603, 0.111, 1, 0.022, 0.603, 0.111, 1 ]
+					},
+					{ "time": 0.1333 }
+				]
+			},
+			"Spark_A": {
+				"rotate": [
+					{ "time": 0.4, "value": 25.25 }
+				],
+				"translate": [
+					{
+						"time": 0.4,
+						"x": 52.01,
+						"y": 20.02,
+						"curve": [ 0.465, -20.11, 0.533, -63.32, 0.469, -4.01, 0.534, -23.17 ]
+					},
+					{ "time": 0.6, "x": -86.2, "y": -37.48 }
+				],
+				"scale": [
+					{ "time": 0.4 },
+					{ "time": 0.6, "x": 1.224, "y": 0.806 }
+				]
+			},
+			"Spark_C": {
+				"rotate": [
+					{ "value": -16.99 }
+				],
+				"translate": [
+					{
+						"x": 9.65,
+						"y": 9.65,
+						"curve": [ 0.067, -40.63, 0.1, -80.99, 0.067, 60.43, 0.1, 101.4 ]
+					},
+					{ "time": 0.1667, "x": -100.59, "y": 121.01 }
+				],
+				"scale": [
+					{},
+					{ "time": 0.1667, "x": 1.204, "y": 0.886 }
+				]
+			},
+			"Spark_D": {
+				"rotate": [
+					{
+						"value": 17.46,
+						"curve": [ 0.033, 29.11, 0.167, 35.98 ]
+					},
+					{ "time": 0.2, "value": 35.98, "curve": "stepped" },
+					{
+						"time": 0.6667,
+						"value": -12.14,
+						"curve": [ 0.689, -0.43, 0.967, 35.98 ]
+					},
+					{ "time": 1, "value": 35.98 }
+				],
+				"translate": [
+					{
+						"x": -55.36,
+						"y": 141.69,
+						"curve": [ 0.041, -92.47, 0.187, -136.25, 0.041, 194.09, 0.187, 228.04 ]
+					},
+					{ "time": 0.2, "x": -152.9, "y": 224.34, "curve": "stepped" },
+					{
+						"time": 0.6667,
+						"x": 3.22,
+						"curve": [ 0.671, 0.04, 0.732, -15.87, 0.671, 23.6, 0.732, 44.73 ]
+					},
+					{
+						"time": 0.8,
+						"x": -34.61,
+						"y": 61.44,
+						"curve": [ 0.891, -58.8, 0.993, -87.44, 0.891, 82.99, 0.993, 96.76 ]
+					},
+					{ "time": 1, "x": -96.82, "y": 94.67 }
+				]
+			},
+			"Spark_E": {
+				"rotate": [
+					{ "value": -15.82 }
+				],
+				"translate": [
+					{
+						"x": 17.19,
+						"y": -3.44,
+						"curve": [ 0.067, 42.89, 0.133, 55.74, 0.066, 70.91, 0.133, 142.4 ]
+					},
+					{ "time": 0.2, "x": 55.74, "y": 152.2 }
+				],
+				"scale": [
+					{
+						"curve": [ 0.033, 1, 0.167, 1.452, 0.033, 1, 0.167, 0.691 ]
+					},
+					{ "time": 0.2, "x": 1.452, "y": 0.691 }
+				]
+			},
+			"Spark_F": {
+				"rotate": [
+					{ "time": 0.2, "value": -10.7 }
+				],
+				"translate": [
+					{
+						"time": 0.2,
+						"x": 8.17,
+						"y": -34.73,
+						"curve": [ 0.233, 121.83, 0.367, 205.2, 0.233, 14.21, 0.367, 50.11 ]
+					},
+					{ "time": 0.4, "x": 205.2, "y": 50.11 }
+				],
+				"scale": [
+					{ "time": 0.2 },
+					{ "time": 0.4, "x": 1.317, "y": 0.681 }
+				]
+			},
+			"Spark_H": {
+				"rotate": [
+					{
+						"time": 0.4,
+						"curve": [ 0.475, 8.44, 0.598, -28.78 ]
+					},
+					{ "time": 0.6667, "value": -49.7 }
+				],
+				"translate": [
+					{
+						"time": 0.4,
+						"x": -14.87,
+						"y": 32.72,
+						"curve": [ 0.47, 45.73, 0.587, 134.52, 0.468, 88.86, 0.601, 113.5 ]
+					},
+					{ "time": 0.6667, "x": 186.77, "y": 7.61 }
+				]
+			},
+			"Spark_I": {
+				"rotate": [
+					{ "time": 0.5333, "value": -31.24 }
+				],
+				"translate": [
+					{
+						"time": 0.5333,
+						"x": -69.2,
+						"y": 26.66,
+						"curve": [ 0.6, -36.97, 0.667, 14.31, 0.6, -16.96, 0.667, -86.39 ]
+					},
+					{ "time": 0.7333, "x": 14.31, "y": -86.39 }
+				],
+				"scale": [
+					{
+						"time": 0.5333,
+						"curve": [ 0.567, 1, 0.7, 1.271, 0.567, 1, 0.7, 0.808 ]
+					},
+					{ "time": 0.7333, "x": 1.271, "y": 0.808 }
+				]
+			},
+			"Spark_J": {
+				"rotate": [
+					{
+						"time": 0.4,
+						"value": -82.89,
+						"curve": [ 0.456, -73.6, 0.578, -68.95 ]
+					},
+					{ "time": 0.6333, "value": -68.95 }
+				],
+				"translate": [
+					{
+						"time": 0.4,
+						"x": -68.26,
+						"y": 69.21,
+						"curve": [ 0.455, -80.93, 0.578, -106.48, 0.456, -1.7, 0.577, -0.25 ]
+					},
+					{ "time": 0.6333, "x": -120.64, "y": -71.05 }
+				]
+			},
+			"yellow_spark_B": {
+				"translate": [
+					{ "time": 0.1333, "x": 59.04, "y": -292.93 }
+				],
+				"scale": [
+					{
+						"time": 0.1333,
+						"x": 0.488,
+						"y": 0.488,
+						"curve": [ 0.156, 0.829, 0.244, 1, 0.156, 0.829, 0.244, 1 ]
+					},
+					{ "time": 0.2667 }
+				]
+			},
+			"yellow_spark_C": {
+				"rotate": [
+					{ "time": 0.2667, "value": -57.41 }
+				],
+				"translate": [
+					{ "time": 0.2667, "x": -189.51, "y": -228.1 }
+				],
+				"scale": [
+					{
+						"time": 0.2667,
+						"x": 0.444,
+						"y": 0.444,
+						"curve": [ 0.289, 0.815, 0.378, 1, 0.289, 0.815, 0.378, 1 ]
+					},
+					{ "time": 0.4 }
+				]
+			},
+			"yellow_spark_D": {
+				"translate": [
+					{ "time": 0.4, "x": -93.1, "y": -2.27 }
+				],
+				"scale": [
+					{
+						"time": 0.4,
+						"x": 0.376,
+						"y": 0.376,
+						"curve": [ 0.422, 0.792, 0.511, 1, 0.422, 0.792, 0.511, 1 ]
+					},
+					{ "time": 0.5333 }
+				]
+			},
+			"yellow_spark_E": {
+				"translate": [
+					{ "time": 0.5333, "x": -97.64, "y": 193.01 }
+				],
+				"scale": [
+					{
+						"time": 0.5333,
+						"x": 0.39,
+						"y": 0.39,
+						"curve": [ 0.556, 0.797, 0.644, 1, 0.556, 0.797, 0.644, 1 ]
+					},
+					{ "time": 0.6667 }
+				]
+			},
+			"yellow_spark_F": {
+				"rotate": [
+					{ "time": 0.6667, "value": 31.17 }
+				],
+				"translate": [
+					{ "time": 0.6667, "x": 63.48, "y": 210.61 }
+				],
+				"scale": [
+					{
+						"time": 0.6667,
+						"x": 0.237,
+						"y": 0.237,
+						"curve": [ 0.689, 0.746, 0.778, 1, 0.689, 0.746, 0.778, 1 ]
+					},
+					{ "time": 0.8 }
+				]
+			},
+			"Spark_B": {
+				"rotate": [
+					{
+						"curve": [ 0.103, 0.5, 0.202, 19.68 ]
+					},
+					{ "time": 0.3, "value": 50.65 }
+				],
+				"translate": [
+					{
+						"x": 32.6,
+						"curve": [ 0.026, 1.1, 0.275, -126.58, 0.049, 53.56, 0.277, 33.17 ]
+					},
+					{ "time": 0.3, "x": -138.08, "y": -5.83 }
+				]
+			},
+			"Spark_G": {
+				"rotate": [
+					{ "value": -36.7 }
+				],
+				"translate": [
+					{
+						"x": -38.58,
+						"y": -30.2,
+						"curve": [ 0.066, 35.9, 0.101, 51.08, 0.067, -49.66, 0.1, -59.39 ]
+					},
+					{ "time": 0.1667, "x": 80.49, "y": -59.39 }
+				],
+				"scale": [
+					{},
+					{ "time": 0.1667, "x": 1.33, "y": 0.78 }
+				]
+			}
+		}
+	},
+	"Electrocuted_Effect_Single_Shock": {
+		"slots": {
+			"Spark_A": {
+				"attachment": [
+					{ "name": "electricity/Sparks/Spark_A" },
+					{ "time": 0.2, "name": null }
+				]
+			},
+			"Spark_B": {
+				"attachment": [
+					{ "name": "electricity/Sparks/Spark_B" },
+					{ "time": 0.3, "name": null }
+				]
+			},
+			"Spark_C": {
+				"attachment": [
+					{ "name": "electricity/Sparks/Spark_C" },
+					{ "time": 0.1667, "name": null }
+				]
+			},
+			"Spark_D": {
+				"attachment": [
+					{ "name": "electricity/Sparks/Spark_D" },
+					{ "time": 0.3333, "name": null }
+				]
+			},
+			"Spark_E": {
+				"attachment": [
+					{ "name": "electricity/Sparks/Spark_E" },
+					{ "time": 0.2, "name": null }
+				]
+			},
+			"Spark_F": {
+				"attachment": [
+					{ "name": "electricity/Sparks/Spark_F" },
+					{ "time": 0.2, "name": null }
+				]
+			},
+			"Spark_G": {
+				"attachment": [
+					{ "name": "electricity/Sparks/Spark_G" },
+					{ "time": 0.1667, "name": null }
+				]
+			},
+			"Spark_H": {
+				"attachment": [
+					{ "name": "electricity/Sparks/Spark_H" },
+					{ "time": 0.2667, "name": null }
+				]
+			},
+			"Spark_I": {
+				"attachment": [
+					{ "name": "electricity/Sparks/Spark_I" },
+					{ "time": 0.2, "name": null }
+				]
+			},
+			"Spark_J": {
+				"attachment": [
+					{ "name": "electricity/Sparks/Spark_J" },
+					{ "time": 0.2333, "name": null }
+				]
+			},
+			"yellow_spark_A": {
+				"attachment": [
+					{ "name": "electricity/Yellow Shock Sparks/spark_A" },
+					{ "time": 0.1333, "name": null }
+				]
+			},
+			"yellow_spark_B": {
+				"attachment": [
+					{ "time": 0.0667, "name": "electricity/Yellow Shock Sparks/spark_B" },
+					{ "time": 0.2, "name": null }
+				]
+			},
+			"yellow_spark_C": {
+				"attachment": [
+					{ "time": 0.2, "name": "electricity/Yellow Shock Sparks/spark_C" },
+					{ "time": 0.3333, "name": null }
+				]
+			},
+			"yellow_spark_D": {
+				"attachment": [
+					{ "time": 0.2667, "name": "electricity/Yellow Shock Sparks/spark_D" },
+					{ "time": 0.4, "name": null }
+				]
+			},
+			"yellow_spark_E": {
+				"attachment": [
+					{ "time": 0.1333, "name": "electricity/Yellow Shock Sparks/spark_E" },
+					{ "time": 0.2667, "name": null }
+				]
+			}
+		},
+		"bones": {
+			"yellow_spark_D": {
+				"translate": [
+					{ "x": -93.1, "y": -2.27 }
+				],
+				"scale": [
+					{ "time": 0.2667 },
+					{ "time": 0.4, "x": 1.33, "y": 0.505 }
+				]
+			},
+			"yellow_spark_A": {
+				"translate": [
+					{ "x": 115.81, "y": -11.35 }
+				],
+				"scale": [
+					{
+						"curve": [ 0.022, 1, 0.111, 0.796, 0.022, 1, 0.111, 1.227 ]
+					},
+					{ "time": 0.1333, "x": 0.796, "y": 1.227 }
+				]
+			},
+			"yellow_spark_B": {
+				"translate": [
+					{ "time": 0.0667, "x": 59.04, "y": -292.93 }
+				],
+				"scale": [
+					{ "time": 0.0667, "x": 0.864, "y": 1.25 },
+					{ "time": 0.2, "x": 1.227, "y": 0.705 }
+				]
+			},
+			"yellow_spark_E": {
+				"translate": [
+					{ "time": 0.1333, "x": -97.64, "y": 193.01 }
+				],
+				"scale": [
+					{
+						"time": 0.1333,
+						"curve": [ 0.156, 1, 0.244, 0.728, 0.156, 1, 0.244, 1.477 ]
+					},
+					{ "time": 0.2667, "x": 0.728, "y": 1.477 }
+				]
+			},
+			"yellow_spark_C": {
+				"rotate": [
+					{ "time": 0.2, "value": -57.41 }
+				],
+				"translate": [
+					{ "time": 0.2, "x": -189.51, "y": -228.1 }
+				],
+				"scale": [
+					{
+						"time": 0.2,
+						"curve": [ 0.222, 1, 0.311, 1.064, 0.222, 1, 0.311, 0.795 ]
+					},
+					{ "time": 0.3333, "x": 1.064, "y": 0.795 }
+				]
+			},
+			"Spark_A": {
+				"rotate": [
+					{ "value": 25.25 }
+				],
+				"translate": [
+					{
+						"x": 52.01,
+						"y": 20.02,
+						"curve": [ 0.065, -20.11, 0.133, -63.32, 0.069, -4.01, 0.134, -23.17 ]
+					},
+					{ "time": 0.2, "x": -86.2, "y": -37.48 }
+				],
+				"scale": [
+					{},
+					{ "time": 0.2, "x": 1.224, "y": 0.806 }
+				]
+			},
+			"Spark_B": {
+				"rotate": [
+					{
+						"curve": [ 0.103, 0.5, 0.202, 19.68 ]
+					},
+					{ "time": 0.3, "value": 50.65 }
+				],
+				"translate": [
+					{
+						"x": 32.6,
+						"curve": [ 0.026, 1.1, 0.275, -126.58, 0.049, 53.56, 0.277, 33.17 ]
+					},
+					{ "time": 0.3, "x": -138.08, "y": -5.83 }
+				]
+			},
+			"Spark_C": {
+				"rotate": [
+					{ "value": -16.99 }
+				],
+				"translate": [
+					{
+						"x": 9.65,
+						"y": 9.65,
+						"curve": [ 0.067, -40.63, 0.1, -80.99, 0.067, 60.43, 0.1, 101.4 ]
+					},
+					{ "time": 0.1667, "x": -100.59, "y": 121.01 }
+				],
+				"scale": [
+					{},
+					{ "time": 0.1667, "x": 1.204, "y": 0.886 }
+				]
+			},
+			"Spark_D": {
+				"rotate": [
+					{
+						"value": -12.14,
+						"curve": [ 0.022, -0.43, 0.3, 35.98 ]
+					},
+					{ "time": 0.3333, "value": 35.98 }
+				],
+				"translate": [
+					{
+						"x": 3.22,
+						"curve": [ 0.009, -4.05, 0.32, -136.25, 0.009, 54.05, 0.32, 228.04 ]
+					},
+					{ "time": 0.3333, "x": -152.9, "y": 224.34 }
+				]
+			},
+			"Spark_E": {
+				"rotate": [
+					{ "value": -15.82 }
+				],
+				"translate": [
+					{
+						"x": 17.19,
+						"y": -3.44,
+						"curve": [ 0.067, 42.89, 0.133, 55.74, 0.066, 70.91, 0.133, 142.4 ]
+					},
+					{ "time": 0.2, "x": 55.74, "y": 152.2 }
+				],
+				"scale": [
+					{
+						"curve": [ 0.033, 1, 0.167, 1.452, 0.033, 1, 0.167, 0.691 ]
+					},
+					{ "time": 0.2, "x": 1.452, "y": 0.691 }
+				]
+			},
+			"Spark_F": {
+				"rotate": [
+					{ "value": -10.7 }
+				],
+				"translate": [
+					{
+						"x": 8.17,
+						"y": -34.73,
+						"curve": [ 0.067, 64.49, 0.133, 120.73, 0.067, -2.42, 0.133, 13.74 ]
+					},
+					{ "time": 0.2, "x": 120.73, "y": 13.74 }
+				],
+				"scale": [
+					{},
+					{ "time": 0.2, "x": 1.317, "y": 0.681 }
+				]
+			},
+			"Spark_G": {
+				"rotate": [
+					{ "value": -36.7 }
+				],
+				"translate": [
+					{
+						"x": -38.58,
+						"y": -30.2,
+						"curve": [ 0.066, 35.9, 0.101, 51.08, 0.067, -49.66, 0.1, -59.39 ]
+					},
+					{ "time": 0.1667, "x": 80.49, "y": -59.39 }
+				],
+				"scale": [
+					{},
+					{ "time": 0.1667, "x": 1.33, "y": 0.78 }
+				]
+			},
+			"Spark_H": {
+				"rotate": [
+					{
+						"curve": [ 0.075, 8.44, 0.198, -28.78 ]
+					},
+					{ "time": 0.2667, "value": -49.7 }
+				],
+				"translate": [
+					{
+						"x": -14.87,
+						"y": 32.72,
+						"curve": [ 0.07, 45.73, 0.187, 134.52, 0.068, 88.86, 0.201, 113.5 ]
+					},
+					{ "time": 0.2667, "x": 186.77, "y": 7.61 }
+				]
+			},
+			"Spark_I": {
+				"rotate": [
+					{ "value": -31.24 }
+				],
+				"translate": [
+					{
+						"x": -69.2,
+						"y": 26.66,
+						"curve": [ 0.067, -36.97, 0.133, 14.31, 0.067, -16.96, 0.133, -86.39 ]
+					},
+					{ "time": 0.2, "x": 14.31, "y": -86.39 }
+				],
+				"scale": [
+					{
+						"curve": [ 0.033, 1, 0.167, 1.271, 0.033, 1, 0.167, 0.808 ]
+					},
+					{ "time": 0.2, "x": 1.271, "y": 0.808 }
+				]
+			},
+			"Spark_J": {
+				"rotate": [
+					{
+						"value": -82.89,
+						"curve": [ 0.056, -73.6, 0.178, -68.95 ]
+					},
+					{ "time": 0.2333, "value": -68.95 }
+				],
+				"translate": [
+					{
+						"x": -68.26,
+						"y": 69.21,
+						"curve": [ 0.055, -80.93, 0.178, -106.48, 0.056, -1.7, 0.177, -0.25 ]
+					},
+					{ "time": 0.2333, "x": -120.64, "y": -71.05 }
+				]
+			}
+		}
+	},
+	"Electrocuted_Effect_Start": {
+		"slots": {
+			"Spark_A": {
+				"attachment": [
+					{ "name": "electricity/Sparks/Spark_A" },
+					{ "time": 0.2, "name": null },
+					{ "time": 0.4, "name": "electricity/Sparks/Spark_A" },
+					{ "time": 0.6, "name": null }
+				]
+			},
+			"Spark_B": {
+				"attachment": [
+					{ "name": "electricity/Sparks/Spark_B" },
+					{ "time": 0.3, "name": null }
+				]
+			},
+			"Spark_C": {
+				"attachment": [
+					{ "name": "electricity/Sparks/Spark_C" },
+					{ "time": 0.1667, "name": null }
+				]
+			},
+			"Spark_D": {
+				"attachment": [
+					{ "name": "electricity/Sparks/Spark_D" },
+					{ "time": 0.3333, "name": null },
+					{ "time": 0.6667, "name": "electricity/Sparks/Spark_D" }
+				]
+			},
+			"Spark_E": {
+				"attachment": [
+					{ "name": "electricity/Sparks/Spark_E" },
+					{ "time": 0.2, "name": null }
+				]
+			},
+			"Spark_F": {
+				"attachment": [
+					{ "name": "electricity/Sparks/Spark_F" },
+					{ "time": 0.2, "name": null },
+					{ "time": 0.4, "name": "electricity/Sparks/Spark_F" },
+					{ "time": 0.6, "name": null }
+				]
+			},
+			"Spark_G": {
+				"attachment": [
+					{ "name": "electricity/Sparks/Spark_G" },
+					{ "time": 0.1667, "name": null }
+				]
+			},
+			"Spark_H": {
+				"attachment": [
+					{ "name": "electricity/Sparks/Spark_H" },
+					{ "time": 0.2667, "name": null },
+					{ "time": 0.4, "name": "electricity/Sparks/Spark_H" },
+					{ "time": 0.6667, "name": null }
+				]
+			},
+			"Spark_I": {
+				"attachment": [
+					{ "name": "electricity/Sparks/Spark_I" },
+					{ "time": 0.2, "name": null },
+					{ "time": 0.5333, "name": "electricity/Sparks/Spark_I" },
+					{ "time": 0.7333, "name": null }
+				]
+			},
+			"Spark_J": {
+				"attachment": [
+					{ "name": "electricity/Sparks/Spark_J" },
+					{ "time": 0.2333, "name": null },
+					{ "time": 0.4, "name": "electricity/Sparks/Spark_J" },
+					{ "time": 0.6333, "name": null }
+				]
+			},
+			"yellow_spark_A": {
+				"attachment": [
+					{ "name": "electricity/Yellow Shock Sparks/spark_A" },
+					{ "time": 0.1333, "name": null }
+				]
+			},
+			"yellow_spark_B": {
+				"attachment": [
+					{ "time": 0.1333, "name": "electricity/Yellow Shock Sparks/spark_B" },
+					{ "time": 0.2667, "name": null }
+				]
+			},
+			"yellow_spark_C": {
+				"attachment": [
+					{ "time": 0.2667, "name": "electricity/Yellow Shock Sparks/spark_C" },
+					{ "time": 0.4, "name": null }
+				]
+			},
+			"yellow_spark_D": {
+				"attachment": [
+					{ "time": 0.4, "name": "electricity/Yellow Shock Sparks/spark_D" },
+					{ "time": 0.5333, "name": null }
+				]
+			},
+			"yellow_spark_E": {
+				"attachment": [
+					{ "time": 0.5333, "name": "electricity/Yellow Shock Sparks/spark_E" },
+					{ "time": 0.6667, "name": null }
+				]
+			},
+			"yellow_spark_F": {
+				"attachment": [
+					{ "time": 0.6667, "name": "electricity/Yellow Shock Sparks/spark_F" },
+					{ "time": 0.8, "name": null }
+				]
+			}
+		},
+		"bones": {
+			"yellow_spark_A": {
+				"translate": [
+					{ "x": 64.68, "y": -14.06 }
+				],
+				"scale": [
+					{
+						"x": 0.404,
+						"y": 0.404,
+						"curve": [ 0.022, 0.603, 0.111, 1, 0.022, 0.603, 0.111, 1 ]
+					},
+					{ "time": 0.1333 }
+				]
+			},
+			"Spark_A": {
+				"rotate": [
+					{ "value": 25.25 }
+				],
+				"translate": [
+					{
+						"x": 52.01,
+						"y": 20.02,
+						"curve": [ 0.065, -20.11, 0.133, -63.32, 0.069, -4.01, 0.134, -23.17 ]
+					},
+					{ "time": 0.2, "x": -86.2, "y": -37.48, "curve": "stepped" },
+					{
+						"time": 0.4,
+						"x": 52.01,
+						"y": 20.02,
+						"curve": [ 0.465, -20.11, 0.533, -63.32, 0.469, -4.01, 0.534, -23.17 ]
+					},
+					{ "time": 0.6, "x": -86.2, "y": -37.48 }
+				],
+				"scale": [
+					{},
+					{ "time": 0.2, "x": 1.224, "y": 0.806, "curve": "stepped" },
+					{ "time": 0.4 },
+					{ "time": 0.6, "x": 1.224, "y": 0.806 }
+				]
+			},
+			"Spark_B": {
+				"rotate": [
+					{
+						"curve": [ 0.103, 0.5, 0.202, 19.68 ]
+					},
+					{ "time": 0.3, "value": 50.65 }
+				],
+				"translate": [
+					{
+						"x": 32.6,
+						"curve": [ 0.026, 1.1, 0.275, -126.58, 0.049, 53.56, 0.277, 33.17 ]
+					},
+					{ "time": 0.3, "x": -138.08, "y": -5.83 }
+				]
+			},
+			"Spark_C": {
+				"rotate": [
+					{ "value": -16.99 }
+				],
+				"translate": [
+					{
+						"x": 9.65,
+						"y": 9.65,
+						"curve": [ 0.067, -40.63, 0.1, -80.99, 0.067, 60.43, 0.1, 101.4 ]
+					},
+					{ "time": 0.1667, "x": -100.59, "y": 121.01 }
+				],
+				"scale": [
+					{},
+					{ "time": 0.1667, "x": 1.204, "y": 0.886 }
+				]
+			},
+			"Spark_D": {
+				"rotate": [
+					{
+						"value": -12.14,
+						"curve": [ 0.022, -0.43, 0.3, 35.98 ]
+					},
+					{ "time": 0.3333, "value": 35.98, "curve": "stepped" },
+					{
+						"time": 0.6667,
+						"value": -12.14,
+						"curve": [ 0.689, -0.43, 0.778, 9.59 ]
+					},
+					{ "time": 0.8, "value": 17.46 }
+				],
+				"translate": [
+					{
+						"x": 3.22,
+						"curve": [ 0.009, -4.05, 0.32, -136.25, 0.009, 54.05, 0.32, 228.04 ]
+					},
+					{ "time": 0.3333, "x": -152.9, "y": 224.34, "curve": "stepped" },
+					{
+						"time": 0.6667,
+						"x": 3.22,
+						"curve": [ 0.676, -4.05, 0.77, -27.75, 0.676, 54.05, 0.77, 102.69 ]
+					},
+					{ "time": 0.8, "x": -55.36, "y": 141.69 }
+				]
+			},
+			"Spark_E": {
+				"rotate": [
+					{ "value": -15.82 }
+				],
+				"translate": [
+					{
+						"x": 17.19,
+						"y": -3.44,
+						"curve": [ 0.067, 42.89, 0.133, 55.74, 0.066, 70.91, 0.133, 142.4 ]
+					},
+					{ "time": 0.2, "x": 55.74, "y": 152.2 }
+				],
+				"scale": [
+					{
+						"curve": [ 0.033, 1, 0.167, 1.452, 0.033, 1, 0.167, 0.691 ]
+					},
+					{ "time": 0.2, "x": 1.452, "y": 0.691 }
+				]
+			},
+			"Spark_F": {
+				"rotate": [
+					{ "value": -10.7 }
+				],
+				"translate": [
+					{
+						"x": 8.17,
+						"y": -34.73,
+						"curve": [ 0.067, 64.49, 0.133, 100.23, 0.067, -2.42, 0.133, 13.74 ]
+					},
+					{ "time": 0.2, "x": 120.73, "y": 13.74, "curve": "stepped" },
+					{
+						"time": 0.4,
+						"x": 8.17,
+						"y": -34.73,
+						"curve": [ 0.467, 64.49, 0.533, 100.23, 0.467, -2.42, 0.533, 13.74 ]
+					},
+					{ "time": 0.6, "x": 120.73, "y": 13.74 }
+				],
+				"scale": [
+					{},
+					{ "time": 0.2, "x": 1.317, "y": 0.681, "curve": "stepped" },
+					{ "time": 0.4 },
+					{ "time": 0.6, "x": 1.317, "y": 0.681 }
+				]
+			},
+			"Spark_G": {
+				"rotate": [
+					{ "value": -36.7 }
+				],
+				"translate": [
+					{
+						"x": -38.58,
+						"y": -30.2,
+						"curve": [ 0.066, 35.9, 0.101, 51.08, 0.067, -49.66, 0.1, -59.39 ]
+					},
+					{ "time": 0.1667, "x": 80.49, "y": -59.39 }
+				],
+				"scale": [
+					{},
+					{ "time": 0.1667, "x": 1.33, "y": 0.78 }
+				]
+			},
+			"Spark_H": {
+				"rotate": [
+					{
+						"curve": [ 0.075, 8.44, 0.198, -28.78 ]
+					},
+					{ "time": 0.2667, "value": -49.7, "curve": "stepped" },
+					{
+						"time": 0.4,
+						"curve": [ 0.475, 8.44, 0.598, -28.78 ]
+					},
+					{ "time": 0.6667, "value": -49.7 }
+				],
+				"translate": [
+					{
+						"x": -14.87,
+						"y": 32.72,
+						"curve": [ 0.07, 45.73, 0.187, 134.52, 0.068, 88.86, 0.201, 113.5 ]
+					},
+					{ "time": 0.2667, "x": 186.77, "y": 7.61, "curve": "stepped" },
+					{
+						"time": 0.4,
+						"x": -14.87,
+						"y": 32.72,
+						"curve": [ 0.47, 45.73, 0.587, 134.52, 0.468, 88.86, 0.601, 113.5 ]
+					},
+					{ "time": 0.6667, "x": 186.77, "y": 7.61 }
+				]
+			},
+			"Spark_I": {
+				"rotate": [
+					{ "value": -31.24 }
+				],
+				"translate": [
+					{
+						"x": -69.2,
+						"y": 26.66,
+						"curve": [ 0.067, -36.97, 0.133, 14.31, 0.067, -16.96, 0.133, -86.39 ]
+					},
+					{ "time": 0.2, "x": 14.31, "y": -86.39, "curve": "stepped" },
+					{
+						"time": 0.5333,
+						"x": -69.2,
+						"y": 26.66,
+						"curve": [ 0.6, -36.97, 0.667, 14.31, 0.6, -16.96, 0.667, -86.39 ]
+					},
+					{ "time": 0.7333, "x": 14.31, "y": -86.39 }
+				],
+				"scale": [
+					{
+						"curve": [ 0.033, 1, 0.167, 1.271, 0.033, 1, 0.167, 0.808 ]
+					},
+					{ "time": 0.2, "x": 1.271, "y": 0.808, "curve": "stepped" },
+					{
+						"time": 0.5333,
+						"curve": [ 0.567, 1, 0.7, 1.271, 0.567, 1, 0.7, 0.808 ]
+					},
+					{ "time": 0.7333, "x": 1.271, "y": 0.808 }
+				]
+			},
+			"Spark_J": {
+				"rotate": [
+					{
+						"value": -82.89,
+						"curve": [ 0.056, -73.6, 0.178, -68.95 ]
+					},
+					{ "time": 0.2333, "value": -68.95, "curve": "stepped" },
+					{
+						"time": 0.4,
+						"value": -82.89,
+						"curve": [ 0.456, -73.6, 0.578, -68.95 ]
+					},
+					{ "time": 0.6333, "value": -68.95 }
+				],
+				"translate": [
+					{
+						"x": -68.26,
+						"y": 69.21,
+						"curve": [ 0.055, -80.93, 0.178, -106.48, 0.056, -1.7, 0.177, -0.25 ]
+					},
+					{ "time": 0.2333, "x": -120.64, "y": -71.05, "curve": "stepped" },
+					{
+						"time": 0.4,
+						"x": -68.26,
+						"y": 69.21,
+						"curve": [ 0.455, -80.93, 0.578, -106.48, 0.456, -1.7, 0.577, -0.25 ]
+					},
+					{ "time": 0.6333, "x": -120.64, "y": -71.05 }
+				]
+			},
+			"yellow_spark_B": {
+				"translate": [
+					{ "time": 0.1333, "x": 59.04, "y": -292.93 }
+				],
+				"scale": [
+					{
+						"time": 0.1333,
+						"x": 0.488,
+						"y": 0.488,
+						"curve": [ 0.156, 0.829, 0.244, 1, 0.156, 0.829, 0.244, 1 ]
+					},
+					{ "time": 0.2667 }
+				]
+			},
+			"yellow_spark_C": {
+				"rotate": [
+					{ "time": 0.2667, "value": -57.41 }
+				],
+				"translate": [
+					{ "time": 0.2667, "x": -189.51, "y": -228.1 }
+				],
+				"scale": [
+					{
+						"time": 0.2667,
+						"x": 0.444,
+						"y": 0.444,
+						"curve": [ 0.289, 0.815, 0.378, 1, 0.289, 0.815, 0.378, 1 ]
+					},
+					{ "time": 0.4 }
+				]
+			},
+			"yellow_spark_D": {
+				"translate": [
+					{ "time": 0.4, "x": -93.1, "y": -2.27 }
+				],
+				"scale": [
+					{
+						"time": 0.4,
+						"x": 0.376,
+						"y": 0.376,
+						"curve": [ 0.422, 0.792, 0.511, 1, 0.422, 0.792, 0.511, 1 ]
+					},
+					{ "time": 0.5333 }
+				]
+			},
+			"yellow_spark_E": {
+				"translate": [
+					{ "time": 0.5333, "x": -97.64, "y": 193.01 }
+				],
+				"scale": [
+					{
+						"time": 0.5333,
+						"x": 0.39,
+						"y": 0.39,
+						"curve": [ 0.556, 0.797, 0.644, 1, 0.556, 0.797, 0.644, 1 ]
+					},
+					{ "time": 0.6667 }
+				]
+			},
+			"yellow_spark_F": {
+				"rotate": [
+					{ "time": 0.6667, "value": 31.17 }
+				],
+				"translate": [
+					{ "time": 0.6667, "x": 63.48, "y": 210.61 }
+				],
+				"scale": [
+					{
+						"time": 0.6667,
+						"x": 0.237,
+						"y": 0.237,
+						"curve": [ 0.689, 0.746, 0.778, 1, 0.689, 0.746, 0.778, 1 ]
+					},
+					{ "time": 0.8 }
+				]
+			}
+		}
+	}
+}
+}

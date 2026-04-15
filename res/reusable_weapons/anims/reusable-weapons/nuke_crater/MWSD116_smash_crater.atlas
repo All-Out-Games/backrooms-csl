@@ -1,0 +1,23 @@
+00132fc5d9e4fa96.png
+	size: 1024, 1024
+	filter: Linear, Linear
+Crater
+	bounds: 6, 442, 711, 343
+	offsets: 1, 1, 713, 345
+Rock Particles/Pebble 1
+	bounds: 723, 587, 49, 55
+	offsets: 1, 1, 51, 57
+Rock Particles/Pebble 2
+	bounds: 723, 648, 59, 50
+	offsets: 1, 1, 61, 52
+	rotate: 90
+Rock Particles/Pebble 3
+	bounds: 723, 506, 25, 29
+	offsets: 1, 2, 27, 32
+Rock Particles/Pebble 4
+	bounds: 723, 541, 40, 30
+	offsets: 1, 1, 42, 32
+	rotate: 90
+Rock Particles/Pebble 7
+	bounds: 723, 713, 62, 72
+	offsets: 1, 1, 64, 74

@@ -1,0 +1,142 @@
+BAT003_fireball.png
+	size: 2596, 1704
+	filter: Linear, Linear
+fire_explosion/big_spark
+	bounds: 2047, 696, 286, 269
+	offsets: 1, 1, 288, 271
+fire_explosion/dissipation_A
+	bounds: 2213, 16, 167, 140
+	offsets: 3, 3, 172, 146
+fire_explosion/dissipation_B
+	bounds: 2355, 500, 131, 140
+	offsets: 2, 2, 135, 144
+fire_explosion/dissipation_C
+	bounds: 2513, 1218, 77, 86
+	offsets: 3, 3, 83, 91
+fire_explosion/dissipation_D
+	bounds: 2391, 159, 115, 150
+	offsets: 3, 3, 121, 155
+fire_explosion/dissipation_smoke_A
+	bounds: 2449, 903, 116, 123
+	offsets: 3, 3, 122, 129
+fire_explosion/dissipation_smoke_B
+	bounds: 2383, 11, 125, 145
+	offsets: 4, 3, 132, 150
+fire_explosion/dissipation_smoke_C
+	bounds: 2336, 780, 120, 120
+	offsets: 3, 3, 126, 126
+fire_explosion/dissipation_smoke_D
+	bounds: 2336, 643, 130, 134
+	offsets: 3, 3, 136, 140
+fire_explosion/explosion_cloud_A
+	bounds: 2290, 332, 168, 165
+	offsets: 3, 3, 174, 171
+fire_explosion/explosion_cloud_B
+	bounds: 2047, 166, 174, 163
+	offsets: 3, 3, 180, 169
+fire_explosion/explosion_cloud_C
+	bounds: 2224, 159, 164, 170
+	offsets: 3, 3, 170, 176
+fire_explosion/explosion_cloud_D
+	bounds: 2047, 5, 163, 158
+	offsets: 3, 3, 169, 164
+fire_explosion/explosion_cloud_E
+	bounds: 2194, 500, 158, 124
+	offsets: 3, 3, 164, 130
+fire_explosion/flame_particle_A
+	bounds: 2459, 780, 102, 96
+	offsets: 3, 2, 108, 100
+fire_explosion/flame_particle_B
+	bounds: 2523, 409, 54, 82
+	offsets: 2, 2, 58, 86
+fire_explosion/flame_particle_C
+	bounds: 2513, 1307, 89, 73
+	offsets: 2, 2, 93, 77
+	rotate: 90
+fire_explosion/flame_particle_D
+	bounds: 2511, 24, 73, 91
+	offsets: 2, 2, 77, 96
+fire_explosion/flame_particle_E
+	bounds: 2449, 1029, 81, 102
+	offsets: 2, 2, 86, 106
+fire_explosion/glow
+	bounds: 2047, 1229, 463, 471
+	offsets: 10, 9, 483, 485
+fire_explosion/line_A
+	bounds: 2489, 595, 96, 37
+	offsets: 1, 1, 98, 39
+fire_explosion/line_B
+	bounds: 2461, 312, 59, 181
+	offsets: 1, 1, 61, 183
+fire_explosion/line_C
+	bounds: 2047, 465, 144, 228
+	offsets: 1, 1, 146, 230
+fire_explosion/smoke_particle_A
+	bounds: 2469, 643, 95, 102
+	offsets: 3, 3, 101, 107
+fire_explosion/smoke_particle_B
+	bounds: 2489, 496, 74, 96
+	offsets: 3, 3, 80, 101
+fire_explosion/smoke_particle_C
+	bounds: 2513, 1399, 72, 71
+	offsets: 3, 3, 78, 77
+fire_explosion/spark
+	bounds: 2541, 1134, 41, 40
+	offsets: 2, 3, 45, 46
+fire_explosion/spike_particle
+	bounds: 2511, 118, 36, 191
+	offsets: 1, 1, 38, 193
+fireball_template
+	bounds: 3, 3, 2041, 1697
+	offsets: 1, 1, 2043, 1699
+projectile/diamond_particle
+	bounds: 2541, 1029, 102, 41
+	offsets: 1, 1, 104, 43
+	rotate: 90
+projectile/main_piece
+	bounds: 2047, 332, 240, 130
+	offsets: 1, 1, 242, 132
+projectile/overlay
+	bounds: 2047, 968, 399, 258
+	offsets: 20, 18, 437, 294
+projectile/ring_A
+	bounds: 2550, 219, 36, 72
+	offsets: 1, 1, 38, 74
+projectile/ring_B
+	bounds: 2567, 635, 16, 119
+	offsets: 1, 1, 18, 121
+projectile/ring_C
+	bounds: 2513, 1538, 42, 84
+	offsets: 1, 1, 44, 86
+projectile/ring_D
+	bounds: 2550, 118, 37, 98
+	offsets: 1, 1, 39, 100
+projectile/ring_E
+	bounds: 2566, 494, 15, 48
+	offsets: 1, 1, 17, 50
+projectile/round_particle
+	bounds: 2511, 5, 16, 16
+	offsets: 1, 1, 18, 18
+projectile/smoke_A
+	bounds: 2523, 312, 94, 62
+	offsets: 2, 3, 99, 68
+	rotate: 90
+projectile/smoke_B
+	bounds: 2449, 1134, 89, 81
+	offsets: 3, 3, 95, 87
+projectile/smoke_C
+	bounds: 2513, 1473, 70, 62
+	offsets: 4, 3, 78, 68
+projectile/smoke_D
+	bounds: 2541, 1177, 39, 33
+	offsets: 2, 3, 44, 38
+projectile/spark_particle_A
+	bounds: 2513, 1625, 66, 38
+	offsets: 2, 2, 70, 42
+projectile/spark_particle_B
+	bounds: 2558, 1538, 40, 28
+	offsets: 2, 2, 44, 31
+	rotate: 90
+projectile/spark_particle_C
+	bounds: 2513, 1666, 59, 33
+	offsets: 2, 2, 63, 37

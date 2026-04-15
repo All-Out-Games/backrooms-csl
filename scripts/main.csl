@@ -1,0 +1,211 @@
+import "core:ao"
+import "match"
+import "reusable_weapons"
+
+ao_before_scene_load :: proc() {
+    // Called before the scene is loaded
+}
+
+ao_start :: proc() {
+    // Called after the scene is loaded
+}
+
+ao_update :: proc(dt: float) {
+    // Called once per frame
+}
+
+ao_late_update :: proc(dt: float) {
+    // Called once per frame after physics has been resolved
+}
+
+
+
+// Translucent highlighted silhouette for the player spine (see res/shaders/spine_silhouette_highlight.aosl).
+apply_player_spine_silhouette_material :: proc(player: Player) {
+    shader := get_asset(Shader_Asset, "shaders/spine_silhouette_highlight.aosl");
+    if shader == null return;
+    mat := Material.create(shader);
+    if mat == null return;
+    mat.set_float3("fill_rgb", v3{0.18, 0.72, 1.0});
+    mat.set_float("fill_alpha", 0.36);
+    mat.set_float3("edge_rgb", v3{0.45, 1.0, 1.0});
+    mat.set_float("edge_strength", 1.2);
+    mat.set_float("edge_width", 10.0);
+    player.animator.set_material(mat, true);
+}
+
+Player :: class : Player_Base {
+    // Lobby: prefer being randomly chosen as Entity (synced for match start).
+    entity_opt_in: bool;
+    weapon_target: Weapon_Target;
+    equipped_weapon_type: Weapon_Type;
+    equipped_item_def: Item_Definition;
+    last_selected_index: s64;
+    boomwheel_cannon: Boomwheel_Cannon; // only needed if using Boomwheel
+
+    footstep_stride_accum: float;
+    footstep_left_next: bool;
+
+    ao_start :: method() {
+        entity_opt_in = false;
+        footstep_stride_accum = 0.0;
+        footstep_left_next = false;
+
+        wt := entity.add_component(Weapon_Target);
+        wt.health = 100.0;
+        wt.max_health = 100.0;
+        wt.owner_entity_id = entity.id;
+        weapon_target = wt;
+
+        last_selected_index = -1;
+
+        init_weapon_items();
+        setup_reusable_weapons_player_state_machine(this);
+        apply_player_spine_silhouette_material(this);
+    }
+
+    is_round_entity :: method() -> bool {
+        gm := get_game_manager();
+        if !#alive(gm) {
+            return false;
+        }
+        return gm.is_entity_player(this);
+    }
+
+    is_round_survivor :: method() -> bool {
+        gm := get_game_manager();
+        if !#alive(gm) {
+            return false;
+        }
+        return gm.is_survivor_player(this);
+    }
+
+    ao_update :: method(dt: float) {
+        tick_footstep_echo_for_player(this, dt);
+    }
+
+    ao_late_update :: method(dt: float) {
+        if is_local_or_server() {
+            draw_match_lobby_ui(this);
+            gm := get_game_manager();
+            if #alive(gm) && gm.phase == .LOBBY {
+                if entity_opt_in {
+                    draw_ability_button(this, Lobby_Withdraw_Entity_Ability, 0);
+                } else {
+                    draw_ability_button(this, Lobby_Volunteer_Entity_Ability, 0);
+                }
+            }
+        }
+
+         if is_local_or_server() {
+        // Draw fire ability button based on equipped weapon
+        if equipped_weapon_type != .NONE {
+            config := get_weapon_config(equipped_weapon_type);
+            switch config.fire_mode {
+                case .CONTINUOUS:  { draw_ability_button(this, Continuous_Fire_Ability, 0); }
+                case .SINGLE_SHOT: { draw_ability_button(this, Single_Shot_Ability, 0); }
+                case .SPREAD:      { draw_ability_button(this, Spread_Shot_Ability, 0); }
+                case .LOBBED:      { draw_ability_button(this, Lobbed_Shot_Ability, 0); }
+                case .BEAM:        { draw_ability_button(this, Beam_Ability, 0); }
+                case .SPECIAL:     { draw_ability_button(this, Special_Ability, 0); }
+            }
+            draw_ability_button(this, Melee_Ability, 1); // optional melee
+        }
+
+        // Draw hotbar and handle equip/unequip
+        options := Inventory_Draw_Options.default();
+        hotbar := Items.draw_hotbar(this, default_inventory, options);
+        handle_equipped_item_changing(hotbar.selected_item_index);
+        }
+
+        if !Game.is_server() {
+            draw_health_bar(this); // from weapons_ui_helpers.csl
+        }
+    }
+
+    ao_end :: method() {
+        // Called when this component is destroyed
+    }
+
+    ao_can_use_ability :: method(ability: Ability_Base) -> bool {
+        // Called to determine if the player is allowed to use the given ability
+        return true;
+    }
+
+    ao_can_use_interactable :: method(interactable: Interactable) -> bool {
+        // Called to determine if the player is allowed to use the given interactable
+        return true;
+    }
+
+    ao_on_interactable_used :: method(interactable: Interactable) {
+        // Called when the player uses the given interactable
+    }
+
+    ao_on_holding_interactable :: method(interactable: Interactable) {
+        // Called once per frame while the player is holding on the interactable
+    }
+
+    ao_on_state_sync :: method() {
+        // Called on the client after applying a state sync from the server
+        // Use this to override things for the local player only like name colors or lighting for example
+    }
+
+
+     handle_equipped_item_changing :: method(selected_index: s64) {
+        // Resolve item from hotbar index
+        selected_item: Item_Instance;
+        if selected_index >= 0 && selected_index < default_inventory.capacity {
+            selected_item = default_inventory.get_item(selected_index);
+        }
+
+        new_def: Item_Definition;
+        if selected_item != null {
+            new_def = selected_item.get_definition();
+        }
+
+        // Skip if nothing changed
+        if selected_index == last_selected_index && new_def == equipped_item_def return;
+        last_selected_index = selected_index;
+
+        // Skip if same item definition
+        if new_def == equipped_item_def return;
+
+        // Unequip old weapon
+        if equipped_weapon_type != .NONE {
+            weapon_unequip(this, equipped_weapon_type);
+            equipped_weapon_type = .NONE;
+        }
+        equipped_item_def = null;
+
+        // Equip new weapon if it's a registered weapon
+        if new_def != null {
+            wt := get_weapon_type_for_item(new_def);
+            if wt != .NONE {
+                weapon_equip(this, wt);
+                equipped_weapon_type = wt;
+                equipped_item_def = new_def;
+            }
+        }
+    }
+
+}
+
+draw_ability_name_label :: proc(button_rect: Rect, label: string) {
+	if label.count <= 0 return;
+
+	bg := get_asset(Texture_Asset, "$AO/white.png");
+
+	// Draw a small strip at the bottom of the button for readability.
+	label_rect := button_rect.inset(8).cut_bottom(30);
+	UI.quad(label_rect, bg, v4.{0, 0, 0, 0.55});
+
+	ts := UI.default_text_settings();
+	ts.size = 22;
+	ts.color = v4.{1, 1, 1, 1};
+	ts.halign = .CENTER;
+	ts.valign = .CENTER;
+	ts.do_outline = true;
+	ts.outline_thickness = 2;
+	ts.outline_color = v4.{0, 0, 0, 1};
+	UI.text(label_rect, ts, label);
+}

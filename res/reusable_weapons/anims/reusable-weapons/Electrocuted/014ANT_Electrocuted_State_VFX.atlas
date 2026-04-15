@@ -1,0 +1,55 @@
+014ANT_Electrocuted_State_VFX.png
+	size: 728, 136
+	filter: Linear, Linear
+	scale: 0.5
+electricity/Sparks/Spark_A
+	bounds: 539, 78, 52, 20
+	rotate: 90
+electricity/Sparks/Spark_B
+	bounds: 716, 114, 16, 6
+	rotate: 90
+electricity/Sparks/Spark_C
+	bounds: 505, 84, 46, 28
+	rotate: 90
+electricity/Sparks/Spark_D
+	bounds: 691, 116, 7, 14
+electricity/Sparks/Spark_E
+	bounds: 653, 98, 15, 32
+	offsets: 0, 1, 15, 34
+electricity/Sparks/Spark_F
+	bounds: 565, 96, 34, 30
+	rotate: 90
+electricity/Sparks/Spark_G
+	bounds: 629, 95, 35, 18
+	offsets: 0, 1, 35, 19
+	rotate: 90
+electricity/Sparks/Spark_H
+	bounds: 704, 114, 16, 6
+	rotate: 90
+electricity/Sparks/Spark_I
+	bounds: 601, 90, 40, 22
+	rotate: 90
+electricity/Sparks/Spark_J
+	bounds: 674, 116, 14, 11
+	rotate: 90
+electricity/Yellow Shock Sparks/spark_A
+	bounds: 212, 30, 85, 100
+	offsets: 1, 1, 87, 102
+electricity/Yellow Shock Sparks/spark_B
+	bounds: 117, 6, 124, 89
+	offsets: 1, 1, 126, 91
+	rotate: 90
+electricity/Yellow Shock Sparks/spark_C
+	bounds: 303, 31, 99, 76
+	offsets: 1, 1, 101, 78
+	rotate: 90
+electricity/Yellow Shock Sparks/spark_D
+	bounds: 6, 21, 105, 109
+	offsets: 1, 1, 107, 111
+electricity/Yellow Shock Sparks/spark_E
+	bounds: 385, 44, 86, 60
+	offsets: 1, 1, 88, 62
+	rotate: 90
+electricity/Yellow Shock Sparks/spark_F
+	bounds: 451, 68, 48, 62
+	offsets: 1, 1, 50, 64

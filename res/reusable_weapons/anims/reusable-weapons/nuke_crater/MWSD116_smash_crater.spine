@@ -1,0 +1,601 @@
+{
+"skeleton": { "hash": "axgocdbFVaM", "spine": "4.0.64", "x": -376.2, "y": -172.5, "width": 713, "height": 345 },
+"bones": [
+	{ "name": "root" },
+	{ "name": "Crater", "parent": "root" },
+	{ "name": "Rock Particles/Pebble 7", "parent": "root", "x": -13.15, "y": 35.83 },
+	{ "name": "Rock Particles/Pebble 2", "parent": "root", "x": 35.63, "y": 18.46 },
+	{ "name": "Rock Particles/Pebble 4", "parent": "root", "x": 15.5, "y": -20.72 },
+	{ "name": "Rock Particles/Pebble 3", "parent": "root", "x": -14.63, "y": -13.05 },
+	{ "name": "Rock Particles/Pebble 1", "parent": "root", "x": -46.44, "y": -13.43 },
+	{ "name": "Rock Particles/Pebble 5", "parent": "root", "x": -46.44, "y": -13.43 },
+	{ "name": "Rock Particles/Pebble 6", "parent": "root", "x": -14.63, "y": -13.05 }
+],
+"slots": [
+	{ "name": "Crater", "bone": "Crater", "attachment": "Crater" },
+	{ "name": "Rock Particles/Pebble 1", "bone": "Rock Particles/Pebble 1" },
+	{ "name": "Rock Particles/Pebble 5", "bone": "Rock Particles/Pebble 5" },
+	{ "name": "Rock Particles/Pebble 2", "bone": "Rock Particles/Pebble 2" },
+	{ "name": "Rock Particles/Pebble 3", "bone": "Rock Particles/Pebble 3" },
+	{ "name": "Rock Particles/Pebble 6", "bone": "Rock Particles/Pebble 6" },
+	{ "name": "Rock Particles/Pebble 4", "bone": "Rock Particles/Pebble 4" },
+	{ "name": "Rock Particles/Pebble 7", "bone": "Rock Particles/Pebble 7" }
+],
+"skins": [
+	{
+		"name": "default",
+		"attachments": {
+			"Crater": {
+				"Crater": { "x": -19.7, "width": 713, "height": 345 }
+			},
+			"Rock Particles/Pebble 1": {
+				"Rock Particles/Pebble 1": { "x": 0.9, "y": -1.66, "width": 51, "height": 57 }
+			},
+			"Rock Particles/Pebble 2": {
+				"Rock Particles/Pebble 2": { "x": 0.76, "y": 1.26, "width": 61, "height": 52 }
+			},
+			"Rock Particles/Pebble 3": {
+				"Rock Particles/Pebble 3": { "x": 0.82, "y": -2.63, "width": 27, "height": 32 }
+			},
+			"Rock Particles/Pebble 4": {
+				"Rock Particles/Pebble 4": { "x": 2.6, "y": -1.64, "width": 42, "height": 32 }
+			},
+			"Rock Particles/Pebble 5": {
+				"Rock Particles/Pebble 1": { "x": 0.9, "y": -1.66, "width": 51, "height": 57 }
+			},
+			"Rock Particles/Pebble 6": {
+				"Rock Particles/Pebble 3": { "x": 0.82, "y": -2.63, "width": 27, "height": 32 }
+			},
+			"Rock Particles/Pebble 7": {
+				"Rock Particles/Pebble 7": { "x": 0.87, "y": -5.19, "width": 64, "height": 74 }
+			}
+		}
+	}
+],
+"animations": {
+	"MWSD116/despawn": {
+		"slots": {
+			"Crater": {
+				"rgba": [
+					{
+						"time": 0.1667,
+						"color": "ffffffff",
+						"curve": [ 0.222, 1, 0.236, 1, 0.222, 1, 0.236, 1, 0.222, 1, 0.236, 1, 0.222, 1, 0.236, 0 ]
+					},
+					{ "time": 0.2917, "color": "ffffff00", "curve": "stepped" },
+					{ "time": 0.375, "color": "ffffff00" }
+				]
+			},
+			"Rock Particles/Pebble 1": {
+				"rgba": [
+					{ "time": 0.125, "color": "ffffffff", "curve": "stepped" },
+					{ "time": 0.3333, "color": "ffffffff" },
+					{ "time": 0.4583, "color": "ffffff00" }
+				],
+				"attachment": [
+					{ "time": 0.0833, "name": "Rock Particles/Pebble 1" },
+					{ "time": 0.125, "name": "Rock Particles/Pebble 1" }
+				]
+			},
+			"Rock Particles/Pebble 3": {
+				"rgba": [
+					{ "time": 0.125, "color": "ffffffff", "curve": "stepped" },
+					{ "time": 0.375, "color": "ffffffff" },
+					{ "time": 0.5, "color": "ffffff00" }
+				],
+				"attachment": [
+					{ "time": 0.0833, "name": null },
+					{ "time": 0.125, "name": "Rock Particles/Pebble 3" }
+				]
+			},
+			"Rock Particles/Pebble 4": {
+				"rgba": [
+					{ "time": 0.125, "color": "ffffffff", "curve": "stepped" },
+					{ "time": 0.3333, "color": "ffffffff" },
+					{ "time": 0.4583, "color": "ffffff00" }
+				],
+				"attachment": [
+					{ "time": 0.0833, "name": "Rock Particles/Pebble 4" },
+					{ "time": 0.125, "name": "Rock Particles/Pebble 4" }
+				]
+			},
+			"Rock Particles/Pebble 5": {
+				"rgba": [
+					{ "time": 0.125, "color": "ffffffff", "curve": "stepped" },
+					{ "time": 0.375, "color": "ffffffff" },
+					{ "time": 0.5, "color": "ffffff00" }
+				],
+				"attachment": [
+					{ "time": 0.0833, "name": "Rock Particles/Pebble 1" },
+					{ "time": 0.125, "name": "Rock Particles/Pebble 1" }
+				]
+			},
+			"Rock Particles/Pebble 6": {
+				"rgba": [
+					{ "time": 0.125, "color": "ffffffff", "curve": "stepped" },
+					{ "time": 0.3333, "color": "ffffffff" },
+					{ "time": 0.4583, "color": "ffffff00" }
+				],
+				"attachment": [
+					{ "time": 0.0833, "name": "Rock Particles/Pebble 3" },
+					{ "time": 0.125, "name": "Rock Particles/Pebble 3" }
+				]
+			},
+			"Rock Particles/Pebble 7": {
+				"rgba": [
+					{ "time": 0.1667, "color": "ffffffff", "curve": "stepped" },
+					{ "time": 0.4583, "color": "ffffffff" },
+					{ "time": 0.5833, "color": "ffffff00" }
+				],
+				"attachment": [
+					{ "time": 0.125, "name": "Rock Particles/Pebble 7" },
+					{ "time": 0.1667, "name": "Rock Particles/Pebble 7" }
+				]
+			}
+		},
+		"bones": {
+			"Crater": {
+				"scale": [
+					{
+						"curve": [ 0.023, 1, 0.053, 1.054, 0.023, 1, 0.053, 0.948 ]
+					},
+					{ "time": 0.0833, "x": 1.012, "y": 0.906, "curve": "stepped" },
+					{
+						"time": 0.1667,
+						"x": 0.807,
+						"y": 1.009,
+						"curve": [ 0.208, 0.704, 0.208, 0.582, 0.208, 1.009, 0.208, 0.831 ]
+					},
+					{ "time": 0.25, "x": 0.528, "y": 0.809, "curve": "stepped" },
+					{ "time": 0.2917, "x": 0.474, "y": 0.788 }
+				]
+			},
+			"Rock Particles/Pebble 1": {
+				"rotate": [
+					{ "time": 0.0833 },
+					{ "time": 0.125, "value": 96.27 },
+					{ "time": 0.4167, "value": 433.21 }
+				],
+				"translate": [
+					{
+						"time": 0.0833,
+						"x": 137.83,
+						"y": -9.75,
+						"curve": [ 0.111, 137.83, 0.097, 118.42, 0.111, -9.75, 0.097, 4.04 ]
+					},
+					{
+						"time": 0.125,
+						"x": 87.97,
+						"y": 21.12,
+						"curve": [ 0.167, 42.29, 0.209, 158.85, 0.167, 46.74, 0.209, 165.33 ]
+					},
+					{
+						"time": 0.25,
+						"x": 93.33,
+						"y": 169.34,
+						"curve": [ 0.306, 6.36, 0.361, -72.72, 0.306, 174.67, 0.361, 45.61 ]
+					},
+					{ "time": 0.4167, "x": -72.72, "y": 45.61 }
+				]
+			},
+			"Rock Particles/Pebble 3": {
+				"rotate": [
+					{ "time": 0.0833 },
+					{ "time": 0.125, "value": 96.27 },
+					{ "time": 0.4583, "value": 433.21 }
+				],
+				"translate": [
+					{
+						"time": 0.0833,
+						"x": 117.65,
+						"y": 71.6,
+						"curve": [ 0.111, 117.65, 0.097, 105.94, 0.111, 71.6, 0.097, 76.99 ]
+					},
+					{
+						"time": 0.125,
+						"x": 87.58,
+						"y": 80.8,
+						"curve": [ 0.167, 60.03, 0.209, -57.08, 0.167, 86.51, 0.209, 92.37 ]
+					},
+					{
+						"time": 0.25,
+						"x": -96.6,
+						"y": 67.18,
+						"curve": [ 0.306, -149.06, 0.403, -185.55, 0.306, 33.74, 0.403, -122.3 ]
+					},
+					{ "time": 0.4583, "x": -185.55, "y": -122.3 }
+				]
+			},
+			"Rock Particles/Pebble 4": {
+				"rotate": [
+					{ "time": 0.0833 },
+					{ "time": 0.125, "value": -134.9 },
+					{ "time": 0.4167, "value": -607.06 }
+				],
+				"translate": [
+					{
+						"time": 0.0833,
+						"x": -5.59,
+						"y": -5.97,
+						"curve": [ 0.111, -5.59, 0.097, 6.23, 0.111, -5.97, 0.097, -3.74 ]
+					},
+					{
+						"time": 0.125,
+						"x": 24.77,
+						"y": -3.34,
+						"curve": [ 0.167, 52.58, 0.209, 95.4, 0.167, -2.74, 0.209, -6.26 ]
+					},
+					{
+						"time": 0.25,
+						"x": 135.3,
+						"y": -27.65,
+						"curve": [ 0.306, 188.25, 0.361, 236.39, 0.306, -56.05, 0.361, -135.75 ]
+					},
+					{ "time": 0.4167, "x": 236.39, "y": -135.75 }
+				]
+			},
+			"Rock Particles/Pebble 5": {
+				"rotate": [
+					{ "time": 0.0833 },
+					{ "time": 0.125, "value": -64.38 },
+					{ "time": 0.4583, "value": -678.06 }
+				],
+				"translate": [
+					{
+						"time": 0.0833,
+						"x": 101.66,
+						"y": -95.79,
+						"curve": [ 0.111, 101.66, 0.097, 114.64, 0.111, -95.79, 0.097, -69.77 ]
+					},
+					{
+						"time": 0.125,
+						"x": 134.54,
+						"y": -35.42,
+						"curve": [ 0.167, 164.39, 0.209, 309.79, 0.167, 16.11, 0.209, 157.78 ]
+					},
+					{
+						"time": 0.25,
+						"x": 349.34,
+						"y": 185.21,
+						"curve": [ 0.306, 401.82, 0.403, 509.48, 0.306, 221.61, 0.403, 53.59 ]
+					},
+					{ "time": 0.4583, "x": 509.48, "y": 53.59 }
+				]
+			},
+			"Rock Particles/Pebble 6": {
+				"rotate": [
+					{ "time": 0.0833 },
+					{ "time": 0.125, "value": 96.27 },
+					{ "time": 0.4167, "value": 433.21 }
+				],
+				"translate": [
+					{
+						"time": 0.0833,
+						"x": -72.39,
+						"y": 47.39,
+						"curve": [ 0.111, -72.39, 0.097, -85.66, 0.111, 47.39, 0.097, 80.84 ]
+					},
+					{
+						"time": 0.125,
+						"x": -106.48,
+						"y": 123.54,
+						"curve": [ 0.167, -137.71, 0.209, -185.8, 0.167, 187.61, 0.209, 272.25 ]
+					},
+					{
+						"time": 0.25,
+						"x": -230.59,
+						"y": 294.09,
+						"curve": [ 0.306, -290.05, 0.361, -344.12, 0.306, 323.08, 0.361, 179.87 ]
+					},
+					{ "time": 0.4167, "x": -344.12, "y": 179.87 }
+				]
+			},
+			"Rock Particles/Pebble 7": {
+				"rotate": [
+					{ "time": 0.125 },
+					{ "time": 0.1667, "value": 96.27 },
+					{ "time": 0.5417, "value": -404.14 }
+				],
+				"translate": [
+					{
+						"time": 0.125,
+						"x": -14.09,
+						"y": 2.17,
+						"curve": [ 0.153, -14.09, 0.139, -47.89, 0.153, 2.17, 0.139, -14.41 ]
+					},
+					{
+						"time": 0.1667,
+						"x": -38.78,
+						"y": 23.18,
+						"curve": [ 0.209, -25.11, 0.292, 35.57, 0.209, 79.56, 0.292, 304.09 ]
+					},
+					{
+						"time": 0.3333,
+						"x": 55.18,
+						"y": 341.75,
+						"curve": [ 0.389, 81.21, 0.486, 170.61, 0.389, 391.75, 0.486, 172.86 ]
+					},
+					{ "time": 0.5417, "x": 170.61, "y": 172.86 }
+				],
+				"scale": [
+					{ "time": 0.3333 },
+					{ "time": 0.5417, "x": 0.4, "y": 0.4 }
+				]
+			}
+		}
+	},
+	"MWSD116/idle": {
+		"slots": {
+			"Crater": {
+				"attachment": [
+					{ "name": "Crater" },
+					{ "time": 0.0833, "name": "Crater" }
+				]
+			}
+		}
+	},
+	"MWSD116/spawn": {
+		"slots": {
+			"Crater": {
+				"rgba": [
+					{ "color": "ffffff00" },
+					{ "time": 0.0417, "color": "ffffffff" }
+				]
+			},
+			"Rock Particles/Pebble 1": {
+				"rgba": [
+					{ "time": 0.0833, "color": "ffffffff", "curve": "stepped" },
+					{ "time": 0.2917, "color": "ffffffff" },
+					{ "time": 0.4167, "color": "ffffff00" }
+				],
+				"attachment": [
+					{ "time": 0.0833, "name": "Rock Particles/Pebble 1" }
+				]
+			},
+			"Rock Particles/Pebble 2": {
+				"rgba": [
+					{ "time": 0.0417, "color": "ffffffff", "curve": "stepped" },
+					{ "time": 0.2917, "color": "ffffffff" },
+					{ "time": 0.4167, "color": "ffffff00" }
+				],
+				"attachment": [
+					{ "time": 0.0417, "name": "Rock Particles/Pebble 2" }
+				]
+			},
+			"Rock Particles/Pebble 3": {
+				"rgba": [
+					{ "time": 0.0417, "color": "ffffffff", "curve": "stepped" },
+					{ "time": 0.3333, "color": "ffffffff" },
+					{ "time": 0.4583, "color": "ffffff00" }
+				],
+				"attachment": [
+					{ "time": 0.0417, "name": "Rock Particles/Pebble 3" }
+				]
+			},
+			"Rock Particles/Pebble 4": {
+				"rgba": [
+					{ "time": 0.0417, "color": "ffffffff", "curve": "stepped" },
+					{ "time": 0.25, "color": "ffffffff" },
+					{ "time": 0.375, "color": "ffffff00" }
+				],
+				"attachment": [
+					{ "time": 0.0417, "name": "Rock Particles/Pebble 4" }
+				]
+			},
+			"Rock Particles/Pebble 5": {
+				"rgba": [
+					{ "time": 0.0417, "color": "ffffffff", "curve": "stepped" },
+					{ "time": 0.2917, "color": "ffffffff" },
+					{ "time": 0.4167, "color": "ffffff00" }
+				],
+				"attachment": [
+					{ "time": 0.0417, "name": "Rock Particles/Pebble 1" }
+				]
+			},
+			"Rock Particles/Pebble 6": {
+				"rgba": [
+					{ "time": 0.0417, "color": "ffffffff", "curve": "stepped" },
+					{ "time": 0.25, "color": "ffffffff" },
+					{ "time": 0.375, "color": "ffffff00" }
+				],
+				"attachment": [
+					{ "time": 0.0417, "name": "Rock Particles/Pebble 3" }
+				]
+			},
+			"Rock Particles/Pebble 7": {
+				"rgba": [
+					{ "time": 0.0417, "color": "ffffffff", "curve": "stepped" },
+					{ "time": 0.0833, "color": "ffffffff", "curve": "stepped" },
+					{ "time": 0.4167, "color": "ffffffff" },
+					{ "time": 0.5417, "color": "ffffff00" }
+				],
+				"attachment": [
+					{ "time": 0.0417, "name": "Rock Particles/Pebble 7" },
+					{ "time": 0.0833, "name": "Rock Particles/Pebble 7" }
+				]
+			}
+		},
+		"bones": {
+			"Crater": {
+				"scale": [
+					{
+						"x": 0.466,
+						"y": 0.466,
+						"curve": [ 0.033, 0.727, 0.042, 1.026, 0.032, 0.727, 0.042, 1 ]
+					},
+					{
+						"time": 0.0833,
+						"x": 1.026,
+						"curve": [ 0.111, 1.026, 0.139, 0.992, 0.111, 1, 0.139, 1 ]
+					},
+					{
+						"time": 0.1667,
+						"x": 0.992,
+						"curve": [ 0.194, 0.992, 0.222, 1, 0.194, 1, 0.222, 1 ]
+					},
+					{ "time": 0.25 }
+				]
+			},
+			"Rock Particles/Pebble 1": {
+				"rotate": [
+					{ "time": 0.0833, "value": 96.27 },
+					{ "time": 0.375, "value": 433.21 }
+				],
+				"translate": [
+					{
+						"time": 0.0833,
+						"x": -104.04,
+						"y": 21.12,
+						"curve": [ 0.125, -149.72, 0.167, -280.54, 0.125, 46.74, 0.167, 165.33 ]
+					},
+					{
+						"time": 0.2083,
+						"x": -346.06,
+						"y": 169.34,
+						"curve": [ 0.264, -433.03, 0.32, -512.11, 0.264, 174.67, 0.32, 45.61 ]
+					},
+					{ "time": 0.375, "x": -512.11, "y": 45.61 }
+				]
+			},
+			"Rock Particles/Pebble 2": {
+				"rotate": [
+					{ "time": 0.0417, "value": -73.98 },
+					{ "time": 0.375, "value": -332.92 }
+				],
+				"translate": [
+					{
+						"time": 0.0417,
+						"x": 73.68,
+						"y": 14.34,
+						"curve": [ 0.098, 137.31, 0.153, 244.44, 0.098, 9.44, 0.153, 92.41 ]
+					},
+					{
+						"time": 0.2083,
+						"x": 325.54,
+						"y": 86.17,
+						"curve": [ 0.25, 385.9, 0.334, 456.97, 0.25, 81.53, 0.334, -105.95 ]
+					},
+					{ "time": 0.375, "x": 456.97, "y": -105.95 }
+				]
+			},
+			"Rock Particles/Pebble 3": {
+				"rotate": [
+					{ "time": 0.0417, "value": 96.27 },
+					{ "time": 0.4167, "value": 433.21 }
+				],
+				"translate": [
+					{
+						"time": 0.0417,
+						"x": -61.29,
+						"y": -0.84,
+						"curve": [ 0.084, -88.84, 0.167, -205.95, 0.084, 4.88, 0.167, 10.74 ]
+					},
+					{
+						"time": 0.2083,
+						"x": -245.47,
+						"y": -14.45,
+						"curve": [ 0.264, -297.92, 0.361, -334.41, 0.264, -47.89, 0.361, -203.93 ]
+					},
+					{ "time": 0.4167, "x": -334.41, "y": -203.93 }
+				]
+			},
+			"Rock Particles/Pebble 4": {
+				"rotate": [
+					{ "time": 0.0417, "value": -134.9 },
+					{ "time": 0.3333, "value": -607.06 }
+				],
+				"translate": [
+					{
+						"time": 0.0417,
+						"x": 24.77,
+						"y": -3.34,
+						"curve": [ 0.084, 52.58, 0.125, 95.4, 0.084, -2.74, 0.125, -6.26 ]
+					},
+					{
+						"time": 0.1667,
+						"x": 135.3,
+						"y": -27.65,
+						"curve": [ 0.223, 188.25, 0.278, 236.39, 0.223, -56.05, 0.278, -135.75 ]
+					},
+					{ "time": 0.3333, "x": 236.39, "y": -135.75 }
+				]
+			},
+			"Rock Particles/Pebble 7": {
+				"rotate": [
+					{ "time": 0.0417 },
+					{ "time": 0.0833, "value": 96.27 },
+					{ "time": 0.5, "value": -404.14 }
+				],
+				"translate": [
+					{
+						"time": 0.0417,
+						"x": -14.09,
+						"y": 2.17,
+						"curve": [ 0.069, -14.09, 0.056, -47.89, 0.069, 2.17, 0.056, -14.41 ]
+					},
+					{
+						"time": 0.0833,
+						"x": -38.78,
+						"y": 23.18,
+						"curve": [ 0.125, -25.11, 0.209, 35.57, 0.125, 79.56, 0.209, 304.09 ]
+					},
+					{
+						"time": 0.25,
+						"x": 55.18,
+						"y": 341.75,
+						"curve": [ 0.306, 81.21, 0.445, 170.61, 0.306, 391.75, 0.445, 172.86 ]
+					},
+					{ "time": 0.5, "x": 170.61, "y": 172.86 }
+				],
+				"scale": [
+					{ "time": 0.0417, "curve": "stepped" },
+					{ "time": 0.25 },
+					{ "time": 0.5, "x": 0.4, "y": 0.4 }
+				]
+			},
+			"Rock Particles/Pebble 5": {
+				"rotate": [
+					{ "time": 0.0417, "value": -64.38 },
+					{ "time": 0.375, "value": -678.06 }
+				],
+				"translate": [
+					{
+						"time": 0.0417,
+						"x": 191.07,
+						"y": 66.88,
+						"curve": [ 0.084, 220.92, 0.125, 366.32, 0.084, 118.4, 0.125, 260.08 ]
+					},
+					{
+						"time": 0.1667,
+						"x": 405.87,
+						"y": 287.5,
+						"curve": [ 0.223, 458.35, 0.32, 566.01, 0.223, 323.9, 0.32, 155.88 ]
+					},
+					{ "time": 0.375, "x": 566.01, "y": 155.88 }
+				]
+			},
+			"Rock Particles/Pebble 6": {
+				"rotate": [
+					{ "time": 0.0417, "value": 96.27 },
+					{ "time": 0.3333, "value": 433.21 }
+				],
+				"translate": [
+					{
+						"time": 0.0417,
+						"x": -106.48,
+						"y": 123.54,
+						"curve": [ 0.084, -137.71, 0.125, -185.8, 0.084, 187.61, 0.125, 272.25 ]
+					},
+					{
+						"time": 0.1667,
+						"x": -230.59,
+						"y": 294.09,
+						"curve": [ 0.223, -290.05, 0.278, -344.12, 0.223, 323.08, 0.278, 179.87 ]
+					},
+					{ "time": 0.3333, "x": -344.12, "y": 179.87 }
+				]
+			}
+		}
+	}
+}
+}

@@ -1,0 +1,2817 @@
+{
+"skeleton": { "hash": "W4j+LUGz1sE", "spine": "4.0.64", "x": -188.55, "y": -95.36, "width": 357, "height": 441 },
+"bones": [
+	{ "name": "root" },
+	{ "name": "IceBlockBase", "parent": "root", "x": -8.69, "y": -78.66, "scaleX": 1.5, "scaleY": 1.5 },
+	{ "name": "block_of_ice", "parent": "IceBlockBase", "x": -0.9, "y": 120.93 },
+	{ "name": "block_of_ice_particles", "parent": "IceBlockBase" },
+	{ "name": "block_of_ice_particles_1", "parent": "block_of_ice_particles", "x": -295.33, "y": 262.77 },
+	{ "name": "block_of_ice_particles_2", "parent": "block_of_ice_particles", "x": -295.33, "y": 262.77 },
+	{ "name": "block_of_ice_particles_3", "parent": "block_of_ice_particles", "x": -295.33, "y": 262.77 },
+	{ "name": "block_of_ice_particles_4", "parent": "block_of_ice_particles", "x": -295.33, "y": 262.77 },
+	{ "name": "block_of_ice_particles_5", "parent": "block_of_ice_particles", "x": -295.33, "y": 262.77 },
+	{ "name": "block_of_ice_particles_6", "parent": "block_of_ice_particles", "x": -295.33, "y": 262.77 },
+	{ "name": "block_of_ice_particles_7", "parent": "block_of_ice_particles", "x": -295.33, "y": 262.77 },
+	{ "name": "block_of_ice_particles_8", "parent": "block_of_ice_particles", "x": -295.33, "y": 262.77 },
+	{ "name": "block_of_ice_particles_9", "parent": "block_of_ice_particles", "x": -295.33, "y": 262.77 },
+	{ "name": "block_of_ice_particles_10", "parent": "block_of_ice_particles", "x": -295.33, "y": 262.77 },
+	{ "name": "block_of_ice_particles_11", "parent": "block_of_ice_particles", "x": -295.33, "y": 262.77 },
+	{ "name": "block_of_ice_particles_12", "parent": "block_of_ice_particles", "x": -295.33, "y": 262.77 },
+	{ "name": "block_of_ice_particles_13", "parent": "block_of_ice_particles", "x": -295.33, "y": 262.77 },
+	{ "name": "block_of_ice_particles_14", "parent": "block_of_ice_particles", "x": -295.33, "y": 262.77 },
+	{ "name": "block_of_ice_particles_15", "parent": "block_of_ice_particles", "x": -295.33, "y": 262.77 },
+	{ "name": "block_of_ice_particles_16", "parent": "block_of_ice_particles", "x": -295.33, "y": 262.77 },
+	{ "name": "block_of_ice_cloud", "parent": "block_of_ice_particles", "x": -295.33, "y": 262.77 },
+	{ "name": "block_of_ice_cloud2", "parent": "block_of_ice_particles", "x": -295.33, "y": 262.77, "scaleX": -1 },
+	{ "name": "block_of_ice_cloud_snowflakes", "parent": "block_of_ice_particles", "x": 160.99, "y": 18.89 },
+	{ "name": "block_of_ice_cloud_snowflake_1", "parent": "block_of_ice_cloud_snowflakes" },
+	{ "name": "block_of_ice_cloud_snowflake_2", "parent": "block_of_ice_cloud_snowflakes" },
+	{ "name": "block_of_ice_cloud_snowflake_3", "parent": "block_of_ice_cloud_snowflakes" },
+	{ "name": "block_of_ice_cloud_snowflake_4", "parent": "block_of_ice_cloud_snowflakes" },
+	{ "name": "block_of_ice_cloud_snowflake_5", "parent": "block_of_ice_cloud_snowflakes" },
+	{ "name": "block_of_ice_cloud_snowflake_6", "parent": "block_of_ice_cloud_snowflakes", "scaleX": 0.5581, "scaleY": 0.5581 },
+	{ "name": "block_of_ice_cloud_snowflake_7", "parent": "block_of_ice_cloud_snowflakes", "scaleX": 0.5394, "scaleY": 0.5394 },
+	{ "name": "block_of_ice_cloud_frames", "parent": "block_of_ice_particles", "x": -0.9, "y": 120.93 },
+	{ "name": "block_of_ice_melting", "parent": "block_of_ice_particles", "x": 1.72, "y": 9.54 },
+	{ "name": "block_of_ice_melting_1", "parent": "block_of_ice_melting" },
+	{ "name": "block_of_ice_melting_puddle", "parent": "block_of_ice_melting" },
+	{ "name": "block_of_ice_melting_2", "parent": "block_of_ice_melting", "x": -4.53, "y": -36.23 },
+	{ "name": "block_of_ice_melting_3", "parent": "block_of_ice_melting", "x": -4.53, "y": -36.23 }
+],
+"slots": [
+	{ "name": "MOD/Ice Maker/melting puddle", "bone": "block_of_ice_melting_puddle" },
+	{ "name": "iceblock", "bone": "block_of_ice", "attachment": "iceblock_cracks" },
+	{ "name": "MOD/Ice Maker/drop 1", "bone": "block_of_ice_particles_1" },
+	{ "name": "MOD/Ice Maker/drop 2", "bone": "block_of_ice_particles_2" },
+	{ "name": "MOD/Ice Maker/drop 3", "bone": "block_of_ice_particles_3" },
+	{ "name": "MOD/Ice Maker/drop 4", "bone": "block_of_ice_particles_4" },
+	{ "name": "MOD/Ice Maker/drop 5", "bone": "block_of_ice_particles_5" },
+	{ "name": "MOD/Ice Maker/drop 6", "bone": "block_of_ice_particles_6" },
+	{ "name": "MOD/Ice Maker/shard 1", "bone": "block_of_ice_particles_7" },
+	{ "name": "MOD/Ice Maker/shard 2", "bone": "block_of_ice_particles_8" },
+	{ "name": "MOD/Ice Maker/shard 3", "bone": "block_of_ice_particles_9" },
+	{ "name": "MOD/Ice Maker/shard 4", "bone": "block_of_ice_particles_10" },
+	{ "name": "MOD/Ice Maker/shard 5", "bone": "block_of_ice_particles_11" },
+	{ "name": "MOD/Ice Maker/shard 6", "bone": "block_of_ice_particles_12" },
+	{ "name": "MOD/Ice Maker/shard 7", "bone": "block_of_ice_particles_13" },
+	{ "name": "MOD/Ice Maker/shard 8", "bone": "block_of_ice_particles_14" },
+	{ "name": "MOD/Ice Maker/shard 9", "bone": "block_of_ice_particles_15" },
+	{ "name": "MOD/Ice Maker/shard 10", "bone": "block_of_ice_particles_16" },
+	{ "name": "MOD/Ice Particles/cloud 12", "bone": "block_of_ice_cloud2" },
+	{ "name": "MOD/Ice Particles/cloud 10", "bone": "block_of_ice_cloud" },
+	{ "name": "MOD/Ice Particles/snowflake 5", "bone": "block_of_ice_cloud_snowflake_4" },
+	{ "name": "MOD/Ice Particles/snowflake 7", "bone": "block_of_ice_cloud_snowflake_3" },
+	{ "name": "MOD/Ice Particles/snowflake 9", "bone": "block_of_ice_cloud_snowflake_2" },
+	{ "name": "MOD/Ice Particles/snowflake 10", "bone": "block_of_ice_cloud_snowflake_6" },
+	{ "name": "MOD/Ice Particles/snow_flake1", "bone": "block_of_ice_cloud_snowflake_1" },
+	{ "name": "MOD/Ice Particles/snow_flake2", "bone": "block_of_ice_cloud_snowflake_7" },
+	{ "name": "MOD/Ice Particles/snowflake 3", "bone": "block_of_ice_cloud_snowflake_5" },
+	{ "name": "MOD/Ice Particles/cloud frame", "bone": "block_of_ice_cloud_frames" },
+	{ "name": "MOD/Ice Maker/melting icecblock 3", "bone": "block_of_ice_melting_3" },
+	{ "name": "MOD/Ice Maker/melting icecblock 2", "bone": "block_of_ice_melting_2" },
+	{ "name": "MOD/Ice Maker/melting icecblock 1", "bone": "block_of_ice_melting_1" }
+],
+"skins": [
+	{
+		"name": "default",
+		"attachments": {
+			"MOD/Ice Maker/drop 1": {
+				"MOD/Ice Maker/drop 1": { "width": 20, "height": 22 }
+			},
+			"MOD/Ice Maker/drop 2": {
+				"MOD/Ice Maker/drop 2": { "x": 0.5, "y": 0.5, "width": 37, "height": 35 }
+			},
+			"MOD/Ice Maker/drop 3": {
+				"MOD/Ice Maker/drop 3": { "width": 32, "height": 34 }
+			},
+			"MOD/Ice Maker/drop 4": {
+				"MOD/Ice Maker/drop 4": { "y": 0.5, "width": 14, "height": 23 }
+			},
+			"MOD/Ice Maker/drop 5": {
+				"MOD/Ice Maker/drop 5": { "y": 0.5, "width": 30, "height": 41 }
+			},
+			"MOD/Ice Maker/drop 6": {
+				"MOD/Ice Maker/drop 6": { "width": 24, "height": 24 }
+			},
+			"MOD/Ice Maker/melting icecblock 1": {
+				"MOD/Ice Maker/melting icecblock 1": { "width": 230, "height": 88 }
+			},
+			"MOD/Ice Maker/melting icecblock 2": {
+				"MOD/Ice Maker/melting icecblock 2": { "width": 253, "height": 84 }
+			},
+			"MOD/Ice Maker/melting icecblock 3": {
+				"MOD/Ice Maker/melting icecblock 3": { "width": 308, "height": 103 }
+			},
+			"MOD/Ice Maker/melting puddle": {
+				"MOD/Ice Maker/melting puddle": { "width": 400, "height": 164 }
+			},
+			"MOD/Ice Maker/shard 1": {
+				"MOD/Ice Maker/shard 1": { "y": 0.5, "width": 96, "height": 133 }
+			},
+			"MOD/Ice Maker/shard 2": {
+				"MOD/Ice Maker/shard 2": { "x": 0.5, "y": 0.5, "width": 57, "height": 67 }
+			},
+			"MOD/Ice Maker/shard 3": {
+				"MOD/Ice Maker/shard 3": { "y": 0.5, "width": 106, "height": 115 }
+			},
+			"MOD/Ice Maker/shard 4": {
+				"MOD/Ice Maker/shard 4": { "y": 0.5, "width": 64, "height": 85 }
+			},
+			"MOD/Ice Maker/shard 5": {
+				"MOD/Ice Maker/shard 5": { "x": 0.5, "y": 0.5, "width": 77, "height": 99 }
+			},
+			"MOD/Ice Maker/shard 6": {
+				"MOD/Ice Maker/shard 6": { "x": 0.5, "y": 0.5, "width": 39, "height": 49 }
+			},
+			"MOD/Ice Maker/shard 7": {
+				"MOD/Ice Maker/shard 7": { "width": 62, "height": 72 }
+			},
+			"MOD/Ice Maker/shard 8": {
+				"MOD/Ice Maker/shard 8": { "y": 0.5, "width": 96, "height": 93 }
+			},
+			"MOD/Ice Maker/shard 9": {
+				"MOD/Ice Maker/shard 9": { "x": 0.5, "width": 91, "height": 130 }
+			},
+			"MOD/Ice Maker/shard 10": {
+				"MOD/Ice Maker/shard 10": { "x": 0.5, "y": 0.5, "width": 81, "height": 149 }
+			},
+			"MOD/Ice Particles/cloud 10": {
+				"MOD/Ice Particles/cloud 7": { "x": 0.5, "width": 135, "height": 106 }
+			},
+			"MOD/Ice Particles/cloud 12": {
+				"MOD/Ice Particles/cloud 6": { "x": 38, "y": 22.96, "width": 108, "height": 95 }
+			},
+			"MOD/Ice Particles/cloud frame": {
+				"MOD/Ice Particles/cloud frame 1": { "width": 360, "height": 346 },
+				"MOD/Ice Particles/cloud frame 2": { "x": 0.5, "width": 525, "height": 508 },
+				"MOD/Ice Particles/cloud frame 3": { "width": 692, "height": 686 }
+			},
+			"MOD/Ice Particles/snowflake 3": {
+				"MOD/Ice Particles/snowflake 3": { "width": 28, "height": 26 }
+			},
+			"MOD/Ice Particles/snowflake 5": {
+				"MOD/Ice Particles/snowflake 5": { "width": 24, "height": 32 }
+			},
+			"MOD/Ice Particles/snowflake 7": {
+				"MOD/Ice Particles/snowflake 7": { "width": 56, "height": 62 }
+			},
+			"MOD/Ice Particles/snowflake 9": {
+				"MOD/Ice Particles/snowflake 9": { "width": 80, "height": 86 }
+			},
+			"MOD/Ice Particles/snowflake 10": {
+				"MOD/Ice Particles/snowflake 9": { "width": 80, "height": 86 }
+			},
+			"MOD/Ice Particles/snow_flake1": {
+				"MOD/Ice Particles/snow_flake1": { "width": 46, "height": 52 }
+			},
+			"MOD/Ice Particles/snow_flake2": {
+				"MOD/Ice Particles/snow_flake1": { "width": 46, "height": 52 }
+			}
+		}
+	},
+	{
+		"name": "iceblock",
+		"attachments": {
+			"iceblock": {
+				"iceblock_cracks": { "name": "MOD/Ice Maker/iceblock wo cracks", "y": 14.94, "width": 238, "height": 294 }
+			}
+		}
+	},
+	{
+		"name": "iceblock_crack_1",
+		"attachments": {
+			"iceblock": {
+				"iceblock_cracks": { "name": "MOD/Ice Maker/iceblock cracked 1 no cm", "y": 14.71, "width": 238, "height": 294 }
+			}
+		}
+	},
+	{
+		"name": "iceblock_crack_2",
+		"attachments": {
+			"iceblock": {
+				"iceblock_cracks": { "name": "MOD/Ice Maker/iceblock cracked 2 no cm", "y": 14.71, "width": 238, "height": 294 }
+			}
+		}
+	},
+	{
+		"name": "iceblock_crack_3",
+		"attachments": {
+			"iceblock": {
+				"iceblock_cracks": { "name": "MOD/Ice Maker/iceblock cracked 3 no cm", "y": 14.71, "width": 238, "height": 294 }
+			}
+		}
+	}
+],
+"events": {
+	"impact": {}
+},
+"animations": {
+	"crack_AL": {
+		"slots": {
+			"iceblock": {
+				"attachment": [
+					{ "name": "iceblock_cracks" },
+					{ "time": 0.1833, "name": "iceblock_cracks" }
+				]
+			}
+		},
+		"bones": {
+			"block_of_ice": {
+				"shear": [
+					{ "curve": "stepped" },
+					{ "time": 0.1833 }
+				]
+			},
+			"IceBlockBase": {
+				"rotate": [
+					{},
+					{ "time": 0.0333, "value": -9.29 },
+					{ "time": 0.0667, "value": 7.59 },
+					{ "time": 0.1, "value": -12.57 },
+					{ "time": 0.15, "value": 4.09 },
+					{ "time": 0.1833, "value": -7.06 },
+					{ "time": 0.25, "value": 0.9 },
+					{ "time": 0.3167, "value": -3.94 },
+					{ "time": 0.4, "value": -0.98 },
+					{ "time": 0.5 }
+				],
+				"translate": [
+					{
+						"curve": [ 0.012, 0, 0.021, 0, 0.012, 15.03, 0.021, 45.1 ]
+					},
+					{
+						"time": 0.0333,
+						"y": 45.1,
+						"curve": [ 0.081, 0, 0.186, 0, 0.125, 45.1, 0.233, 0.44 ]
+					},
+					{ "time": 0.2333 }
+				],
+				"scale": [
+					{
+						"curve": [ 0.012, 0.969, 0.021, 0.893, 0.012, 1.051, 0.021, 1.134 ]
+					},
+					{
+						"time": 0.0333,
+						"x": 0.893,
+						"y": 1.134,
+						"curve": [ 0.125, 0.893, 0.233, 1, 0.125, 1.134, 0.233, 1 ]
+					},
+					{ "time": 0.2333 }
+				]
+			}
+		},
+		"drawOrder": [
+			{}
+		],
+		"events": [
+			{ "time": 0.0333, "name": "impact" }
+		]
+	},
+	"frozen": {
+		"slots": {
+			"iceblock": {
+				"rgba": [
+					{ "time": 0.0667, "color": "ffffffaf" },
+					{ "time": 0.2167, "color": "ffffffff" }
+				],
+				"attachment": [
+					{ "name": null },
+					{ "time": 0.0667, "name": "iceblock_cracks" }
+				]
+			},
+			"MOD/Ice Particles/cloud 12": {
+				"attachment": [
+					{ "name": null },
+					{ "time": 0.2, "name": null }
+				]
+			},
+			"MOD/Ice Particles/cloud frame": {
+				"rgba": [
+					{ "color": "ffffffff", "curve": "stepped" },
+					{ "time": 0.1167, "color": "ffffffff" },
+					{ "time": 0.4167, "color": "ffffff00" }
+				],
+				"attachment": [
+					{ "name": "MOD/Ice Particles/cloud frame 1" },
+					{ "time": 0.0667, "name": "MOD/Ice Particles/cloud frame 2" },
+					{ "time": 0.1167, "name": "MOD/Ice Particles/cloud frame 3" }
+				]
+			},
+			"MOD/Ice Particles/snowflake 3": {
+				"rgba": [
+					{ "color": "ffffffff", "curve": "stepped" },
+					{ "time": 0.3333, "color": "ffffffff" },
+					{ "time": 0.75, "color": "ffffff00" }
+				],
+				"attachment": [
+					{ "name": "MOD/Ice Particles/snowflake 3" }
+				]
+			},
+			"MOD/Ice Particles/snowflake 5": {
+				"rgba": [
+					{ "color": "ffffffff", "curve": "stepped" },
+					{ "time": 0.6, "color": "ffffffff" },
+					{ "time": 1, "color": "ffffff00" }
+				],
+				"attachment": [
+					{ "name": "MOD/Ice Particles/snowflake 5" }
+				]
+			},
+			"MOD/Ice Particles/snowflake 7": {
+				"rgba": [
+					{ "color": "ffffffff", "curve": "stepped" },
+					{ "time": 0.3333, "color": "ffffffff" },
+					{ "time": 1, "color": "ffffff00" }
+				],
+				"attachment": [
+					{ "name": "MOD/Ice Particles/snowflake 7" }
+				]
+			},
+			"MOD/Ice Particles/snowflake 9": {
+				"rgba": [
+					{ "color": "ffffffff", "curve": "stepped" },
+					{ "time": 0.4167, "color": "ffffffff" },
+					{ "time": 0.9167, "color": "ffffff00" }
+				],
+				"attachment": [
+					{ "name": "MOD/Ice Particles/snowflake 9" }
+				]
+			},
+			"MOD/Ice Particles/snowflake 10": {
+				"rgba": [
+					{ "color": "ffffffff", "curve": "stepped" },
+					{ "time": 0.4833, "color": "ffffffff" },
+					{ "time": 1, "color": "ffffff00" }
+				],
+				"attachment": [
+					{ "name": "MOD/Ice Particles/snowflake 9" }
+				]
+			},
+			"MOD/Ice Particles/snow_flake1": {
+				"rgba": [
+					{ "color": "ffffffff", "curve": "stepped" },
+					{ "time": 0.3333, "color": "ffffffff" },
+					{ "time": 0.6667, "color": "ffffff00" }
+				],
+				"attachment": [
+					{ "name": "MOD/Ice Particles/snow_flake1" }
+				]
+			},
+			"MOD/Ice Particles/snow_flake2": {
+				"rgba": [
+					{ "color": "ffffffff", "curve": "stepped" },
+					{ "time": 0.3333, "color": "ffffffff" },
+					{ "time": 0.75, "color": "ffffff00" }
+				],
+				"attachment": [
+					{ "name": "MOD/Ice Particles/snow_flake1" }
+				]
+			}
+		},
+		"bones": {
+			"block_of_ice": {
+				"rotate": [
+					{ "curve": "stepped" },
+					{ "time": 0.3333 }
+				],
+				"translate": [
+					{}
+				],
+				"scale": [
+					{
+						"time": 0.0667,
+						"curve": [ 0.094, 1.117, 0.126, 1.222, 0.094, 1.117, 0.126, 1.222 ]
+					},
+					{
+						"time": 0.15,
+						"x": 1.176,
+						"y": 1.176,
+						"curve": [ 0.211, 1.059, 0.272, 1, 0.211, 1.059, 0.272, 1 ]
+					},
+					{ "time": 0.3333 }
+				],
+				"shear": [
+					{
+						"time": 0.0667,
+						"curve": [ 0.079, 0, 0.1, 0, 0.079, 0, 0.1, 1.54 ]
+					},
+					{
+						"time": 0.1167,
+						"y": 1.54,
+						"curve": [ 0.134, 0, 0.148, 0, 0.134, 1.54, 0.148, -1.05 ]
+					},
+					{
+						"time": 0.1667,
+						"y": -1.05,
+						"curve": [ 0.179, 0, 0.2, 0, 0.179, -1.05, 0.2, 1.54 ]
+					},
+					{
+						"time": 0.2167,
+						"y": 1.54,
+						"curve": [ 0.234, 0, 0.248, 0, 0.234, 1.54, 0.248, -1.05 ]
+					},
+					{
+						"time": 0.2667,
+						"y": -1.05,
+						"curve": [ 0.279, 0, 0.302, 0, 0.279, -1.05, 0.302, 0 ]
+					},
+					{ "time": 0.3333 }
+				]
+			},
+			"block_of_ice_cloud_frames": {
+				"rotate": [
+					{}
+				],
+				"translate": [
+					{ "x": 5.43, "y": 78.07 }
+				],
+				"scale": [
+					{
+						"x": 0.555,
+						"y": 0.555,
+						"curve": [ 0.065, 1.007, 0.133, 1.201, 0.065, 1.007, 0.133, 1.201 ]
+					},
+					{
+						"time": 0.2333,
+						"x": 1.342,
+						"y": 1.342,
+						"curve": [ 0.326, 1.473, 0.389, 1.466, 0.326, 1.473, 0.389, 1.466 ]
+					},
+					{ "time": 0.4833, "x": 1.466, "y": 1.466 }
+				],
+				"shear": [
+					{}
+				]
+			},
+			"block_of_ice_cloud_snowflake_1": {
+				"rotate": [
+					{},
+					{ "time": 1, "value": -45.99 }
+				],
+				"translate": [
+					{
+						"x": -95.78,
+						"y": 248.81,
+						"curve": [ 0, -95.77, 0.105, -39.65, 0, 248.8, 0.121, 260.31 ]
+					},
+					{
+						"time": 0.1667,
+						"x": -20.92,
+						"y": 263.77,
+						"curve": [ 0.237, 0.19, 0.999, 40.25, 0.256, 270.56, 0.894, 224.72 ]
+					},
+					{ "time": 1, "x": 40.25, "y": 224.72 }
+				]
+			},
+			"block_of_ice_cloud_snowflake_2": {
+				"rotate": [
+					{},
+					{ "time": 1, "value": 48.37 }
+				],
+				"translate": [
+					{
+						"x": -206.27,
+						"y": 353.68,
+						"curve": [ 0, -206.27, 0.137, -217.89, 0, 408.44, 0.136, 431.47 ]
+					},
+					{
+						"time": 0.1667,
+						"x": -219.33,
+						"y": 431.76,
+						"curve": [ 0.278, -224.66, 0.999, -236.32, 0.326, 433.29, 1, 403.47 ]
+					},
+					{ "time": 1, "x": -236.32, "y": 375.88 }
+				]
+			},
+			"block_of_ice_cloud_snowflake_3": {
+				"rotate": [
+					{},
+					{ "time": 1, "value": -40.24 }
+				],
+				"translate": [
+					{
+						"x": -245.9,
+						"y": 184.43,
+						"curve": [ 0, -245.91, 0.136, -335.17, 0, 184.42, 0.122, 176.83 ]
+					},
+					{
+						"time": 0.1667,
+						"x": -341.86,
+						"y": 167.08,
+						"curve": [ 0.228, -355.25, 0.894, -391.2, 0.281, 142.07, 0.894, 75.68 ]
+					},
+					{ "time": 1, "x": -391.2, "y": 75.68 }
+				]
+			},
+			"block_of_ice_cloud_snowflake_4": {
+				"rotate": [
+					{},
+					{ "time": 1, "value": -12.32 }
+				],
+				"translate": [
+					{
+						"x": -168.03,
+						"y": 352.46,
+						"curve": [ 0.03, -168.72, 0.137, -145.25, 0.03, 360.23, 0.136, 350.99 ]
+					},
+					{
+						"time": 0.1667,
+						"x": -142.89,
+						"y": 350.99,
+						"curve": [ 0.281, -133.87, 0.894, -122.08, 0.228, 350.99, 0.894, 303.49 ]
+					},
+					{ "time": 1, "x": -122.08, "y": 303.49 }
+				]
+			},
+			"block_of_ice_cloud_snowflake_5": {
+				"rotate": [
+					{},
+					{ "time": 1, "value": 63.63 }
+				],
+				"translate": [
+					{
+						"x": -65.57,
+						"y": 188.52,
+						"curve": [ 0, -65.57, 0.096, -38.4, 0.03, 170.77, 0.123, 144.82 ]
+					},
+					{
+						"time": 0.1667,
+						"x": -23.67,
+						"y": 135.25,
+						"curve": [ 0.232, -10.01, 0.894, -1.09, 0.267, 113.25, 0.894, 94.53 ]
+					},
+					{ "time": 1, "x": -1.09, "y": 94.53 }
+				]
+			},
+			"block_of_ice_cloud_snowflake_6": {
+				"rotate": [
+					{},
+					{ "time": 1, "value": -35.88 }
+				],
+				"translate": [
+					{
+						"x": -266.39,
+						"y": 301.23,
+						"curve": [ 0, -266.4, 0.138, -334.11, 0, 336.91, 0.097, 360.4 ]
+					},
+					{
+						"time": 0.1667,
+						"x": -344.26,
+						"y": 372.95,
+						"curve": [ 0.327, -400.22, 1, -403.84, 0.259, 389.58, 1, 369.99 ]
+					},
+					{ "time": 1, "x": -403.84, "y": 341.8 }
+				]
+			},
+			"block_of_ice_cloud_snowflake_7": {
+				"rotate": [
+					{},
+					{ "time": 1, "value": 54.68 }
+				],
+				"translate": [
+					{
+						"x": -77.87,
+						"y": 321.72,
+						"curve": [ 0, -77.87, 0.096, -45.62, 0, 354.73, 0.074, 385.7 ]
+					},
+					{
+						"time": 0.1667,
+						"x": -31.13,
+						"y": 387.3,
+						"curve": [ 0.312, -1.29, 0.999, 12.98, 0.344, 390.36, 0.996, 317.57 ]
+					},
+					{ "time": 1, "x": 12.98, "y": 299.32 }
+				]
+			},
+			"block_of_ice_particles": {
+				"rotate": [
+					{}
+				],
+				"translate": [
+					{}
+				],
+				"scale": [
+					{}
+				],
+				"shear": [
+					{}
+				]
+			}
+		},
+		"drawOrder": [
+			{}
+		]
+	},
+	"idle": {
+		"slots": {
+			"iceblock": {
+				"attachment": [
+					{ "name": "iceblock_cracks" }
+				]
+			}
+		},
+		"drawOrder": [
+			{}
+		]
+	},
+	"melt": {
+		"slots": {
+			"iceblock": {
+				"rgba": [
+					{ "color": "ffffffff" },
+					{ "time": 0.7167, "color": "ffffff00" }
+				],
+				"attachment": [
+					{ "name": "iceblock_cracks" },
+					{ "time": 1, "name": null },
+					{ "time": 1.1167, "name": null }
+				]
+			},
+			"MOD/Ice Maker/drop 1": {
+				"rgba": [
+					{ "time": 0.5, "color": "ffffffff" },
+					{ "time": 0.6833, "color": "ffffff00" }
+				],
+				"attachment": [
+					{ "time": 0.0333, "name": "MOD/Ice Maker/drop 1" }
+				]
+			},
+			"MOD/Ice Maker/drop 2": {
+				"rgba": [
+					{ "time": 0.5, "color": "ffffffff" },
+					{ "time": 0.6833, "color": "ffffff00" }
+				],
+				"attachment": [
+					{ "time": 0.0333, "name": "MOD/Ice Maker/drop 2" }
+				]
+			},
+			"MOD/Ice Maker/drop 3": {
+				"rgba": [
+					{ "time": 0.5, "color": "ffffffff" },
+					{ "time": 0.6833, "color": "ffffff00" }
+				],
+				"attachment": [
+					{ "time": 0.0333, "name": "MOD/Ice Maker/drop 3" }
+				]
+			},
+			"MOD/Ice Maker/drop 4": {
+				"rgba": [
+					{ "time": 0.5, "color": "ffffffff" },
+					{ "time": 0.6833, "color": "ffffff00" }
+				],
+				"attachment": [
+					{ "time": 0.0333, "name": "MOD/Ice Maker/drop 4" }
+				]
+			},
+			"MOD/Ice Maker/drop 5": {
+				"rgba": [
+					{ "time": 0.5, "color": "ffffffff" },
+					{ "time": 0.6833, "color": "ffffff00" }
+				],
+				"attachment": [
+					{ "time": 0.0333, "name": "MOD/Ice Maker/drop 5" }
+				]
+			},
+			"MOD/Ice Maker/melting icecblock 1": {
+				"rgba": [
+					{
+						"time": 0.15,
+						"color": "ffffff00",
+						"curve": [ 0.258, 1, 0.717, 1, 0.258, 1, 0.717, 1, 0.258, 1, 0.717, 1, 0.258, 0, 0.717, 1 ]
+					},
+					{
+						"time": 0.7167,
+						"color": "ffffffff",
+						"curve": [ 0.849, 1, 0.985, 1, 0.849, 1, 0.985, 1, 0.849, 1, 0.985, 1, 0.849, 1, 0.985, 0 ]
+					},
+					{ "time": 1.1167, "color": "ffffff00" }
+				],
+				"attachment": [
+					{ "time": 0.15, "name": "MOD/Ice Maker/melting icecblock 1" }
+				]
+			},
+			"MOD/Ice Maker/melting icecblock 2": {
+				"rgba": [
+					{
+						"time": 0.25,
+						"color": "ffffff00",
+						"curve": [ 0.322, 1, 0.395, 1, 0.322, 1, 0.395, 1, 0.322, 1, 0.395, 1, 0.322, 0, 0.395, 0.33 ]
+					},
+					{ "time": 0.4667, "color": "ffffffff" },
+					{ "time": 1.1167, "color": "ffffff00" }
+				],
+				"attachment": [
+					{ "time": 0.25, "name": "MOD/Ice Maker/melting icecblock 2" }
+				]
+			},
+			"MOD/Ice Maker/melting icecblock 3": {
+				"rgba": [
+					{ "color": "ffffff00" },
+					{ "time": 0.2833, "color": "ffffffff" },
+					{ "time": 0.7167, "color": "ffffff00" }
+				],
+				"attachment": [
+					{ "time": 0.25, "name": "MOD/Ice Maker/melting icecblock 3" }
+				]
+			},
+			"MOD/Ice Maker/melting puddle": {
+				"rgba": [
+					{ "time": 0.3167, "color": "ffffff00" },
+					{ "time": 0.5333, "color": "ffffffff", "curve": "stepped" },
+					{ "time": 0.8333, "color": "ffffffff" },
+					{ "time": 1.3333, "color": "ffffff00" }
+				],
+				"attachment": [
+					{ "time": 0.3167, "name": "MOD/Ice Maker/melting puddle" }
+				]
+			},
+			"MOD/Ice Particles/cloud 10": {
+				"rgba": [
+					{ "time": 0.2167, "color": "ffffffff", "curve": "stepped" },
+					{ "time": 0.3667, "color": "ffffffff" },
+					{ "time": 0.8667, "color": "ffffff00", "curve": "stepped" },
+					{ "time": 1, "color": "ffffff00" }
+				],
+				"attachment": [
+					{ "time": 0.2167, "name": "MOD/Ice Particles/cloud 7" },
+					{ "time": 0.3667, "name": "MOD/Ice Particles/cloud 7" }
+				]
+			},
+			"MOD/Ice Particles/cloud 12": {
+				"rgba": [
+					{ "time": 0.2167, "color": "ffffffff" },
+					{ "time": 0.9667, "color": "ffffff00" }
+				],
+				"attachment": [
+					{ "time": 0.2167, "name": "MOD/Ice Particles/cloud 6" }
+				]
+			},
+			"MOD/Ice Particles/snowflake 3": {
+				"rgba": [
+					{ "time": 0.4333, "color": "ffffffff", "curve": "stepped" },
+					{ "time": 0.8333, "color": "ffffffff" },
+					{ "time": 1.0833, "color": "ffffff00" }
+				],
+				"attachment": [
+					{ "time": 0.4333, "name": "MOD/Ice Particles/snowflake 3" }
+				]
+			},
+			"MOD/Ice Particles/snowflake 5": {
+				"rgba": [
+					{ "time": 0.4333, "color": "ffffffff", "curve": "stepped" },
+					{ "time": 0.9667, "color": "ffffffff" },
+					{ "time": 1.2667, "color": "ffffff00" }
+				],
+				"attachment": [
+					{ "time": 0.4333, "name": "MOD/Ice Particles/snowflake 5" }
+				]
+			},
+			"MOD/Ice Particles/snowflake 7": {
+				"rgba": [
+					{ "time": 0.4333, "color": "ffffffff", "curve": "stepped" },
+					{ "time": 0.8333, "color": "ffffffff" },
+					{ "time": 1.2667, "color": "ffffff00" }
+				],
+				"attachment": [
+					{ "time": 0.4333, "name": "MOD/Ice Particles/snowflake 7" }
+				]
+			},
+			"MOD/Ice Particles/snowflake 9": {
+				"rgba": [
+					{ "time": 0.4333, "color": "ffffffff", "curve": "stepped" },
+					{ "time": 0.8667, "color": "ffffffff" },
+					{ "time": 1.1833, "color": "ffffff00" }
+				],
+				"attachment": [
+					{ "time": 0.4333, "name": "MOD/Ice Particles/snowflake 9" }
+				]
+			},
+			"MOD/Ice Particles/snowflake 10": {
+				"rgba": [
+					{ "time": 0.4333, "color": "ffffffff", "curve": "stepped" },
+					{ "time": 0.9333, "color": "ffffffff" },
+					{ "time": 1.2667, "color": "ffffff00" }
+				],
+				"attachment": [
+					{ "time": 0.4333, "name": "MOD/Ice Particles/snowflake 9" }
+				]
+			},
+			"MOD/Ice Particles/snow_flake1": {
+				"rgba": [
+					{ "time": 0.4333, "color": "ffffffff", "curve": "stepped" },
+					{ "time": 0.8333, "color": "ffffffff" },
+					{ "time": 1.05, "color": "ffffff00" }
+				],
+				"attachment": [
+					{ "time": 0.4333, "name": "MOD/Ice Particles/snow_flake1" }
+				]
+			},
+			"MOD/Ice Particles/snow_flake2": {
+				"rgba": [
+					{ "time": 0.4333, "color": "ffffffff", "curve": "stepped" },
+					{ "time": 0.8333, "color": "ffffffff" },
+					{ "time": 1.0833, "color": "ffffff00" }
+				],
+				"attachment": [
+					{ "time": 0.4333, "name": "MOD/Ice Particles/snow_flake1" }
+				]
+			}
+		},
+		"bones": {
+			"block_of_ice_cloud2": {
+				"rotate": [
+					{
+						"time": 0.2167,
+						"value": 9.02,
+						"curve": [ 0.217, 9.02, 0.772, 38.83 ]
+					},
+					{ "time": 0.9667, "value": 35.47 }
+				],
+				"translate": [
+					{
+						"time": 0.2167,
+						"x": 378.24,
+						"y": -254.28,
+						"curve": [ 0.217, 378.24, 0.365, 428.56, 0.217, -254.28, 0.426, -261.55 ]
+					},
+					{
+						"time": 0.5333,
+						"x": 465.91,
+						"y": -255.27,
+						"curve": [ 0.712, 504.26, 0.906, 515.51, 0.633, -249.44, 0.914, -221.43 ]
+					},
+					{ "time": 0.9667, "x": 515.31, "y": -205.2 }
+				],
+				"scale": [
+					{
+						"time": 0.2167,
+						"x": -0.52,
+						"y": 0.52,
+						"curve": [ 0.469, -0.52, 0.715, -1.279, 0.469, 0.52, 0.715, 1.279 ]
+					},
+					{ "time": 0.9667, "x": -1.279, "y": 1.279 }
+				],
+				"shear": [
+					{ "time": 0.2167 }
+				]
+			},
+			"block_of_ice_cloud": {
+				"rotate": [
+					{
+						"time": 0.2167,
+						"curve": [ 0.301, -2.24, 0.783, -3.36 ]
+					},
+					{ "time": 0.8667, "value": -3.36 }
+				],
+				"translate": [
+					{
+						"time": 0.2167,
+						"x": 224.28,
+						"y": -242.08,
+						"curve": [ 0.217, 165.2, 0.783, 33.87, 0.567, -239.6, 0.867, -197.97 ]
+					},
+					{ "time": 0.8667, "x": 33.87, "y": -169.98 }
+				],
+				"scale": [
+					{
+						"time": 0.2167,
+						"x": 0.632,
+						"y": 0.632,
+						"curve": [ 0.61, 0.793, 0.783, 1.667, 0.61, 0.793, 0.783, 1.667 ]
+					},
+					{ "time": 0.8667, "x": 1.667, "y": 1.667 }
+				],
+				"shear": [
+					{ "time": 0.2167 }
+				]
+			},
+			"block_of_ice_cloud_snowflakes": {
+				"rotate": [
+					{ "time": 0.2833 }
+				],
+				"translate": [
+					{ "time": 0.2833 }
+				],
+				"scale": [
+					{ "time": 0.2833 }
+				],
+				"shear": [
+					{ "time": 0.2833 }
+				]
+			},
+			"block_of_ice_particles_1": {
+				"rotate": [
+					{},
+					{ "time": 0.0333, "value": -55.32 }
+				],
+				"translate": [
+					{},
+					{
+						"time": 0.0333,
+						"x": 215.08,
+						"y": -71.93,
+						"curve": [ 0.13, 215.08, 0.223, 215.08, 0.13, -71.93, 0.223, -75.4 ]
+					},
+					{
+						"time": 0.3167,
+						"x": 215.08,
+						"y": -82.34,
+						"curve": [ 0.511, 215.08, 0.642, 215.08, 0.319, -82.49, 0.833, -303.7 ]
+					},
+					{ "time": 0.8333, "x": 215.08, "y": -303.7 }
+				],
+				"scale": [
+					{},
+					{ "time": 0.0333, "x": 0.293, "y": 0.293 },
+					{ "time": 0.3667 }
+				],
+				"shear": [
+					{}
+				]
+			},
+			"block_of_ice_particles_2": {
+				"rotate": [
+					{}
+				],
+				"translate": [
+					{},
+					{
+						"time": 0.0333,
+						"x": 220.02,
+						"y": -168.83,
+						"curve": [ 0.142, 220.02, 0.26, 220.02, 0.142, -168.83, 0.26, -173.23 ]
+					},
+					{
+						"time": 0.3667,
+						"x": 220.02,
+						"y": -181.92,
+						"curve": [ 0.475, 220.02, 0.576, 220.02, 0.475, -190.55, 0.683, -307.62 ]
+					},
+					{ "time": 0.6833, "x": 220.02, "y": -307.63 }
+				],
+				"scale": [
+					{},
+					{ "time": 0.0333, "x": 0.293, "y": 0.293 },
+					{ "time": 0.3667 }
+				],
+				"shear": [
+					{}
+				]
+			},
+			"block_of_ice_particles_3": {
+				"rotate": [
+					{}
+				],
+				"translate": [
+					{},
+					{
+						"time": 0.0333,
+						"x": 386.15,
+						"y": -74.54,
+						"curve": [ 0.142, 386.15, 0.26, 386.15, 0.142, -74.54, 0.26, -78.94 ]
+					},
+					{
+						"time": 0.3667,
+						"x": 386.15,
+						"y": -87.63,
+						"curve": [ 0.475, 386.15, 0.576, 386.15, 0.367, -87.63, 0.535, -175.27 ]
+					},
+					{ "time": 0.6833, "x": 386.15, "y": -251.66 }
+				],
+				"scale": [
+					{},
+					{ "time": 0.0333, "x": 0.293, "y": 0.293 },
+					{ "time": 0.3667 }
+				],
+				"shear": [
+					{}
+				]
+			},
+			"block_of_ice_particles_4": {
+				"rotate": [
+					{},
+					{ "time": 0.0333, "value": 21.85 }
+				],
+				"translate": [
+					{},
+					{
+						"time": 0.0333,
+						"x": 393.12,
+						"y": -142.13,
+						"curve": [ 0.321, 393.12, 0.612, 393.12, 0.321, -142.13, 0.612, -172.75 ]
+					},
+					{ "time": 0.9, "x": 393.12, "y": -234 }
+				],
+				"scale": [
+					{},
+					{ "time": 0.0333, "x": -0.441, "y": 0.441 },
+					{ "time": 0.3667, "x": -1 }
+				],
+				"shear": [
+					{}
+				]
+			},
+			"block_of_ice_particles_5": {
+				"rotate": [
+					{},
+					{ "time": 0.0333, "value": 2.4 }
+				],
+				"translate": [
+					{},
+					{
+						"time": 0.0333,
+						"x": 344.1,
+						"y": -169.02,
+						"curve": [ 0.142, 344.1, 0.26, 344.1, 0.142, -169.02, 0.26, -173.42 ]
+					},
+					{
+						"time": 0.3667,
+						"x": 344.1,
+						"y": -182.11,
+						"curve": [ 0.475, 344.1, 0.576, 344.1, 0.475, -190.74, 0.683, -307.81 ]
+					},
+					{ "time": 0.6833, "x": 344.1, "y": -307.82 }
+				],
+				"scale": [
+					{},
+					{ "time": 0.0333, "x": -0.441, "y": 0.441 },
+					{ "time": 0.3667, "x": -1 }
+				],
+				"shear": [
+					{}
+				]
+			},
+			"block_of_ice_particles_6": {
+				"rotate": [
+					{ "time": 0.2833 }
+				],
+				"translate": [
+					{ "time": 0.2833 }
+				],
+				"scale": [
+					{ "time": 0.2833 }
+				],
+				"shear": [
+					{ "time": 0.2833 }
+				]
+			},
+			"block_of_ice_cloud_snowflake_1": {
+				"rotate": [
+					{ "time": 0.4333 },
+					{ "time": 1.2667, "value": -45.99 }
+				],
+				"translate": [
+					{
+						"time": 0.4333,
+						"x": -95.78,
+						"y": 248.81,
+						"curve": [ 0.433, -95.77, 0.577, -39.65, 0.433, 248.8, 0.596, 260.31 ]
+					},
+					{
+						"time": 0.65,
+						"x": -20.92,
+						"y": 263.77,
+						"curve": [ 0.732, 0.19, 1.266, 40.25, 0.755, 270.56, 1.195, 224.72 ]
+					},
+					{ "time": 1.2667, "x": 40.25, "y": 224.72 }
+				]
+			},
+			"block_of_ice_cloud_snowflake_2": {
+				"rotate": [
+					{ "time": 0.4333 },
+					{ "time": 1.2667, "value": 48.37 }
+				],
+				"translate": [
+					{
+						"time": 0.4333,
+						"x": -206.27,
+						"y": 353.68,
+						"curve": [ 0.433, -206.27, 0.615, -217.89, 0.433, 408.44, 0.614, 431.47 ]
+					},
+					{
+						"time": 0.65,
+						"x": -219.33,
+						"y": 431.76,
+						"curve": [ 0.781, -224.66, 1.266, -236.32, 0.838, 433.29, 1.267, 403.47 ]
+					},
+					{ "time": 1.2667, "x": -236.32, "y": 375.88 }
+				]
+			},
+			"block_of_ice_cloud_snowflake_3": {
+				"rotate": [
+					{ "time": 0.4333 },
+					{ "time": 1.2667, "value": -40.24 }
+				],
+				"translate": [
+					{
+						"time": 0.4333,
+						"x": -245.9,
+						"y": 184.43,
+						"curve": [ 0.433, -245.91, 0.614, -335.17, 0.433, 184.42, 0.598, 176.83 ]
+					},
+					{
+						"time": 0.65,
+						"x": -341.86,
+						"y": 167.08,
+						"curve": [ 0.722, -355.25, 1.195, -391.2, 0.784, 142.07, 1.195, 75.68 ]
+					},
+					{ "time": 1.2667, "x": -391.2, "y": 75.68 }
+				]
+			},
+			"block_of_ice_cloud_snowflake_4": {
+				"rotate": [
+					{ "time": 0.4333 },
+					{ "time": 1.2667, "value": -12.32 }
+				],
+				"translate": [
+					{
+						"time": 0.4333,
+						"x": -168.03,
+						"y": 352.46,
+						"curve": [ 0.469, -168.72, 0.615, -145.25, 0.469, 360.23, 0.614, 350.99 ]
+					},
+					{
+						"time": 0.65,
+						"x": -142.89,
+						"y": 350.99,
+						"curve": [ 0.784, -133.87, 1.195, -122.08, 0.722, 350.99, 1.195, 303.49 ]
+					},
+					{ "time": 1.2667, "x": -122.08, "y": 303.49 }
+				]
+			},
+			"block_of_ice_cloud_snowflake_5": {
+				"rotate": [
+					{ "time": 0.4333 },
+					{ "time": 1.2667, "value": 63.63 }
+				],
+				"translate": [
+					{
+						"time": 0.4333,
+						"x": -65.57,
+						"y": 188.52,
+						"curve": [ 0.433, -65.57, 0.567, -38.4, 0.469, 170.77, 0.598, 144.82 ]
+					},
+					{
+						"time": 0.65,
+						"x": -23.67,
+						"y": 135.25,
+						"curve": [ 0.727, -10.01, 1.195, -1.09, 0.769, 113.25, 1.195, 94.53 ]
+					},
+					{ "time": 1.2667, "x": -1.09, "y": 94.53 }
+				]
+			},
+			"block_of_ice_cloud_snowflake_6": {
+				"rotate": [
+					{ "time": 0.4333 },
+					{ "time": 1.2667, "value": -35.88 }
+				],
+				"translate": [
+					{
+						"time": 0.4333,
+						"x": -266.39,
+						"y": 301.23,
+						"curve": [ 0.433, -266.4, 0.616, -334.11, 0.433, 336.91, 0.568, 360.4 ]
+					},
+					{
+						"time": 0.65,
+						"x": -344.26,
+						"y": 372.95,
+						"curve": [ 0.839, -400.22, 1.267, -403.84, 0.759, 389.58, 1.267, 369.99 ]
+					},
+					{ "time": 1.2667, "x": -403.84, "y": 341.8 }
+				]
+			},
+			"block_of_ice_cloud_snowflake_7": {
+				"rotate": [
+					{ "time": 0.4333 },
+					{ "time": 1.2667, "value": 54.68 }
+				],
+				"translate": [
+					{
+						"time": 0.4333,
+						"x": -77.87,
+						"y": 321.72,
+						"curve": [ 0.433, -77.87, 0.567, -45.62, 0.433, 354.73, 0.541, 385.7 ]
+					},
+					{
+						"time": 0.65,
+						"x": -31.13,
+						"y": 387.3,
+						"curve": [ 0.821, -1.29, 1.266, 12.98, 0.859, 390.36, 1.264, 317.57 ]
+					},
+					{ "time": 1.2667, "x": 12.98, "y": 299.32 }
+				]
+			},
+			"block_of_ice": {
+				"rotate": [
+					{ "time": 0.6833, "curve": "stepped" },
+					{ "time": 0.9 }
+				],
+				"translate": [
+					{
+						"curve": [ 0.048, 0, 0.669, 0, 0.108, 0, 0.717, -17.79 ]
+					},
+					{ "time": 0.7167, "y": -33.59 }
+				],
+				"scale": [
+					{
+						"curve": [ 0.108, 1, 0.609, 0.993, 0.108, 1, 0.717, 0.749 ]
+					},
+					{ "time": 0.7167, "x": 0.993, "y": 0.653 }
+				]
+			},
+			"block_of_ice_melting_1": {
+				"translate": [
+					{
+						"time": 0.15,
+						"y": 151.23,
+						"curve": [ 0.162, 0, 0.172, 0, 0.162, 151.23, 0.176, 240.98 ]
+					},
+					{
+						"time": 0.1833,
+						"y": 240.13,
+						"curve": [ 0.28, 0, 0.717, 8.13, 0.39, 214.75, 0.678, 48.46 ]
+					},
+					{
+						"time": 0.7167,
+						"x": 8.13,
+						"y": 26.07,
+						"curve": [ 0.753, 8.13, 0.964, 7.15, 0.753, 5.29, 0.919, -4.83 ]
+					},
+					{ "time": 1, "x": 5.88, "y": -5.62 }
+				],
+				"scale": [
+					{
+						"time": 0.15,
+						"x": 0.785,
+						"y": 0.07,
+						"curve": [ 0.178, 0.792, 0.315, 0.808, 0.179, 0.078, 0.321, 0.544 ]
+					},
+					{
+						"time": 0.3667,
+						"x": 0.838,
+						"y": 0.584,
+						"curve": [ 0.466, 0.895, 0.575, 1.234, 0.466, 0.668, 0.575, 0.749 ]
+					},
+					{
+						"time": 0.6833,
+						"x": 1.305,
+						"y": 0.738,
+						"curve": [ 0.728, 1.334, 0.973, 1.362, 0.728, 0.733, 0.973, 0.706 ]
+					},
+					{ "time": 1, "x": 1.389, "y": 0.67 }
+				]
+			},
+			"block_of_ice_melting_2": {
+				"rotate": [
+					{ "time": 0.7167 }
+				],
+				"translate": [
+					{ "x": 1.09, "y": 128.38, "curve": "stepped" },
+					{
+						"time": 0.25,
+						"x": 1.09,
+						"y": 128.38,
+						"curve": [ 0.406, 1.09, 0.561, 2.69, 0.406, 128.38, 0.561, 91.75 ]
+					},
+					{ "time": 0.7167, "x": 5.89, "y": 18.5 }
+				],
+				"scale": [
+					{
+						"time": 0.25,
+						"x": 0.68,
+						"y": 0.098,
+						"curve": [ 0.322, 0.68, 0.395, 0.781, 0.322, 0.098, 0.395, 0.354 ]
+					},
+					{ "time": 0.4667, "x": 0.984, "y": 0.868 },
+					{ "time": 0.7167, "x": 1.339, "y": 0.875 }
+				]
+			},
+			"block_of_ice_melting_3": {
+				"translate": [
+					{ "x": 3.25, "y": 26.9, "curve": "stepped" },
+					{ "time": 0.1833, "x": 3.25, "y": 26.9 },
+					{ "time": 0.7167, "x": 1.78, "y": 1.62 }
+				],
+				"scale": [
+					{ "x": 0.823, "y": 0.515, "curve": "stepped" },
+					{ "time": 0.1833, "x": 0.823, "y": 0.515 },
+					{ "time": 0.7167, "x": 1.172, "y": 0.655 }
+				],
+				"shear": [
+					{ "curve": "stepped" },
+					{ "time": 0.1833 }
+				]
+			},
+			"block_of_ice_melting_puddle": {
+				"rotate": [
+					{ "time": 0.3167, "curve": "stepped" },
+					{ "time": 1.2167 }
+				],
+				"translate": [
+					{ "time": 0.3167, "y": -29.19 },
+					{ "time": 1.2167, "x": -8.62, "y": -29.48 }
+				],
+				"scale": [
+					{
+						"time": 0.3167,
+						"x": 0.433,
+						"y": 0.433,
+						"curve": [ 0.449, 0.526, 0.584, 0.618, 0.449, 0.439, 0.618, 0.539 ]
+					},
+					{
+						"time": 0.7167,
+						"x": 0.714,
+						"y": 0.619,
+						"curve": [ 0.885, 0.834, 1.049, 1.086, 0.869, 0.742, 1.049, 1.086 ]
+					},
+					{ "time": 1.2167, "x": 1.086, "y": 1.086 }
+				],
+				"shear": [
+					{ "time": 0.3167, "curve": "stepped" },
+					{ "time": 0.9 }
+				]
+			}
+		},
+		"drawOrder": [
+			{},
+			{ "time": 0.25 }
+		]
+	},
+	"shatter": {
+		"slots": {
+			"iceblock": {
+				"attachment": [
+					{ "name": "iceblock_cracks" },
+					{ "time": 0.05, "name": null }
+				]
+			},
+			"MOD/Ice Maker/shard 1": {
+				"rgba": [
+					{ "time": 0.2, "color": "ffffffff" },
+					{ "time": 0.3333, "color": "ffffff00" }
+				],
+				"attachment": [
+					{ "time": 0.05, "name": "MOD/Ice Maker/shard 1" }
+				]
+			},
+			"MOD/Ice Maker/shard 2": {
+				"rgba": [
+					{ "time": 0.2, "color": "ffffffff" },
+					{ "time": 0.3333, "color": "ffffff00" }
+				],
+				"attachment": [
+					{ "time": 0.05, "name": "MOD/Ice Maker/shard 2" }
+				]
+			},
+			"MOD/Ice Maker/shard 3": {
+				"rgba": [
+					{ "time": 0.2, "color": "ffffffff" },
+					{ "time": 0.3333, "color": "ffffff00" }
+				],
+				"attachment": [
+					{ "time": 0.05, "name": "MOD/Ice Maker/shard 3" }
+				]
+			},
+			"MOD/Ice Maker/shard 4": {
+				"rgba": [
+					{ "time": 0.2, "color": "ffffffff" },
+					{ "time": 0.3333, "color": "ffffff00" }
+				],
+				"attachment": [
+					{ "time": 0.05, "name": "MOD/Ice Maker/shard 4" }
+				]
+			},
+			"MOD/Ice Maker/shard 5": {
+				"rgba": [
+					{ "time": 0.2, "color": "ffffffff" },
+					{ "time": 0.3333, "color": "ffffff00" }
+				],
+				"attachment": [
+					{ "time": 0.05, "name": "MOD/Ice Maker/shard 5" }
+				]
+			},
+			"MOD/Ice Maker/shard 6": {
+				"rgba": [
+					{ "time": 0.2, "color": "ffffffff" },
+					{ "time": 0.2833, "color": "ffffff00" }
+				],
+				"attachment": [
+					{ "time": 0.05, "name": "MOD/Ice Maker/shard 6" }
+				]
+			},
+			"MOD/Ice Maker/shard 7": {
+				"rgba": [
+					{ "time": 0.2, "color": "ffffffff" },
+					{ "time": 0.3333, "color": "ffffff00" }
+				],
+				"attachment": [
+					{ "time": 0.05, "name": "MOD/Ice Maker/shard 7" }
+				]
+			},
+			"MOD/Ice Maker/shard 8": {
+				"rgba": [
+					{ "time": 0.2, "color": "ffffffff" },
+					{ "time": 0.3333, "color": "ffffff00" }
+				],
+				"attachment": [
+					{ "time": 0.05, "name": "MOD/Ice Maker/shard 8" }
+				]
+			},
+			"MOD/Ice Maker/shard 9": {
+				"rgba": [
+					{ "time": 0.1333, "color": "ffffffff" },
+					{ "time": 0.2833, "color": "ffffff00" }
+				],
+				"attachment": [
+					{ "time": 0.05, "name": "MOD/Ice Maker/shard 9" }
+				]
+			},
+			"MOD/Ice Maker/shard 10": {
+				"rgba": [
+					{ "time": 0.1333, "color": "ffffffff" },
+					{ "time": 0.2833, "color": "ffffff00" }
+				],
+				"attachment": [
+					{ "time": 0.05, "name": "MOD/Ice Maker/shard 10" }
+				]
+			},
+			"MOD/Ice Particles/cloud 12": {
+				"attachment": [
+					{ "time": 0.05, "name": null },
+					{ "time": 0.2833, "name": null }
+				]
+			},
+			"MOD/Ice Particles/cloud frame": {
+				"rgba": [
+					{ "time": 0.05, "color": "ffffffff", "curve": "stepped" },
+					{ "time": 0.2, "color": "ffffffff" },
+					{ "time": 0.8, "color": "ffffff00" }
+				],
+				"attachment": [
+					{ "time": 0.05, "name": "MOD/Ice Particles/cloud frame 1" },
+					{ "time": 0.1167, "name": "MOD/Ice Particles/cloud frame 2" },
+					{ "time": 0.2, "name": "MOD/Ice Particles/cloud frame 3" }
+				]
+			},
+			"MOD/Ice Particles/snowflake 3": {
+				"rgba": [
+					{ "time": 0.2, "color": "ffffffff", "curve": "stepped" },
+					{ "time": 0.8333, "color": "ffffffff" },
+					{ "time": 1.2167, "color": "ffffff00" }
+				],
+				"attachment": [
+					{ "time": 0.2, "name": "MOD/Ice Particles/snowflake 3" }
+				]
+			},
+			"MOD/Ice Particles/snowflake 5": {
+				"rgba": [
+					{ "time": 0.2, "color": "ffffffff", "curve": "stepped" },
+					{ "time": 1.0667, "color": "ffffffff" },
+					{ "time": 1.5, "color": "ffffff00" }
+				],
+				"attachment": [
+					{ "time": 0.2, "name": "MOD/Ice Particles/snowflake 5" }
+				]
+			},
+			"MOD/Ice Particles/snowflake 7": {
+				"rgba": [
+					{ "time": 0.2, "color": "ffffffff", "curve": "stepped" },
+					{ "time": 0.8333, "color": "ffffffff" },
+					{ "time": 1.5, "color": "ffffff00" }
+				],
+				"attachment": [
+					{ "time": 0.2, "name": "MOD/Ice Particles/snowflake 7" }
+				]
+			},
+			"MOD/Ice Particles/snowflake 9": {
+				"rgba": [
+					{ "time": 0.2, "color": "ffffffff", "curve": "stepped" },
+					{ "time": 0.8667, "color": "ffffffff" },
+					{ "time": 1.3833, "color": "ffffff00" }
+				],
+				"attachment": [
+					{ "time": 0.2, "name": "MOD/Ice Particles/snowflake 9" }
+				]
+			},
+			"MOD/Ice Particles/snowflake 10": {
+				"rgba": [
+					{ "time": 0.2, "color": "ffffffff", "curve": "stepped" },
+					{ "time": 0.9833, "color": "ffffffff" },
+					{ "time": 1.5, "color": "ffffff00" }
+				],
+				"attachment": [
+					{ "time": 0.2, "name": "MOD/Ice Particles/snowflake 9" }
+				]
+			},
+			"MOD/Ice Particles/snow_flake1": {
+				"rgba": [
+					{ "time": 0.2, "color": "ffffffff", "curve": "stepped" },
+					{ "time": 0.8333, "color": "ffffffff" },
+					{ "time": 1.1667, "color": "ffffff00" }
+				],
+				"attachment": [
+					{ "time": 0.2, "name": "MOD/Ice Particles/snow_flake1" }
+				]
+			},
+			"MOD/Ice Particles/snow_flake2": {
+				"rgba": [
+					{ "time": 0.2, "color": "ffffffff", "curve": "stepped" },
+					{ "time": 0.8333, "color": "ffffffff" },
+					{ "time": 1.2167, "color": "ffffff00" }
+				],
+				"attachment": [
+					{ "time": 0.2, "name": "MOD/Ice Particles/snow_flake1" }
+				]
+			}
+		},
+		"bones": {
+			"block_of_ice_particles": {
+				"rotate": [
+					{ "time": 0.05 }
+				],
+				"translate": [
+					{ "x": -11.04, "y": -128.81 }
+				],
+				"scale": [
+					{ "time": 0.05 }
+				],
+				"shear": [
+					{ "time": 0.05 }
+				]
+			},
+			"block_of_ice_cloud2": {
+				"rotate": [
+					{ "time": 0.05 }
+				],
+				"translate": [
+					{ "time": 0.05 }
+				],
+				"scale": [
+					{ "time": 0.05 }
+				],
+				"shear": [
+					{ "time": 0.05 }
+				]
+			},
+			"block_of_ice_cloud_frames": {
+				"rotate": [
+					{ "time": 0.05 }
+				],
+				"translate": [
+					{ "time": 0.05, "x": 12.88, "y": 167.47 }
+				],
+				"scale": [
+					{
+						"time": 0.05,
+						"x": 0.841,
+						"y": 0.841,
+						"curve": [ 0.05, 1.068, 0.243, 1.553, 0.05, 1.068, 0.243, 1.553 ]
+					},
+					{
+						"time": 0.3333,
+						"x": 1.597,
+						"y": 1.597,
+						"curve": [ 0.489, 1.673, 0.644, 1.711, 0.489, 1.673, 0.644, 1.711 ]
+					},
+					{ "time": 0.8, "x": 1.711, "y": 1.711 }
+				],
+				"shear": [
+					{ "time": 0.05 }
+				]
+			},
+			"block_of_ice_cloud": {
+				"rotate": [
+					{ "time": 0.05 }
+				],
+				"translate": [
+					{ "time": 0.05 }
+				],
+				"scale": [
+					{ "time": 0.05 }
+				],
+				"shear": [
+					{ "time": 0.05 }
+				]
+			},
+			"block_of_ice_cloud_snowflakes": {
+				"rotate": [
+					{ "time": 0.05 }
+				],
+				"translate": [
+					{ "time": 0.05 }
+				],
+				"scale": [
+					{ "time": 0.05 }
+				],
+				"shear": [
+					{ "time": 0.05 }
+				]
+			},
+			"block_of_ice_particles_1": {
+				"rotate": [
+					{ "time": 0.05 }
+				],
+				"translate": [
+					{ "time": 0.05, "curve": "stepped" },
+					{ "time": 0.3333 }
+				],
+				"scale": [
+					{ "time": 0.05 }
+				],
+				"shear": [
+					{ "time": 0.05 }
+				]
+			},
+			"block_of_ice_particles_2": {
+				"rotate": [
+					{ "time": 0.05 }
+				],
+				"translate": [
+					{ "time": 0.05, "curve": "stepped" },
+					{ "time": 0.3333 }
+				],
+				"scale": [
+					{ "time": 0.05 }
+				],
+				"shear": [
+					{ "time": 0.05 }
+				]
+			},
+			"block_of_ice_particles_3": {
+				"rotate": [
+					{ "time": 0.05 }
+				],
+				"translate": [
+					{ "time": 0.05, "curve": "stepped" },
+					{ "time": 0.3333 }
+				],
+				"scale": [
+					{ "time": 0.05 }
+				],
+				"shear": [
+					{ "time": 0.05 }
+				]
+			},
+			"block_of_ice_particles_4": {
+				"rotate": [
+					{ "time": 0.05 }
+				],
+				"translate": [
+					{ "time": 0.05, "curve": "stepped" },
+					{ "time": 0.3333 }
+				],
+				"scale": [
+					{ "time": 0.05 }
+				],
+				"shear": [
+					{ "time": 0.05 }
+				]
+			},
+			"block_of_ice_particles_5": {
+				"rotate": [
+					{ "time": 0.05 }
+				],
+				"translate": [
+					{ "time": 0.05, "curve": "stepped" },
+					{ "time": 0.3333 }
+				],
+				"scale": [
+					{ "time": 0.05 }
+				],
+				"shear": [
+					{ "time": 0.05 }
+				]
+			},
+			"block_of_ice_particles_6": {
+				"rotate": [
+					{ "time": 0.05 }
+				],
+				"translate": [
+					{ "time": 0.05, "curve": "stepped" },
+					{ "time": 0.3333 }
+				],
+				"scale": [
+					{ "time": 0.05 }
+				],
+				"shear": [
+					{ "time": 0.05 }
+				]
+			},
+			"block_of_ice_particles_7": {
+				"rotate": [
+					{ "time": 0.05 }
+				],
+				"translate": [
+					{ "x": 268.61, "y": 8.5, "curve": "stepped" },
+					{
+						"time": 0.05,
+						"x": 268.61,
+						"y": 8.5,
+						"curve": [ 0.129, -67.3, 0.254, -311.57, 0.129, 7.94, 0.254, 17.19 ]
+					},
+					{ "time": 0.3333, "x": -311.57, "y": 17.19 }
+				],
+				"scale": [
+					{ "time": 0.05 }
+				],
+				"shear": [
+					{ "time": 0.05 }
+				]
+			},
+			"block_of_ice_particles_8": {
+				"rotate": [
+					{ "time": 0.05 }
+				],
+				"translate": [
+					{
+						"time": 0.05,
+						"x": 360.68,
+						"y": -144.27,
+						"curve": [ 0.129, 488.64, 0.254, 552.62, 0.129, -262.76, 0.254, -322 ]
+					},
+					{ "time": 0.3333, "x": 552.62, "y": -322 }
+				],
+				"scale": [
+					{ "time": 0.05 }
+				],
+				"shear": [
+					{ "time": 0.05 }
+				]
+			},
+			"block_of_ice_particles_9": {
+				"rotate": [
+					{ "time": 0.05 }
+				],
+				"translate": [
+					{
+						"time": 0.05,
+						"x": 236.47,
+						"y": -104.87,
+						"curve": [ 0.129, 23.67, 0.254, -82.73, 0.129, -381.33, 0.254, -519.56 ]
+					},
+					{ "time": 0.3333, "x": -82.73, "y": -519.56 }
+				],
+				"scale": [
+					{ "time": 0.05 }
+				],
+				"shear": [
+					{ "time": 0.05 }
+				]
+			},
+			"block_of_ice_particles_10": {
+				"rotate": [
+					{ "time": 0.05 }
+				],
+				"translate": [
+					{
+						"time": 0.05,
+						"x": 314.84,
+						"y": -126.16,
+						"curve": [ 0.129, 280.08, 0.254, 262.7, 0.129, -314.16, 0.254, -408.16 ]
+					},
+					{ "time": 0.3333, "x": 262.7, "y": -408.16 }
+				],
+				"scale": [
+					{ "time": 0.05 }
+				],
+				"shear": [
+					{ "time": 0.05 }
+				]
+			},
+			"block_of_ice_particles_11": {
+				"rotate": [
+					{ "time": 0.05 }
+				],
+				"translate": [
+					{
+						"time": 0.05,
+						"x": 308.95,
+						"y": 156.48,
+						"curve": [ 0.129, 288.95, 0.254, 278.94, 0.129, 411.12, 0.254, 538.43 ]
+					},
+					{ "time": 0.3333, "x": 278.94, "y": 538.43 }
+				],
+				"scale": [
+					{ "time": 0.05 }
+				],
+				"shear": [
+					{ "time": 0.05 }
+				]
+			},
+			"block_of_ice_particles_12": {
+				"rotate": [
+					{ "time": 0.05 }
+				],
+				"translate": [
+					{
+						"time": 0.05,
+						"x": 437.03,
+						"y": -50.12,
+						"curve": [ 0.115, 661.14, 0.208, 671.33, 0.115, -73.44, 0.208, -51.21 ]
+					},
+					{
+						"time": 0.2833,
+						"x": 711.67,
+						"y": -55.41,
+						"curve": [ 0.3, 720.55, 0.317, 711.67, 0.3, -56.34, 0.317, -55.41 ]
+					},
+					{ "time": 0.3333, "x": 711.67, "y": -55.41 }
+				],
+				"scale": [
+					{ "time": 0.05 }
+				],
+				"shear": [
+					{ "time": 0.05 }
+				]
+			},
+			"block_of_ice_particles_16": {
+				"rotate": [
+					{ "time": 0.05, "value": 14.94 }
+				],
+				"translate": [
+					{
+						"time": 0.05,
+						"x": 400.77,
+						"y": 127.1,
+						"curve": [ 0.129, 613.58, 0.204, 585.07, 0.129, 319.89, 0.204, 277.92 ]
+					},
+					{ "time": 0.2833, "x": 585.07, "y": 277.92, "curve": "stepped" },
+					{ "time": 0.3333, "x": 585.07, "y": 277.92 }
+				],
+				"scale": [
+					{ "time": 0.05 }
+				],
+				"shear": [
+					{ "time": 0.05 }
+				]
+			},
+			"block_of_ice_particles_15": {
+				"rotate": [
+					{ "time": 0.05, "value": -21.9 }
+				],
+				"translate": [
+					{
+						"time": 0.05,
+						"x": 211.83,
+						"y": 134.96,
+						"curve": [ 0.129, 0.85, 0.283, -21.62, 0.129, 311.39, 0.204, 302.74 ]
+					},
+					{ "time": 0.2833, "x": -21.62, "y": 302.74, "curve": "stepped" },
+					{ "time": 0.3333, "x": -21.62, "y": 302.74 }
+				],
+				"scale": [
+					{ "time": 0.05 }
+				],
+				"shear": [
+					{ "time": 0.05 }
+				]
+			},
+			"block_of_ice_particles_14": {
+				"rotate": [
+					{ "time": 0.05 }
+				],
+				"translate": [
+					{
+						"time": 0.05,
+						"x": 431.08,
+						"y": 24.6,
+						"curve": [ 0.129, 722.27, 0.254, 867.87, 0.129, 87.14, 0.254, 118.41 ]
+					},
+					{ "time": 0.3333, "x": 867.87, "y": 118.41 }
+				],
+				"scale": [
+					{ "time": 0.05 }
+				],
+				"shear": [
+					{ "time": 0.05 }
+				]
+			},
+			"block_of_ice_particles_13": {
+				"rotate": [
+					{ "time": 0.05 }
+				],
+				"translate": [
+					{
+						"time": 0.05,
+						"x": 404.34,
+						"y": -110.1,
+						"curve": [ 0.129, 687.12, 0.254, 828.52, 0.129, -209.63, 0.254, -259.4 ]
+					},
+					{ "time": 0.3333, "x": 828.52, "y": -259.4 }
+				],
+				"scale": [
+					{ "time": 0.05 }
+				],
+				"shear": [
+					{ "time": 0.05 }
+				]
+			},
+			"block_of_ice_cloud_snowflake_1": {
+				"rotate": [
+					{ "time": 0.2 },
+					{ "time": 1.5, "value": -45.99 }
+				],
+				"translate": [
+					{
+						"time": 0.2,
+						"x": -95.78,
+						"y": 248.81,
+						"curve": [ 0.2, -95.77, 0.418, -39.65, 0.2, 248.8, 0.449, 260.31 ]
+					},
+					{
+						"time": 0.5333,
+						"x": -20.92,
+						"y": 263.77,
+						"curve": [ 0.664, 0.19, 1.499, 40.25, 0.7, 270.56, 1.386, 224.72 ]
+					},
+					{ "time": 1.5, "x": 40.25, "y": 224.72 }
+				]
+			},
+			"block_of_ice_cloud_snowflake_2": {
+				"rotate": [
+					{ "time": 0.2 },
+					{ "time": 1.5, "value": 48.37 }
+				],
+				"translate": [
+					{
+						"time": 0.2,
+						"x": -206.27,
+						"y": 353.68,
+						"curve": [ 0.2, -206.27, 0.478, -217.89, 0.2, 408.44, 0.476, 431.47 ]
+					},
+					{
+						"time": 0.5333,
+						"x": -219.33,
+						"y": 431.76,
+						"curve": [ 0.741, -224.66, 1.499, -236.32, 0.831, 433.29, 1.5, 403.47 ]
+					},
+					{ "time": 1.5, "x": -236.32, "y": 375.88 }
+				]
+			},
+			"block_of_ice_cloud_snowflake_3": {
+				"rotate": [
+					{ "time": 0.2 },
+					{ "time": 1.5, "value": -40.24 }
+				],
+				"translate": [
+					{
+						"time": 0.2,
+						"x": -245.9,
+						"y": 184.43,
+						"curve": [ 0.2, -245.91, 0.476, -335.17, 0.2, 184.42, 0.451, 176.83 ]
+					},
+					{
+						"time": 0.5333,
+						"x": -341.86,
+						"y": 167.08,
+						"curve": [ 0.647, -355.25, 1.386, -391.2, 0.746, 142.07, 1.386, 75.68 ]
+					},
+					{ "time": 1.5, "x": -391.2, "y": 75.68 }
+				]
+			},
+			"block_of_ice_cloud_snowflake_4": {
+				"rotate": [
+					{ "time": 0.2 },
+					{ "time": 1.5, "value": -12.32 }
+				],
+				"translate": [
+					{
+						"time": 0.2,
+						"x": -168.03,
+						"y": 352.46,
+						"curve": [ 0.257, -168.72, 0.478, -145.25, 0.257, 360.23, 0.476, 350.99 ]
+					},
+					{
+						"time": 0.5333,
+						"x": -142.89,
+						"y": 350.99,
+						"curve": [ 0.746, -133.87, 1.386, -122.08, 0.647, 350.99, 1.386, 303.49 ]
+					},
+					{ "time": 1.5, "x": -122.08, "y": 303.49 }
+				]
+			},
+			"block_of_ice_cloud_snowflake_5": {
+				"rotate": [
+					{ "time": 0.2 },
+					{ "time": 1.5, "value": 63.63 }
+				],
+				"translate": [
+					{
+						"time": 0.2,
+						"x": -65.57,
+						"y": 188.52,
+						"curve": [ 0.2, -65.57, 0.402, -38.4, 0.257, 170.77, 0.452, 144.82 ]
+					},
+					{
+						"time": 0.5333,
+						"x": -23.67,
+						"y": 135.25,
+						"curve": [ 0.655, -10.01, 1.386, -1.09, 0.721, 113.25, 1.386, 94.53 ]
+					},
+					{ "time": 1.5, "x": -1.09, "y": 94.53 }
+				]
+			},
+			"block_of_ice_cloud_snowflake_6": {
+				"rotate": [
+					{ "time": 0.2 },
+					{ "time": 1.5, "value": -35.88 }
+				],
+				"translate": [
+					{
+						"time": 0.2,
+						"x": -266.39,
+						"y": 301.23,
+						"curve": [ 0.2, -266.4, 0.479, -334.11, 0.2, 336.91, 0.403, 360.4 ]
+					},
+					{
+						"time": 0.5333,
+						"x": -344.26,
+						"y": 372.95,
+						"curve": [ 0.832, -400.22, 1.5, -403.84, 0.705, 389.58, 1.5, 369.99 ]
+					},
+					{ "time": 1.5, "x": -403.84, "y": 341.8 }
+				]
+			},
+			"block_of_ice_cloud_snowflake_7": {
+				"rotate": [
+					{ "time": 0.2 },
+					{ "time": 1.5, "value": 54.68 }
+				],
+				"translate": [
+					{
+						"time": 0.2,
+						"x": -77.87,
+						"y": 321.72,
+						"curve": [ 0.2, -77.87, 0.402, -45.62, 0.2, 354.73, 0.361, 385.7 ]
+					},
+					{
+						"time": 0.5333,
+						"x": -31.13,
+						"y": 387.3,
+						"curve": [ 0.804, -1.29, 1.499, 12.98, 0.864, 390.36, 1.496, 317.57 ]
+					},
+					{ "time": 1.5, "x": 12.98, "y": 299.32 }
+				]
+			},
+			"block_of_ice": {
+				"scale": [
+					{
+						"curve": [ 0.033, 0.791, 0.033, 1.676, 0.033, 0.791, 0.033, 1.676 ]
+					},
+					{ "time": 0.05, "x": 1.676, "y": 1.676 }
+				]
+			}
+		},
+		"drawOrder": [
+			{}
+		]
+	},
+	"sliding_left": {
+		"slots": {
+			"iceblock": {
+				"attachment": [
+					{ "name": "iceblock_cracks" }
+				]
+			},
+			"MOD/Ice Maker/drop 1": {
+				"rgba": [
+					{ "time": 0.0833, "color": "ffffffff" },
+					{ "time": 0.2333, "color": "ffffff00" },
+					{ "time": 0.2833, "color": "ffffffff" }
+				],
+				"attachment": [
+					{ "name": "MOD/Ice Maker/drop 1" }
+				]
+			},
+			"MOD/Ice Maker/drop 2": {
+				"rgba": [
+					{ "color": "ffffffff" },
+					{ "time": 0.15, "color": "ffffff00" },
+					{ "time": 0.2, "color": "ffffffff" }
+				],
+				"attachment": [
+					{ "name": "MOD/Ice Maker/drop 2" }
+				]
+			},
+			"MOD/Ice Maker/drop 3": {
+				"rgba": [
+					{ "color": "ffffff7f" },
+					{ "time": 0.0833, "color": "ffffff00" },
+					{ "time": 0.1333, "color": "ffffffff", "curve": "stepped" },
+					{ "time": 0.35, "color": "ffffffff" },
+					{ "time": 0.4333, "color": "ffffff7f" }
+				],
+				"attachment": [
+					{ "name": "MOD/Ice Maker/drop 3" }
+				]
+			},
+			"MOD/Ice Maker/drop 4": {
+				"rgba": [
+					{ "color": "ffffff00" },
+					{ "time": 0.05, "color": "ffffffff", "curve": "stepped" },
+					{ "time": 0.2833, "color": "ffffffff" },
+					{ "time": 0.35, "color": "ffffff7f" },
+					{ "time": 0.4333, "color": "ffffff00" }
+				],
+				"attachment": [
+					{ "name": "MOD/Ice Maker/drop 4" }
+				]
+			},
+			"MOD/Ice Maker/drop 5": {
+				"rgba": [
+					{ "time": 0.2, "color": "ffffffff" },
+					{ "time": 0.35, "color": "ffffff00" },
+					{ "time": 0.4, "color": "ffffffff" }
+				],
+				"attachment": [
+					{ "name": "MOD/Ice Maker/drop 5" }
+				]
+			},
+			"MOD/Ice Maker/drop 6": {
+				"rgba": [
+					{ "time": 0.15, "color": "ffffffff" },
+					{ "time": 0.3333, "color": "ffffff00" },
+					{ "time": 0.35, "color": "ffffffff" }
+				],
+				"attachment": [
+					{ "name": "MOD/Ice Maker/drop 6" }
+				]
+			},
+			"MOD/Ice Maker/shard 10": {
+				"attachment": [
+					{ "name": null }
+				]
+			},
+			"MOD/Ice Particles/cloud 10": {
+				"rgba": [
+					{ "color": "ffffff00" },
+					{ "time": 0.2333, "color": "ffffffff" },
+					{ "time": 0.4333, "color": "ffffff00" }
+				],
+				"attachment": [
+					{ "name": "MOD/Ice Particles/cloud 7" },
+					{ "time": 0.4333, "name": "MOD/Ice Particles/cloud 7" }
+				]
+			},
+			"MOD/Ice Particles/cloud 12": {
+				"rgba": [
+					{ "color": "ffffff7f" },
+					{ "time": 0.1333, "color": "ffffffff" },
+					{ "time": 0.3333, "color": "ffffff00" },
+					{ "time": 0.4333, "color": "ffffff7f" }
+				],
+				"attachment": [
+					{ "name": "MOD/Ice Particles/cloud 6" }
+				]
+			}
+		},
+		"bones": {
+			"block_of_ice_particles_1": {
+				"rotate": [
+					{ "value": -103.34 },
+					{ "time": 0.2333, "value": -56.88, "curve": "stepped" },
+					{ "time": 0.2833, "value": -134.31 },
+					{ "time": 0.4333, "value": -103.34 }
+				],
+				"translate": [
+					{
+						"x": 51.66,
+						"y": -208.8,
+						"curve": [ 0.014, 40.21, 0.038, 30.34, 0.015, -205.46, 0.039, -203.78 ]
+					},
+					{
+						"time": 0.05,
+						"x": 24.09,
+						"y": -203.78,
+						"curve": [ 0.127, -15.87, 0.233, -165.45, 0.116, -203.78, 0.227, -227.58 ]
+					},
+					{ "time": 0.2333, "x": -165.45, "y": -279.64, "curve": "stepped" },
+					{
+						"time": 0.2833,
+						"x": 215.1,
+						"y": -272.5,
+						"curve": [ 0.284, 215.1, 0.363, 108.88, 0.283, -236.67, 0.397, -220.78 ]
+					},
+					{ "time": 0.4333, "x": 51.66, "y": -208.8 }
+				]
+			},
+			"block_of_ice_particles_2": {
+				"rotate": [
+					{ "value": -67.55 },
+					{ "time": 0.15, "value": -23.04, "curve": "stepped" },
+					{ "time": 0.2, "value": -134.31 },
+					{ "time": 0.35, "value": -89.8 },
+					{ "time": 0.4333, "value": -67.55 }
+				],
+				"translate": [
+					{
+						"x": -2.95,
+						"y": -217.15,
+						"curve": [ 0.073, -60.56, 0.15, -165.45, 0.069, -225.35, 0.15, -251.03 ]
+					},
+					{ "time": 0.15, "x": -165.45, "y": -279.64, "curve": "stepped" },
+					{
+						"time": 0.2,
+						"x": 215.1,
+						"y": -272.5,
+						"curve": [ 0.2, 215.1, 0.279, 108.88, 0.2, -231.34, 0.282, -218.58 ]
+					},
+					{
+						"time": 0.35,
+						"x": 51.66,
+						"y": -215.37,
+						"curve": [ 0.364, 40.21, 0.388, 30.34, 0.365, -214.7, 0.389, -214.36 ]
+					},
+					{
+						"time": 0.4,
+						"x": 24.09,
+						"y": -214.36,
+						"curve": [ 0.413, 17.57, 0.42, 8.3, 0.412, -214.36, 0.419, -215.38 ]
+					},
+					{ "time": 0.4333, "x": -2.95, "y": -217.15 }
+				]
+			},
+			"block_of_ice_particles_3": {
+				"rotate": [
+					{ "value": -72.36 },
+					{ "time": 0.0833, "value": -56.88, "curve": "stepped" },
+					{ "time": 0.1333, "value": -134.31 },
+					{ "time": 0.4333, "value": -72.36 }
+				],
+				"translate": [
+					{
+						"x": 51.67,
+						"y": -199.25,
+						"curve": [ 0.045, 23.51, 0.083, -0.53, 0.044, -220.1, 0.083, -246.84 ]
+					},
+					{ "time": 0.0833, "x": -0.53, "y": -267.32, "curve": "stepped" },
+					{
+						"time": 0.1333,
+						"x": 281.24,
+						"y": -270.4,
+						"curve": [ 0.134, 281.24, 0.261, 160.12, 0.133, -221.78, 0.267, -165.41 ]
+					},
+					{
+						"time": 0.3333,
+						"x": 122.66,
+						"y": -165.41,
+						"curve": [ 0.369, 104.01, 0.396, 76.31, 0.365, -165.41, 0.394, -179.74 ]
+					},
+					{ "time": 0.4333, "x": 51.67, "y": -199.25 }
+				]
+			},
+			"block_of_ice_particles_4": {
+				"rotate": [
+					{ "value": -56.88, "curve": "stepped" },
+					{ "time": 0.05, "value": -134.31 },
+					{ "time": 0.35, "value": -72.36 },
+					{ "time": 0.4333, "value": -56.88 }
+				],
+				"translate": [
+					{ "x": -119.39, "y": -283.28, "curve": "stepped" },
+					{
+						"time": 0.05,
+						"x": 215.1,
+						"y": -280.27,
+						"curve": [ 0.05, 215.1, 0.161, 111.26, 0.05, -243.04, 0.107, -193.59 ]
+					},
+					{
+						"time": 0.2333,
+						"x": 73.8,
+						"y": -193.59,
+						"curve": [ 0.269, 55.15, 0.312, 12.34, 0.281, -193.59, 0.319, -201.77 ]
+					},
+					{
+						"time": 0.35,
+						"x": -28.56,
+						"y": -213.87,
+						"curve": [ 0.395, -75.3, 0.433, -119.39, 0.401, -233.32, 0.433, -252.7 ]
+					},
+					{ "time": 0.4333, "x": -119.39, "y": -283.28 }
+				]
+			},
+			"block_of_ice_particles_5": {
+				"rotate": [
+					{ "value": -126.57 },
+					{ "time": 0.1333, "value": -103.34 },
+					{ "time": 0.35, "value": -56.88, "curve": "stepped" },
+					{ "time": 0.4, "value": -134.31 },
+					{ "time": 0.4333, "value": -126.57 }
+				],
+				"translate": [
+					{
+						"x": 154.59,
+						"y": -233.28,
+						"curve": [ 0.032, 107.37, 0.093, 42.96, 0.033, -218.89, 0.094, -209.18 ]
+					},
+					{
+						"time": 0.1333,
+						"x": 3.18,
+						"y": -205.42,
+						"curve": [ 0.148, -10.7, 0.138, -22.27, 0.148, -204.05, 0.139, -203.18 ]
+					},
+					{
+						"time": 0.15,
+						"x": -28.51,
+						"y": -203.18,
+						"curve": [ 0.227, -68.47, 0.35, -237.78, 0.216, -203.18, 0.35, -227.29 ]
+					},
+					{ "time": 0.35, "x": -237.78, "y": -286.22, "curve": "stepped" },
+					{
+						"time": 0.4,
+						"x": 215.1,
+						"y": -272.5,
+						"curve": [ 0.4, 215.1, 0.41, 189.73, 0.4, -256.78, 0.41, -243.85 ]
+					},
+					{ "time": 0.4333, "x": 154.59, "y": -233.28 }
+				]
+			},
+			"block_of_ice_particles_6": {
+				"rotate": [
+					{ "value": -118.83 },
+					{ "time": 0.3333, "value": -56.88, "curve": "stepped" },
+					{ "time": 0.35, "value": -134.31 },
+					{ "time": 0.4333, "value": -118.83 }
+				],
+				"translate": [
+					{
+						"x": 164.62,
+						"y": -256.53,
+						"curve": [ 0.04, 126.23, 0.1, 84.79, 0.04, -252.84, 0.102, -251.71 ]
+					},
+					{
+						"time": 0.1333,
+						"x": 67.18,
+						"y": -251.71,
+						"curve": [ 0.21, 27.22, 0.333, -58.23, 0.199, -251.71, 0.333, -258.43 ]
+					},
+					{ "time": 0.3333, "x": -58.23, "y": -280.78, "curve": "stepped" },
+					{
+						"time": 0.35,
+						"x": 247.48,
+						"y": -279.72,
+						"curve": [ 0.35, 247.48, 0.39, 207.91, 0.35, -267.54, 0.39, -260.52 ]
+					},
+					{ "time": 0.4333, "x": 164.62, "y": -256.53 }
+				]
+			},
+			"block_of_ice_cloud": {
+				"translate": [
+					{
+						"x": 343.68,
+						"y": -249.22,
+						"curve": [ 0, 343.68, 0.4, 120.63, 0, -249.22, 0.4, -223.05 ]
+					},
+					{ "time": 0.4, "x": 120.63, "y": -223.05, "curve": "stepped" },
+					{ "time": 0.4333, "x": 343.68, "y": -249.22 }
+				],
+				"scale": [
+					{
+						"x": 0.626,
+						"y": 0.626,
+						"curve": [ 0.067, 0.626, 0.135, 0.749, 0.067, 0.626, 0.135, 0.51 ]
+					},
+					{
+						"time": 0.2,
+						"x": 0.875,
+						"y": 0.636,
+						"curve": [ 0.267, 0.999, 0.334, 1.124, 0.267, 0.76, 0.334, 1.124 ]
+					},
+					{ "time": 0.4, "x": 1.124, "y": 1.124, "curve": "stepped" },
+					{ "time": 0.4333, "x": 0.626, "y": 0.626 }
+				]
+			},
+			"block_of_ice_cloud2": {
+				"translate": [
+					{
+						"x": 276.85,
+						"y": -241.38,
+						"curve": [ 0.117, 211.16, 0.283, 120.63, 0.117, -233.67, 0.283, -223.05 ]
+					},
+					{ "time": 0.2833, "x": 120.63, "y": -223.05, "curve": "stepped" },
+					{
+						"time": 0.3333,
+						"x": 343.68,
+						"y": -249.22,
+						"curve": [ 0.333, 343.68, 0.367, 314.35, 0.333, -249.22, 0.367, -245.78 ]
+					},
+					{ "time": 0.4333, "x": 276.85, "y": -241.38 }
+				],
+				"scale": [
+					{
+						"x": 0.732,
+						"y": 0.578,
+						"curve": [ 0.027, 0.774, 0.057, 0.825, 0.027, 0.574, 0.057, 0.586 ]
+					},
+					{
+						"time": 0.0833,
+						"x": 0.875,
+						"y": 0.636,
+						"curve": [ 0.15, 0.999, 0.218, 1.124, 0.15, 0.76, 0.218, 1.124 ]
+					},
+					{ "time": 0.2833, "x": 1.124, "y": 1.124, "curve": "stepped" },
+					{
+						"time": 0.3333,
+						"x": 0.626,
+						"y": 0.626,
+						"curve": [ 0.373, 0.626, 0.394, 0.669, 0.373, 0.626, 0.394, 0.584 ]
+					},
+					{ "time": 0.4333, "x": 0.732, "y": 0.578 }
+				]
+			},
+			"block_of_ice_particles": {
+				"translate": [
+					{ "x": 64.93 }
+				],
+				"scale": [
+					{ "x": -1 }
+				]
+			},
+			"IceBlockBase": {
+				"shear": [
+					{ "y": -1.46 },
+					{ "time": 0.0833, "y": 0.86 },
+					{ "time": 0.15, "y": -1.46 },
+					{ "time": 0.2, "y": 0.86 },
+					{ "time": 0.2833, "y": -1.46 },
+					{ "time": 0.35, "y": 0.86 },
+					{ "time": 0.4333, "y": -1.46 }
+				]
+			}
+		},
+		"drawOrder": [
+			{}
+		]
+	},
+	"sliding_right": {
+		"slots": {
+			"iceblock": {
+				"attachment": [
+					{ "name": "iceblock_cracks" }
+				]
+			},
+			"MOD/Ice Maker/drop 1": {
+				"rgba": [
+					{ "time": 0.0833, "color": "ffffffff" },
+					{ "time": 0.2333, "color": "ffffff00" },
+					{ "time": 0.2833, "color": "ffffffff" }
+				],
+				"attachment": [
+					{ "name": "MOD/Ice Maker/drop 1" }
+				]
+			},
+			"MOD/Ice Maker/drop 2": {
+				"rgba": [
+					{ "color": "ffffffff" },
+					{ "time": 0.15, "color": "ffffff00" },
+					{ "time": 0.2, "color": "ffffffff" }
+				],
+				"attachment": [
+					{ "name": "MOD/Ice Maker/drop 2" }
+				]
+			},
+			"MOD/Ice Maker/drop 3": {
+				"rgba": [
+					{ "color": "ffffff7f" },
+					{ "time": 0.0833, "color": "ffffff00" },
+					{ "time": 0.1167, "color": "ffffffff", "curve": "stepped" },
+					{ "time": 0.35, "color": "ffffffff" },
+					{ "time": 0.4333, "color": "ffffff7f" }
+				],
+				"attachment": [
+					{ "name": "MOD/Ice Maker/drop 3" }
+				]
+			},
+			"MOD/Ice Maker/drop 4": {
+				"rgba": [
+					{ "color": "ffffff00" },
+					{ "time": 0.0333, "color": "ffffffff", "curve": "stepped" },
+					{ "time": 0.2833, "color": "ffffffff" },
+					{ "time": 0.35, "color": "ffffff7f" },
+					{ "time": 0.4333, "color": "ffffff00" }
+				],
+				"attachment": [
+					{ "name": "MOD/Ice Maker/drop 4" }
+				]
+			},
+			"MOD/Ice Maker/drop 5": {
+				"rgba": [
+					{ "time": 0.2, "color": "ffffffff" },
+					{ "time": 0.35, "color": "ffffff00" },
+					{ "time": 0.4, "color": "ffffffff" }
+				],
+				"attachment": [
+					{ "name": "MOD/Ice Maker/drop 5" }
+				]
+			},
+			"MOD/Ice Maker/drop 6": {
+				"rgba": [
+					{ "time": 0.15, "color": "ffffffff" },
+					{ "time": 0.3167, "color": "ffffff00" },
+					{ "time": 0.35, "color": "ffffffff" }
+				],
+				"attachment": [
+					{ "name": "MOD/Ice Maker/drop 6" }
+				]
+			},
+			"MOD/Ice Maker/shard 10": {
+				"attachment": [
+					{ "name": null }
+				]
+			},
+			"MOD/Ice Particles/cloud 10": {
+				"rgba": [
+					{ "color": "ffffff00" },
+					{ "time": 0.2333, "color": "ffffffff" },
+					{ "time": 0.4333, "color": "ffffff00" }
+				],
+				"attachment": [
+					{ "name": "MOD/Ice Particles/cloud 7" },
+					{ "time": 0.4333, "name": "MOD/Ice Particles/cloud 7" }
+				]
+			},
+			"MOD/Ice Particles/cloud 12": {
+				"rgba": [
+					{ "color": "ffffff7f" },
+					{ "time": 0.1167, "color": "ffffffff" },
+					{ "time": 0.3167, "color": "ffffff00" },
+					{ "time": 0.4333, "color": "ffffff7f" }
+				],
+				"attachment": [
+					{ "name": "MOD/Ice Particles/cloud 6" }
+				]
+			}
+		},
+		"bones": {
+			"block_of_ice_particles_1": {
+				"rotate": [
+					{ "value": -103.34 },
+					{ "time": 0.2333, "value": -56.88, "curve": "stepped" },
+					{ "time": 0.2833, "value": -134.31 },
+					{ "time": 0.4333, "value": -103.34 }
+				],
+				"translate": [
+					{
+						"x": 51.66,
+						"y": -208.8,
+						"curve": [ 0.014, 40.21, 0.021, 30.34, 0.015, -205.46, 0.022, -203.78 ]
+					},
+					{
+						"time": 0.0333,
+						"x": 24.09,
+						"y": -203.78,
+						"curve": [ 0.11, -15.87, 0.233, -165.45, 0.099, -203.78, 0.227, -227.58 ]
+					},
+					{ "time": 0.2333, "x": -165.45, "y": -279.64, "curve": "stepped" },
+					{
+						"time": 0.2833,
+						"x": 215.1,
+						"y": -272.5,
+						"curve": [ 0.284, 215.1, 0.363, 108.88, 0.283, -236.67, 0.397, -220.78 ]
+					},
+					{ "time": 0.4333, "x": 51.66, "y": -208.8 }
+				]
+			},
+			"block_of_ice_particles_2": {
+				"rotate": [
+					{ "value": -67.55 },
+					{ "time": 0.15, "value": -23.04, "curve": "stepped" },
+					{ "time": 0.2, "value": -134.31 },
+					{ "time": 0.35, "value": -89.8 },
+					{ "time": 0.4333, "value": -67.55 }
+				],
+				"translate": [
+					{
+						"x": -2.95,
+						"y": -217.15,
+						"curve": [ 0.073, -60.56, 0.15, -165.45, 0.069, -225.35, 0.15, -251.03 ]
+					},
+					{ "time": 0.15, "x": -165.45, "y": -279.64, "curve": "stepped" },
+					{
+						"time": 0.2,
+						"x": 215.1,
+						"y": -272.5,
+						"curve": [ 0.2, 215.1, 0.28, 108.88, 0.2, -231.34, 0.282, -218.58 ]
+					},
+					{
+						"time": 0.35,
+						"x": 51.66,
+						"y": -215.37,
+						"curve": [ 0.364, 40.21, 0.388, 30.34, 0.365, -214.7, 0.389, -214.36 ]
+					},
+					{
+						"time": 0.4,
+						"x": 24.09,
+						"y": -214.36,
+						"curve": [ 0.412, 17.57, 0.42, 8.3, 0.412, -214.36, 0.419, -215.38 ]
+					},
+					{ "time": 0.4333, "x": -2.95, "y": -217.15 }
+				]
+			},
+			"block_of_ice_particles_3": {
+				"rotate": [
+					{ "value": -72.36 },
+					{ "time": 0.0833, "value": -56.88, "curve": "stepped" },
+					{ "time": 0.1167, "value": -134.31 },
+					{ "time": 0.4333, "value": -72.36 }
+				],
+				"translate": [
+					{
+						"x": 51.67,
+						"y": -199.25,
+						"curve": [ 0.044, 23.51, 0.083, -0.53, 0.044, -220.1, 0.083, -246.84 ]
+					},
+					{ "time": 0.0833, "x": -0.53, "y": -267.32, "curve": "stepped" },
+					{
+						"time": 0.1167,
+						"x": 281.24,
+						"y": -270.4,
+						"curve": [ 0.117, 281.24, 0.245, 160.12, 0.117, -221.78, 0.251, -165.41 ]
+					},
+					{
+						"time": 0.3167,
+						"x": 122.66,
+						"y": -165.41,
+						"curve": [ 0.352, 104.01, 0.396, 76.31, 0.348, -165.41, 0.394, -179.74 ]
+					},
+					{ "time": 0.4333, "x": 51.67, "y": -199.25 }
+				]
+			},
+			"block_of_ice_particles_4": {
+				"rotate": [
+					{ "value": -56.88, "curve": "stepped" },
+					{ "time": 0.0333, "value": -134.31 },
+					{ "time": 0.35, "value": -72.36 },
+					{ "time": 0.4333, "value": -56.88 }
+				],
+				"translate": [
+					{ "x": -119.39, "y": -283.28, "curve": "stepped" },
+					{
+						"time": 0.0333,
+						"x": 215.1,
+						"y": -280.27,
+						"curve": [ 0.034, 215.1, 0.162, 111.26, 0.033, -243.04, 0.108, -193.59 ]
+					},
+					{
+						"time": 0.2333,
+						"x": 73.8,
+						"y": -193.59,
+						"curve": [ 0.269, 55.15, 0.312, 12.34, 0.281, -193.59, 0.319, -201.77 ]
+					},
+					{
+						"time": 0.35,
+						"x": -28.56,
+						"y": -213.87,
+						"curve": [ 0.394, -75.3, 0.433, -119.39, 0.401, -233.32, 0.433, -252.7 ]
+					},
+					{ "time": 0.4333, "x": -119.39, "y": -283.28 }
+				]
+			},
+			"block_of_ice_particles_5": {
+				"rotate": [
+					{ "value": -126.57 },
+					{ "time": 0.1167, "value": -103.34 },
+					{ "time": 0.35, "value": -56.88, "curve": "stepped" },
+					{ "time": 0.4, "value": -134.31 },
+					{ "time": 0.4333, "value": -126.57 }
+				],
+				"translate": [
+					{
+						"x": 154.59,
+						"y": -233.28,
+						"curve": [ 0.032, 107.37, 0.076, 42.96, 0.033, -218.89, 0.077, -209.18 ]
+					},
+					{
+						"time": 0.1167,
+						"x": 3.18,
+						"y": -205.42,
+						"curve": [ 0.131, -10.7, 0.138, -22.27, 0.131, -204.05, 0.139, -203.18 ]
+					},
+					{
+						"time": 0.15,
+						"x": -28.51,
+						"y": -203.18,
+						"curve": [ 0.226, -68.47, 0.35, -237.78, 0.216, -203.18, 0.35, -227.29 ]
+					},
+					{ "time": 0.35, "x": -237.78, "y": -286.22, "curve": "stepped" },
+					{
+						"time": 0.4,
+						"x": 215.1,
+						"y": -272.5,
+						"curve": [ 0.4, 215.1, 0.41, 189.73, 0.4, -256.78, 0.41, -243.85 ]
+					},
+					{ "time": 0.4333, "x": 154.59, "y": -233.28 }
+				]
+			},
+			"block_of_ice_particles_6": {
+				"rotate": [
+					{ "value": -118.83 },
+					{ "time": 0.3167, "value": -56.88, "curve": "stepped" },
+					{ "time": 0.35, "value": -134.31 },
+					{ "time": 0.4333, "value": -118.83 }
+				],
+				"translate": [
+					{
+						"x": 164.62,
+						"y": -256.53,
+						"curve": [ 0.039, 126.23, 0.083, 84.79, 0.04, -252.84, 0.085, -251.71 ]
+					},
+					{
+						"time": 0.1167,
+						"x": 67.18,
+						"y": -251.71,
+						"curve": [ 0.193, 27.22, 0.316, -58.23, 0.182, -251.71, 0.317, -258.43 ]
+					},
+					{ "time": 0.3167, "x": -58.23, "y": -280.78, "curve": "stepped" },
+					{
+						"time": 0.35,
+						"x": 247.48,
+						"y": -279.72,
+						"curve": [ 0.35, 247.48, 0.39, 207.91, 0.35, -267.54, 0.39, -260.52 ]
+					},
+					{ "time": 0.4333, "x": 164.62, "y": -256.53 }
+				]
+			},
+			"block_of_ice_cloud": {
+				"translate": [
+					{
+						"x": 343.68,
+						"y": -249.22,
+						"curve": [ 0, 343.68, 0.4, 120.63, 0, -249.22, 0.4, -223.05 ]
+					},
+					{ "time": 0.4, "x": 120.63, "y": -223.05, "curve": "stepped" },
+					{ "time": 0.4333, "x": 343.68, "y": -249.22 }
+				],
+				"scale": [
+					{
+						"x": 0.626,
+						"y": 0.626,
+						"curve": [ 0.066, 0.626, 0.135, 0.749, 0.066, 0.626, 0.135, 0.51 ]
+					},
+					{
+						"time": 0.2,
+						"x": 0.875,
+						"y": 0.636,
+						"curve": [ 0.267, 0.999, 0.335, 1.124, 0.267, 0.76, 0.335, 1.124 ]
+					},
+					{ "time": 0.4, "x": 1.124, "y": 1.124, "curve": "stepped" },
+					{ "time": 0.4333, "x": 0.626, "y": 0.626 }
+				]
+			},
+			"block_of_ice_cloud2": {
+				"translate": [
+					{
+						"x": 276.85,
+						"y": -241.38,
+						"curve": [ 0.116, 211.16, 0.283, 120.63, 0.116, -233.67, 0.283, -223.05 ]
+					},
+					{ "time": 0.2833, "x": 120.63, "y": -223.05, "curve": "stepped" },
+					{
+						"time": 0.3167,
+						"x": 343.68,
+						"y": -249.22,
+						"curve": [ 0.317, 343.68, 0.367, 314.35, 0.317, -249.22, 0.367, -245.78 ]
+					},
+					{ "time": 0.4333, "x": 276.85, "y": -241.38 }
+				],
+				"scale": [
+					{
+						"x": 0.732,
+						"y": 0.578,
+						"curve": [ 0.027, 0.774, 0.057, 0.825, 0.027, 0.574, 0.057, 0.586 ]
+					},
+					{
+						"time": 0.0833,
+						"x": 0.875,
+						"y": 0.636,
+						"curve": [ 0.15, 0.999, 0.218, 1.124, 0.15, 0.76, 0.218, 1.124 ]
+					},
+					{ "time": 0.2833, "x": 1.124, "y": 1.124, "curve": "stepped" },
+					{
+						"time": 0.3167,
+						"x": 0.626,
+						"y": 0.626,
+						"curve": [ 0.356, 0.626, 0.394, 0.669, 0.356, 0.626, 0.394, 0.584 ]
+					},
+					{ "time": 0.4333, "x": 0.732, "y": 0.578 }
+				]
+			},
+			"IceBlockBase": {
+				"shear": [
+					{ "y": -1.46 },
+					{ "time": 0.0833, "y": 0.86 },
+					{ "time": 0.15, "y": -1.46 },
+					{ "time": 0.2, "y": 0.86 },
+					{ "time": 0.2833, "y": -1.46 },
+					{ "time": 0.35, "y": 0.86 },
+					{ "time": 0.4333, "y": -1.46 }
+				]
+			}
+		},
+		"drawOrder": [
+			{}
+		]
+	}
+}
+}

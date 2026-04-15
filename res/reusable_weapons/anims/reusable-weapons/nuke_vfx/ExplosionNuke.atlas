@@ -1,0 +1,34 @@
+ExplosionNuke.png
+	size: 3120, 3120
+	filter: Linear, Linear
+Nuke/explosion0000
+	bounds: 766, 2446, 697, 671
+	offsets: 1, 1, 699, 673
+Nuke/explosion0001
+	bounds: 2, 1347, 1153, 1097
+	offsets: 1, 1, 1155, 1099
+Nuke/explosion0002
+	bounds: 1465, 2033, 1084, 1627
+	offsets: 1, 1, 1086, 1628
+	rotate: 90
+Nuke/explosion0003
+	bounds: 1157, 276, 1755, 1960
+	offsets: 1, 1, 1757, 1962
+	rotate: 90
+Nuke/ground_mark
+	bounds: 2, 2745, 762, 372
+	offsets: 20, 1, 802, 374
+
+ExplosionNuke_2.png
+	size: 4012, 4012
+	filter: Linear, Linear
+Nuke/explosion0004
+	bounds: 2, 2, 1872, 2071
+	offsets: 1, 1, 1874, 2073
+	rotate: 90
+Nuke/explosion0005
+	bounds: 1976, 1892, 1938, 2117
+	offsets: 1, 1, 1940, 2119
+Nuke/explosion0006
+	bounds: 2, 1876, 1972, 2133
+	offsets: 1, 1, 1974, 2135

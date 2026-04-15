@@ -1,0 +1,87 @@
+Continuous_Fire_Ability :: class : Ability_Base {
+    was_shooting: bool;
+
+    on_init :: proc(ability: Ability_Base) {
+        ability.name = "Shoot";
+        ability.icon = get_asset(Texture_Asset, "reusable_weapons/sprites/reusable-weapons/weapon_icons/weapon_icons_250x250/assaultrifle.png");
+        ability.disable_keybind = true;
+        ability.is_aimed_ability = true;
+    }
+
+    can_use :: proc(ability: Ability_Base) -> bool {
+        p := ability.player.(Player);
+        if p.equipped_weapon_type == .NONE return false;
+        config := get_weapon_config(p.equipped_weapon_type);
+        if config.fire_mode != .CONTINUOUS return false;
+        return weapon_has_ammo(p, p.equipped_weapon_type);
+    }
+
+    on_update :: proc(ability: Ability_Base, params: ref Ability_Update_Params) {
+        p := ability.player.(Player);
+        self := ability.(Continuous_Fire_Ability);
+        wt := p.equipped_weapon_type;
+        config := get_weapon_config(wt);
+
+        // Update icon to match current weapon
+        ability.icon = get_asset(Texture_Asset, config.weapon_icon_path);
+
+        aiming := Ability_Utilities.update_aiming_ability(p, ref params);
+
+        if aiming.aim {
+            p.last_aim_direction = aiming.aim_direction;
+            p.set_mouse_ik_enabled(true);
+            p.set_aim_target(p.entity.world_position + aiming.aim_direction * 5.0);
+            draw_thin_aiming_line(p.entity.world_position, aiming.aim_direction, 1.0);
+        } else {
+            p.set_mouse_ik_enabled(false);
+        }
+
+        should_fire := false;
+        if p.device_kind == .PC {
+            should_fire = aiming.activate;
+        } else {
+            should_fire = aiming.aim;
+        }
+
+        if should_fire && params.can_use && ability.current_cooldown <= 0 {
+            weapon_shoot(p, wt);
+
+            // Spawn projectile based on weapon type
+            switch wt {
+                case .BEAM_MACHINE: {
+                    spawn_beam_machine_projectile(p, aiming.aim_direction, wt);
+                }
+                case .MISSILE_BARRAGE: {
+                    spawn_homing_projectile(p, aiming.aim_direction, wt);
+                }
+                // AR, SMG, Gatling, WaterGun: standard projectile
+                case .ASSAULT_RIFLE: {
+                    weapon_spawn_standard_projectile(p, aiming.aim_direction, wt);
+                }
+                case .SUBMACHINE_GUN: {
+                    weapon_spawn_standard_projectile(p, aiming.aim_direction, wt);
+                }
+                case .GATLING_GUN: {
+                    weapon_spawn_standard_projectile(p, aiming.aim_direction, wt);
+                }
+                case .WATER_GUN: {
+                    spawn_water_gun_projectile(p, aiming.aim_direction, wt);
+                }
+            }
+
+            ability.current_cooldown = config.fire_rate;
+            self.was_shooting = true;
+        }
+
+        if !should_fire && self.was_shooting {
+            weapon_stop_shoot_anim(p, wt);
+            self.was_shooting = false;
+        }
+
+        if should_fire && !weapon_has_ammo(p, wt) {
+            if p.is_local() {
+                Notifier.notify("Out of ammo!");
+            }
+        }
+    }
+}

@@ -1,0 +1,27 @@
+004RAND_virus_cloud.png
+	size: 1132, 216
+	filter: Linear, Linear
+cloud_A
+	bounds: 230, 9, 205, 198
+	offsets: 5, 4, 215, 206
+cloud_B
+	bounds: 441, 44, 149, 163
+	offsets: 5, 4, 158, 172
+cloud_C
+	bounds: 896, 80, 127, 112
+	offsets: 4, 4, 135, 120
+	rotate: 90
+cloud_D
+	bounds: 6, 6, 218, 201
+	offsets: 5, 5, 227, 211
+cloud_E
+	bounds: 596, 51, 156, 152
+	offsets: 2, 2, 160, 156
+	rotate: 90
+cloud_F
+	bounds: 1014, 89, 110, 118
+	offsets: 2, 5, 114, 125
+cloud_G
+	bounds: 754, 68, 139, 136
+	offsets: 2, 2, 143, 140
+	rotate: 90

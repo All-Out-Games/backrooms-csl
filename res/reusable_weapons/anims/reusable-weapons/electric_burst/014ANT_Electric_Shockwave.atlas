@@ -1,0 +1,41 @@
+014ANT_Electric_Shockwave.png
+	size: 1148, 176
+	filter: Linear, Linear
+	scale: 0.5
+[014ANT]electric_wave/electricwave_F1
+	bounds: 262, 9, 248, 159
+	offsets: 1, 1, 250, 161
+[014ANT]electric_wave/electricwave_F2
+	bounds: 6, 9, 250, 159
+	offsets: 0, 1, 250, 161
+[014ANT]electric_wave/electricwave_F3
+	bounds: 516, 6, 226, 162
+	offsets: 1, 1, 227, 164
+butt smoke/smoke A
+	bounds: 826, 98, 70, 67
+	rotate: 90
+butt smoke/smoke B
+	bounds: 899, 106, 62, 54
+	rotate: 90
+butt smoke/smoke C
+	bounds: 748, 88, 80, 72
+	rotate: 90
+butt smoke/smoke D
+	bounds: 959, 124, 39, 44
+butt smoke/smoke E
+	bounds: 1038, 135, 33, 32
+	rotate: 90
+electricity/Sparks/Spark_A
+	bounds: 1076, 116, 52, 20
+	rotate: 90
+electricity/Sparks/Spark_B
+	bounds: 1136, 152, 16, 6
+	rotate: 90
+electricity/Sparks/Spark_C
+	bounds: 1004, 122, 46, 28
+	rotate: 90
+electricity/Sparks/Spark_D
+	bounds: 1123, 154, 7, 14
+electricity/Sparks/Spark_E
+	bounds: 1102, 136, 15, 32
+	offsets: 0, 1, 15, 34

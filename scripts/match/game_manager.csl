@@ -1,0 +1,358 @@
+import "core:ao"
+
+// --- Match layout: 1 Entity vs 4–6 Survivors (5–7 players total) ---
+
+HEAD_START_SECONDS :: 15.0;
+MATCH_MAX_SECONDS :: 600.0; // ~10 minutes after survivors' head start ends
+
+MIN_TOTAL_PLAYERS :: 5; // 1 entity + 4 survivors
+MAX_TOTAL_PLAYERS :: 7; // 1 entity + 6 survivors
+
+LOBBY_COUNTDOWN_SECONDS :: 10.0;
+
+// Matchmaking queue name for players who prefer Entity (Server.queue_add_player)
+ENTITY_QUEUE_NAME :: "entity";
+
+FREEZE_ENTITY_HEAD_START :: "game_manager_entity_head_start";
+
+Match_Phase :: enum {
+    LOBBY;
+    SURVIVOR_HEAD_START;
+    ACTIVE;
+    ENDED;
+}
+
+Match_Result :: enum {
+    NONE;
+    SURVIVORS_WIN;
+    ENTITY_WIN;
+}
+
+// Set by Game_Manager.ao_start; use get_game_manager() / #alive before use.
+game_manager_singleton: Game_Manager;
+
+get_game_manager :: proc() -> Game_Manager {
+    return game_manager_singleton;
+}
+
+// Prefer this when integrating matchmaking UI (lobby queue for Entity role).
+queue_for_entity_matchmaking :: proc(player: Player) {
+    Server.queue_add_player(ENTITY_QUEUE_NAME, player);
+}
+
+remove_from_entity_matchmaking_queue :: proc(player: Player) {
+    Server.queue_remove_player(ENTITY_QUEUE_NAME, player);
+}
+
+collect_players :: proc(out_players: ref [..]Player) {
+    out_players.clear();
+    for p: component_iterator(Player) {
+        out_players.append(p);
+    }
+}
+
+reset_all_entity_opt_ins :: proc() {
+    for p: component_iterator(Player) {
+        p.entity_opt_in = false;
+    }
+}
+
+find_player_by_user_id :: proc(user_id: string) -> Player, bool {
+    for p: component_iterator(Player) {
+        if p.get_user_id() == user_id {
+            return p, true;
+        }
+    }
+    return null, false;
+}
+
+count_players :: proc() -> s64 {
+    n: s64 = 0;
+    for p: component_iterator(Player) {
+        n += 1;
+    }
+    return n;
+}
+
+// UIK must be drawn from Player.ao_late_update (see UIK skill).
+draw_match_lobby_ui :: proc(player: Player) {
+    gm := get_game_manager();
+    if !#alive(gm) {
+        return;
+    }
+    if gm.phase != .LOBBY {
+        return;
+    }
+
+    n := count_players();
+
+    UIK.begin(UIK.window(UIK.rect_topbar()));
+
+    shell := UIK.panel_modal(.TRANSP_BLACK);
+    shell.cross_align = .CENTER;
+    shell.main_align = .CENTER;
+    shell.gap = 8;
+    shell.padding = v4{16, 14, 16, 14};
+    UIK.panel_begin(shell);
+
+    UIK.text("Waiting for Players", UIK.text_title());
+    min_req: s64 = MIN_TOTAL_PLAYERS.(s64);
+    count_line := format_string("%/%", {n, min_req});
+    UIK.text(count_line, UIK.text_body());
+
+    if gm.lobby_countdown_ends_at > 0.0 && n >= MIN_TOTAL_PLAYERS && n <= MAX_TOTAL_PLAYERS {
+        rem := gm.lobby_countdown_ends_at - get_time();
+        if rem < 0.0 {
+            rem = 0.0;
+        }
+        secs := (rem + 0.999).(s64);
+        one: s64 = 1;
+        if secs < one && rem > 0.0 {
+            secs = one;
+        }
+        countdown_line := format_string("Game Starts in %", {secs});
+        UIK.text(countdown_line, UIK.text_title());
+    }
+
+    UIK.panel_end();
+    UIK.end();
+}
+
+Game_Manager :: class : Component {
+    phase: Match_Phase;
+    result: Match_Result;
+
+    // Authoritative identity for the Entity this round (synced with gameplay state).
+    entity_user_id: string;
+
+    survivors_alive: int;
+    emergency_systems_online: bool;
+
+    head_start_ends_at: float;
+    match_ends_at: float;
+
+    // LOBBY: 0 = countdown not running; otherwise get_time() when autostart fires.
+    lobby_countdown_ends_at: float;
+
+    match_rng: u64;
+
+    ao_start :: method() {
+        if #alive(game_manager_singleton) {
+            log_info("Game_Manager: replacing previous singleton instance", {});
+        }
+        game_manager_singleton = this;
+
+        phase = .LOBBY;
+        result = .NONE;
+        entity_user_id = "";
+        survivors_alive = 0;
+        emergency_systems_online = false;
+        head_start_ends_at = 0.0;
+        match_ends_at = 0.0;
+        lobby_countdown_ends_at = 0.0;
+        match_rng = rng_root_seed();
+
+        reset_all_entity_opt_ins();
+    }
+
+    ao_end :: method() {
+        if game_manager_singleton == this {
+            game_manager_singleton = null;
+        }
+    }
+
+    ao_update :: method(dt: float) {
+        if phase == .LOBBY {
+            update_lobby_autostart();
+        }
+
+        if phase == .ENDED {
+            return;
+        }
+
+        if phase == .SURVIVOR_HEAD_START {
+            if get_time() >= head_start_ends_at {
+                end_head_start_and_begin_hunt();
+            }
+            return;
+        }
+
+        if phase == .ACTIVE {
+            if get_time() >= match_ends_at {
+                end_match_entity_win();
+                return;
+            }
+        }
+    }
+
+    // --- Queries ---
+
+    is_entity_player :: method(player: Player) -> bool {
+        if entity_user_id.count == 0 {
+            return false;
+        }
+        return player.get_user_id() == entity_user_id;
+    }
+
+    is_survivor_player :: method(player: Player) -> bool {
+        if entity_user_id.count == 0 {
+            return false;
+        }
+        return player.get_user_id() != entity_user_id;
+    }
+
+    can_start_match :: method() -> bool {
+        players: [..]Player;
+        collect_players(ref players);
+        n := players.count;
+        players.clear();
+        return n >= MIN_TOTAL_PLAYERS && n <= MAX_TOTAL_PLAYERS;
+    }
+
+    update_lobby_autostart :: method() {
+        n := count_players();
+
+        if n < MIN_TOTAL_PLAYERS || n > MAX_TOTAL_PLAYERS {
+            lobby_countdown_ends_at = 0.0;
+            return;
+        }
+
+        if lobby_countdown_ends_at <= 0.0 {
+            lobby_countdown_ends_at = get_time() + LOBBY_COUNTDOWN_SECONDS;
+        }
+
+        if get_time() >= lobby_countdown_ends_at {
+            lobby_countdown_ends_at = 0.0;
+            start_match();
+        }
+    }
+
+    // --- Lobby → round ---
+
+    // Picks one Entity (random among connected players). Survivors are everyone else.
+    // Call when player count is in [MIN_TOTAL_PLAYERS, MAX_TOTAL_PLAYERS].
+    start_match :: method() -> bool {
+        if phase != .LOBBY {
+            return false;
+        }
+        if !can_start_match() {
+            return false;
+        }
+
+        players: [..]Player;
+        collect_players(ref players);
+        if players.count < MIN_TOTAL_PLAYERS || players.count > MAX_TOTAL_PLAYERS {
+            players.clear();
+            return false;
+        }
+
+        pool: [..]Player;
+        for i: 0..players.count - 1 {
+            if players[i].entity_opt_in {
+                pool.append(players[i]);
+            }
+        }
+        if pool.count == 0 {
+            for i: 0..players.count - 1 {
+                pool.append(players[i]);
+            }
+        }
+
+        pick_idx := rng_range_int(ref match_rng, 0, pool.count - 1);
+        chosen := pool[pick_idx];
+        entity_user_id = chosen.get_user_id();
+        survivors_alive = players.count - 1;
+        players.clear();
+        pool.clear();
+
+        emergency_systems_online = false;
+        result = .NONE;
+
+        if entity_player, ok := find_player_by_user_id(entity_user_id); ok {
+            entity_player.add_freeze_reason(FREEZE_ENTITY_HEAD_START);
+        }
+
+        now := get_time();
+        head_start_ends_at = now + HEAD_START_SECONDS;
+        // Match clock starts after head start (full hunt window).
+        match_ends_at = head_start_ends_at + MATCH_MAX_SECONDS;
+        phase = .SURVIVOR_HEAD_START;
+
+        log_info("Game_Manager: Entity is % (head start % sec)", {entity_user_id, HEAD_START_SECONDS});
+        return true;
+    }
+
+    end_head_start_and_begin_hunt :: method() {
+        if phase != .SURVIVOR_HEAD_START {
+            return;
+        }
+
+        if entity_player, ok := find_player_by_user_id(entity_user_id); ok {
+            entity_player.remove_freeze_reason(FREEZE_ENTITY_HEAD_START);
+        }
+
+        phase = .ACTIVE;
+        log_info("Game_Manager: Hunt started; match ends at t=%", {match_ends_at});
+    }
+
+    // --- World systems (exit, objectives) call into these ---
+
+    set_emergency_systems_online :: method(online: bool) {
+        emergency_systems_online = online;
+    }
+
+    // When a Survivor is eliminated (death, disconnect handling, etc.).
+    register_survivor_eliminated :: method() {
+        if phase != .ACTIVE && phase != .SURVIVOR_HEAD_START {
+            return;
+        }
+        if survivors_alive > 0 {
+            survivors_alive -= 1;
+        }
+        if survivors_alive <= 0 {
+            end_match_entity_win();
+        }
+    }
+
+    // Survivor reaches exit with all emergency systems online — team win.
+    survivor_team_escape :: method(exiting_player: Player) {
+        if phase != .ACTIVE {
+            return;
+        }
+        if !is_survivor_player(exiting_player) {
+            return;
+        }
+        if !emergency_systems_online {
+            return;
+        }
+        end_match_survivors_win();
+    }
+
+    // --- Internal ---
+
+    end_match_survivors_win :: method() {
+        if phase == .ENDED {
+            return;
+        }
+        phase = .ENDED;
+        result = .SURVIVORS_WIN;
+        unfreeze_entity_if_needed();
+        log_info("Game_Manager: Survivors win", {});
+    }
+
+    end_match_entity_win :: method() {
+        if phase == .ENDED {
+            return;
+        }
+        phase = .ENDED;
+        result = .ENTITY_WIN;
+        unfreeze_entity_if_needed();
+        log_info("Game_Manager: Entity win", {});
+    }
+
+    unfreeze_entity_if_needed :: method() {
+        if entity_player, ok := find_player_by_user_id(entity_user_id); ok {
+            entity_player.remove_freeze_reason(FREEZE_ENTITY_HEAD_START);
+        }
+    }
+}

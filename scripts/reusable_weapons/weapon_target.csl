@@ -1,0 +1,18 @@
+Weapon_Target :: class : Component {
+    health: float;
+    max_health: float;
+    owner_entity_id: u64; // entity that "owns" this target (for friendly-fire exclusion in user code)
+
+    on_damaged_userdata: Object;
+    on_damaged: proc(target: Weapon_Target, damage: float, attacker_id: u64, userdata: Object);
+}
+
+weapon_target_apply_damage :: proc(target: Weapon_Target, damage: float, attacker_id: u64) {
+    target.health -= damage;
+    if target.health < 0 {
+        target.health = 0;
+    }
+    if target.on_damaged != null {
+        target.on_damaged(target, damage, attacker_id, target.on_damaged_userdata);
+    }
+}

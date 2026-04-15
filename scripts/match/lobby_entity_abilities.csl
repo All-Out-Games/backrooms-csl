@@ -1,0 +1,67 @@
+import "core:ao"
+
+Lobby_Volunteer_Entity_Ability :: class : Ability_Base {
+    on_init :: method() {
+        name = "Volunteer as Entity";
+        icon = get_asset(Texture_Asset, "$AO/ui/kit/Icons/special_tickets/ticket_goldstar 2.png");
+        disable_keybind = true;
+    }
+
+    can_use :: method() -> bool {
+        gm := get_game_manager();
+        if !#alive(gm) {
+            return false;
+        }
+        if gm.phase != .LOBBY {
+            return false;
+        }
+        if player.entity_opt_in {
+            return false;
+        }
+        return true;
+    }
+
+    on_update :: method(params: ref Ability_Update_Params) {
+        if params.clicked && params.can_use {
+            player.entity_opt_in = true;
+            current_cooldown = 0.25;
+        }
+    }
+
+    on_draw_button :: proc(instance: Lobby_Volunteer_Entity_Ability, rect: Rect) {
+		draw_ability_name_label(rect, "Queue for Monster");
+	}
+}
+
+Lobby_Withdraw_Entity_Ability :: class : Ability_Base {
+    on_init :: method() {
+        name = "Withdraw from Entity Pool";
+        icon = get_asset(Texture_Asset, "$AO/ui/kit/Icons/info/info_icon_c.png");
+        disable_keybind = true;
+    }
+
+    can_use :: method() -> bool {
+        gm := get_game_manager();
+        if !#alive(gm) {
+            return false;
+        }
+        if gm.phase != .LOBBY {
+            return false;
+        }
+        if !player.entity_opt_in {
+            return false;
+        }
+        return true;
+    }
+
+    on_update :: method(params: ref Ability_Update_Params) {
+        if params.clicked && params.can_use {
+            player.entity_opt_in = false;
+            current_cooldown = 0.25;
+        }
+    }
+
+    on_draw_button :: proc(instance: Lobby_Withdraw_Entity_Ability, rect: Rect) {
+		draw_ability_name_label(rect, "Unqueue for Monster");
+	}
+}

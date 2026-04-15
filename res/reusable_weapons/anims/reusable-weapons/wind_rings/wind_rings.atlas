@@ -1,0 +1,46 @@
+wind_rings.png
+	size: 1936, 512
+	filter: Linear, Linear
+	scale: 0.5
+2f4ff15bc1a608ce
+	bounds: 1214, 329, 174, 140
+	rotate: 90
+840613d1a09b1dd1
+	bounds: 514, 244, 259, 184
+	rotate: 90
+flame ring
+	bounds: 6, 6, 502, 497
+flames/disc
+	bounds: 1046, 339, 164, 162
+	offsets: 4, 5, 173, 172
+	rotate: 90
+flames/ring_A
+	bounds: 704, 331, 172, 168
+	offsets: 4, 5, 179, 177
+	rotate: 90
+flames/ring_B
+	bounds: 878, 335, 168, 162
+	offsets: 4, 5, 176, 172
+	rotate: 90
+rockA
+	bounds: 1810, 462, 41, 35
+	rotate: 90
+rockB
+	bounds: 1851, 469, 34, 28
+	rotate: 90
+small_rockA
+	bounds: 1885, 483, 19, 20
+small_rockB
+	bounds: 1910, 484, 19, 17
+	rotate: 90
+wind/disc
+	bounds: 1661, 358, 145, 143
+	offsets: 1, 2, 148, 147
+	rotate: 90
+wind/ring_A
+	bounds: 1511, 358, 145, 144
+	offsets: 1, 1, 148, 146
+	rotate: 90
+wind/ring_B
+	bounds: 1360, 356, 145, 147
+	offsets: 1, 0, 148, 147

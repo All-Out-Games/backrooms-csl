@@ -1,0 +1,31 @@
+GOLD109_mushroom_cloud.png
+	size: 2036, 2036
+	filter: Linear, Linear
+images/GOLD109/Golden Map Imposter Abilities/golden_nuclear_explosion/nuke_explosion_1
+	bounds: 6, 1693, 349, 336
+	offsets: 1, 1, 351, 338
+images/GOLD109/Golden Map Imposter Abilities/golden_nuclear_explosion/nuke_explosion_2
+	bounds: 1181, 1480, 577, 549
+	offsets: 1, 1, 579, 551
+images/GOLD109/Golden Map Imposter Abilities/golden_nuclear_explosion/nuke_explosion_3
+	bounds: 361, 1487, 542, 814
+	offsets: 1, 1, 544, 816
+	rotate: 90
+images/GOLD109/Golden Map Imposter Abilities/golden_nuclear_explosion/nuke_explosion_4
+	bounds: 6, 603, 878, 981
+	offsets: 1, 1, 880, 982
+	rotate: 90
+images/GOLD109/Golden Map Imposter Abilities/golden_nuclear_explosion/nuke_explosion_5
+	bounds: 993, 538, 936, 1036
+	offsets: 1, 1, 938, 1038
+	rotate: 90
+
+GOLD109_mushroom_cloud_2.png
+	size: 1976, 1976
+	filter: Linear, Linear
+images/GOLD109/Golden Map Imposter Abilities/golden_nuclear_explosion/nuke_explosion_6
+	bounds: 998, 908, 969, 1059
+	offsets: 1, 1, 971, 1061
+images/GOLD109/Golden Map Imposter Abilities/golden_nuclear_explosion/nuke_explosion_7
+	bounds: 6, 900, 986, 1067
+	offsets: 1, 1, 988, 1069

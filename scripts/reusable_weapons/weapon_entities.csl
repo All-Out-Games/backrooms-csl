@@ -1,0 +1,377 @@
+// Poison Cloud: persistent damage zone with spine VFX
+Poison_Cloud :: class : Component {
+    damage_per_tick: float;
+    tick_rate: float;
+    tick_timer: float;
+    lifetime: float;
+    max_lifetime: float;
+    owner_id: u64;
+    radius: float;
+    sound_id: u64;
+    disappearing: bool;
+
+    ao_update :: method(dt: float) {
+        lifetime += dt;
+        if max_lifetime <= 0 {
+            max_lifetime = 10.0;
+        }
+
+        // Trigger disappear animation 1s before end
+        if !disappearing && lifetime > (max_lifetime - 1.0) {
+            spine := entity.get_component(Spine_Animator);
+            if spine != null {
+                spine.state_machine.set_trigger("disappear");
+            }
+            if sound_id != 0 {
+                SFX.stop(sound_id);
+                sound_id = 0;
+            }
+            disappearing = true;
+        }
+
+        if lifetime > max_lifetime {
+            entity.destroy();
+            return;
+        }
+
+        tick_timer += dt;
+        if tick_timer >= tick_rate {
+            tick_timer = 0;
+            apply_aoe_damage(entity.world_position, owner_id, radius, damage_per_tick);
+        }
+    }
+
+    ao_end :: method() {
+        if sound_id != 0 {
+            SFX.stop(sound_id);
+        }
+    }
+}
+
+spawn_poison_cloud :: proc(pos: v2, owner_id: u64) {
+    cloud_entity := Scene.create_entity();
+    cloud_entity.set_local_position(pos);
+    cloud_entity.set_local_scale({2, 2});
+
+    // Spine visual: virus cloud with Appear -> Idle -> Disappear
+    spine := cloud_entity.add_component(Spine_Animator);
+    spine.awaken();
+    spine.set_skeleton(get_asset(Spine_Asset, "reusable_weapons/anims/reusable-weapons/Virus_Cloud/004RAND_virus_cloud.spine"));
+    spine.color_multiplier = {1, 1, 1, 0.5};
+
+    sm := State_Machine.create();
+    disappear_var := sm.create_variable("disappear", .TRIGGER);
+    layer := sm.create_layer("main", 0);
+    appear_state := layer.create_state("Appear", false);
+    idle_state := layer.create_state("Idle", true);
+    disappear_state := layer.create_state("Disappear", false);
+    layer.set_initial_state(appear_state);
+    appear_to_idle := layer.create_transition(appear_state, idle_state, true);
+    idle_to_disappear := layer.create_transition(idle_state, disappear_state, false);
+    idle_to_disappear.create_trigger_condition(disappear_var);
+    spine.set_state_machine(sm, true);
+
+    cloud := cloud_entity.add_component(Poison_Cloud);
+    cloud.damage_per_tick = 3.0;
+    cloud.tick_rate = 1.0;
+    cloud.max_lifetime = 10.0;
+    cloud.owner_id = owner_id;
+    cloud.radius = 2.0;
+
+    // Gas cloud sound
+    sfx := get_asset(SFX_Asset, "reusable_weapons/sounds/reusable-weapons/poison_grenade_gas_cloud.wav");
+    desc := SFX.default_sfx_desc();
+    desc.entity_to_follow = cloud_entity.id;
+    desc.range_multiplier = 2.0;
+    cloud.sound_id = SFX.play(sfx, desc);
+}
+
+// Cluster bombs for Boomwheel
+spawn_cluster_bombs :: proc(pos: v2, owner_id: u64) {
+    count :: 10;
+    rng: u64 = rng_root_seed();
+    i := 0;
+    while i < count {
+        angle := i.(float) / count.(float) * 2.0 * 3.14159;
+        offset := v2{cos(angle) * 5.0, sin(angle) * 5.0};
+        bomb_pos := v2{pos.x + offset.x, pos.y + offset.y};
+
+        bomb_entity := Scene.create_entity();
+        bomb_entity.set_local_position(pos);
+
+        texture := get_asset(Texture_Asset, "reusable_weapons/sprites/reusable-weapons/projectiles/cannonball.png");
+        sprite := bomb_entity.add_component(Sprite_Renderer);
+        sprite.set_texture(texture);
+        bomb_entity.set_local_scale({1.5, 1.5});
+
+        bomb := bomb_entity.add_component(Cluster_Bomb);
+        bomb.target_pos = bomb_pos;
+        bomb.start_pos = pos;
+        bomb.owner_id = owner_id;
+        bomb.damage = 30.0;
+        bomb.aoe_radius = 2.0;
+
+        i += 1;
+    }
+}
+
+Cluster_Bomb :: class : Component {
+    target_pos: v2;
+    start_pos: v2;
+    owner_id: u64;
+    damage: float;
+    aoe_radius: float;
+    travel_time: float;
+    max_travel_time: float;
+    started: bool;
+
+    ao_update :: method(dt: float) {
+        if !started {
+            started = true;
+            max_travel_time = 0.5;
+        }
+
+        travel_time += dt;
+        t := travel_time / max_travel_time;
+        if t > 1.0 { t = 1.0; }
+
+        // Arc to target
+        current_x := lerp(start_pos.x, target_pos.x, t);
+        current_y := lerp(start_pos.y, target_pos.y, t);
+        arc_height := -2.0 * (2.0 * t - 1.0) * (2.0 * t - 1.0) + 2.0;
+        entity.set_local_position({current_x, current_y + arc_height});
+
+        if t >= 1.0 {
+            apply_aoe_damage(target_pos, owner_id, aoe_radius, damage);
+
+            sfx := get_asset(SFX_Asset, "reusable_weapons/sounds/reusable-weapons/dynamite_explode.wav");
+            desc := SFX.default_sfx_desc();
+            desc.set_position(target_pos);
+            desc.range_multiplier = 2.0;
+            SFX.play(sfx, desc);
+
+            // Spawn explosion VFX
+            spawn_simple_vfx("reusable_weapons/anims/reusable-weapons/fireball/BAT003_fireball.spine", "default", target_pos, {2, 2}, "explode", 1.5);
+            entity.destroy();
+        }
+    }
+}
+
+// Tornado entity for WindBlaster with spine visual
+Tornado_Entity :: class : Component {
+    owner_id: u64;
+    damage_per_tick: float;
+    tick_rate: float;
+    tick_timer: float;
+    lifetime: float;
+    max_lifetime: float;
+    direction: v2;
+    speed: float;
+    homing_radius: float;
+    aoe_radius: float;
+    sound_id: u64;
+    despawning: bool;
+
+    ao_update :: method(dt: float) {
+        lifetime += dt;
+        if max_lifetime <= 0 {
+            max_lifetime = 10.0;
+        }
+
+        // Trigger outro animation before destruction
+        if !despawning && lifetime > (max_lifetime - 1.317) {
+            spine := entity.get_component(Spine_Animator);
+            if spine != null {
+                spine.state_machine.set_trigger("disappear");
+            }
+            if sound_id != 0 {
+                SFX.stop(sound_id);
+                sound_id = 0;
+            }
+            // Play end sound
+            end_sfx := get_asset(SFX_Asset, "reusable_weapons/sounds/reusable-weapons/fire_tornado_end.wav");
+            end_desc := SFX.default_sfx_desc();
+            end_desc.set_position(entity.world_position);
+            end_desc.range_multiplier = 2.0;
+            SFX.play(end_sfx, end_desc);
+            despawning = true;
+        }
+
+        if lifetime > max_lifetime {
+            entity.destroy();
+            return;
+        }
+
+        // Homing toward nearest target
+        pos := entity.world_position;
+        if homing_radius > 0 {
+            target, found := Scene.get_closest_component_in_range(pos, homing_radius, Weapon_Target);
+            if found && target != null && target.entity.id != owner_id {
+                to_target := v2{target.entity.world_position.x - pos.x, target.entity.world_position.y - pos.y};
+                dist := length(to_target);
+                if dist > 0.1 {
+                    desired := normalize(to_target);
+                    direction.x = lerp(direction.x, desired.x, 2.0 * (lifetime / max_lifetime));
+                    direction.y = lerp(direction.y, desired.y, 2.0 * (lifetime / max_lifetime));
+                    direction = normalize(direction);
+                }
+            }
+        }
+
+        move := v2{direction.x * speed * (lifetime / max_lifetime), direction.y * speed * (lifetime / max_lifetime)};
+        entity.add_local_position(move);
+
+        tick_timer += dt;
+        if tick_timer >= tick_rate {
+            tick_timer = 0;
+            apply_aoe_damage(entity.world_position, owner_id, aoe_radius, damage_per_tick);
+        }
+    }
+
+    ao_end :: method() {
+        if sound_id != 0 {
+            SFX.stop(sound_id);
+        }
+    }
+}
+
+spawn_tornado_entity :: proc(player: Player, direction: v2, wt: Weapon_Type) {
+
+    config := get_weapon_config(wt);
+    spawn_pos := player.entity.world_position;
+
+    tornado_entity := Scene.create_entity();
+    tornado_entity.set_local_position(spawn_pos);
+    tornado_entity.set_local_scale({2, 2});
+
+    // Spine visual: tornado with spin_intro -> spin_loop -> spin_outro
+    spine := tornado_entity.add_component(Spine_Animator);
+    spine.awaken();
+    spine.set_skeleton(get_asset(Spine_Asset, "reusable_weapons/anims/reusable-weapons/Tornado/Export/tornado.spine"));
+
+    sm := State_Machine.create();
+    disappear_var := sm.create_variable("disappear", .TRIGGER);
+    layer := sm.create_layer("main", 0);
+    intro_state := layer.create_state("spin_intro", false);
+    loop_state := layer.create_state("spin_loop", true);
+    outro_state := layer.create_state("spin_outro", false);
+    layer.set_initial_state(intro_state);
+    intro_to_loop := layer.create_transition(intro_state, loop_state, true);
+    loop_to_outro := layer.create_transition(loop_state, outro_state, false);
+    loop_to_outro.create_trigger_condition(disappear_var);
+    spine.set_state_machine(sm, true);
+
+    tornado := tornado_entity.add_component(Tornado_Entity);
+    tornado.owner_id = player.entity.id;
+    tornado.damage_per_tick = config.base_damage;
+    tornado.tick_rate = 0.5;
+    tornado.max_lifetime = 10.0;
+    tornado.direction = normalize(direction);
+    tornado.speed = config.projectile_speed;
+    tornado.homing_radius = 10.0;
+    tornado.aoe_radius = config.aoe_radius;
+
+    // Start sound + loop sound
+    start_sfx := get_asset(SFX_Asset, "reusable_weapons/sounds/reusable-weapons/fire_tornado_start.wav");
+    start_desc := SFX.default_sfx_desc();
+    start_desc.set_position(spawn_pos);
+    start_desc.range_multiplier = 2.0;
+    SFX.play(start_sfx, start_desc);
+
+    loop_sfx := get_asset(SFX_Asset, "reusable_weapons/sounds/reusable-weapons/fire_tornado_loop.wav");
+    loop_desc := SFX.default_sfx_desc();
+    loop_desc.entity_to_follow = tornado_entity.id;
+    loop_desc.range_multiplier = 2.0;
+    tornado.sound_id = SFX.play(loop_sfx, loop_desc);
+}
+
+// Storm's Eye tornado: follows player with spine visual
+Storms_Eye_Tornado :: class : Component {
+    owner_id: u64;
+    damage_per_tick: float;
+    tick_rate: float;
+    tick_timer: float;
+    lifetime: float;
+    max_lifetime: float;
+    aoe_radius: float;
+    sound_id: u64;
+    despawning: bool;
+
+    ao_update :: method(dt: float) {
+        lifetime += dt;
+        if max_lifetime <= 0 {
+            max_lifetime = 6.0;
+        }
+
+        // Trigger outro animation before destruction
+        if !despawning && lifetime > (max_lifetime - 1.5) {
+            spine := entity.get_component(Spine_Animator);
+            if spine != null {
+                spine.state_machine.set_trigger("outro_trigger");
+            }
+            if sound_id != 0 {
+                SFX.stop(sound_id);
+                sound_id = 0;
+            }
+            despawning = true;
+        }
+
+        if lifetime > max_lifetime {
+            entity.destroy();
+            return;
+        }
+
+        tick_timer += dt;
+        if tick_timer >= tick_rate {
+            tick_timer = 0;
+            apply_aoe_damage(entity.world_position, owner_id, aoe_radius, damage_per_tick);
+        }
+    }
+
+    ao_end :: method() {
+        if sound_id != 0 {
+            SFX.stop(sound_id);
+        }
+    }
+}
+
+spawn_storms_eye_tornado :: proc(player: Player) {
+
+    config := get_weapon_config(.STORMS_EYE);
+
+    tornado_entity := Scene.create_entity();
+    tornado_entity.set_parent(player.entity, false);
+    tornado_entity.set_local_position({0, 0});
+    tornado_entity.set_local_scale({2, 2});
+
+    // Spine visual: wind rings with intro -> loop -> outro
+    spine := tornado_entity.add_component(Spine_Animator);
+    spine.awaken();
+    spine.set_skeleton(get_asset(Spine_Asset, "reusable_weapons/anims/reusable-weapons/wind_rings/wind_rings.spine"));
+
+    sm := State_Machine.create();
+    outro_var := sm.create_variable("outro_trigger", .TRIGGER);
+    layer := sm.create_layer("main", 0);
+    intro_state := layer.create_state("intro", false);
+    loop_state := layer.create_state("loop", true);
+    outro_state := layer.create_state("outro", false);
+    layer.set_initial_state(intro_state);
+    intro_to_loop := layer.create_transition(intro_state, loop_state, true);
+    loop_to_outro := layer.create_transition(loop_state, outro_state, false);
+    loop_to_outro.create_trigger_condition(outro_var);
+    spine.set_state_machine(sm, true);
+
+    tornado := tornado_entity.add_component(Storms_Eye_Tornado);
+    tornado.owner_id = player.entity.id;
+    tornado.damage_per_tick = config.base_damage;
+    tornado.tick_rate = 0.5;
+    tornado.max_lifetime = 6.0;
+    tornado.aoe_radius = config.aoe_radius;
+
+    // Loop sound
+    loop_sfx := get_asset(SFX_Asset, "reusable_weapons/sounds/reusable-weapons/storms_eye_shoot_loop.wav");
+    loop_desc := SFX.default_sfx_desc();
+    loop_desc.entity_to_follow = tornado_entity.id;
+    loop_desc.range_multiplier = 2.0;
+    tornado.sound_id = SFX.play(loop_sfx, loop_desc);
+}

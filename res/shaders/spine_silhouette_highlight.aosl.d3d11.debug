@@ -1,0 +1,161 @@
+HLSL:
+Vertex Shader:
+cbuffer user_input: register(b1) {
+float3 fill_rgb;
+float fill_alpha;
+float3 edge_rgb;
+float edge_strength;
+float edge_width;
+};
+
+#define MATRIX_TEXTURE_PROVIDED
+
+struct vs_in {
+    float2 pos: POS;
+    float2 uv: UV;
+    float2 uv2: UV1;
+    float4 color: COLOR;
+    int matrix_index: MATRIX_INDEX;
+};
+
+
+cbuffer params: register(b0) {
+    float4x4 mvp;
+    float4 resolution_time;
+    int matrix_image_size;
+};
+#define FLIP_IF_GL(y) do { } while (0);
+
+Texture2D<float4> matrices: register(t0);
+sampler matrices_smp: register(s0);
+
+#ifdef MATRIX_TEXTURE_PROVIDED
+int3 create_pixel_coord(int index) {
+    int x = index % matrix_image_size;
+    int y = index / matrix_image_size;
+    return int3(x, y, 0);
+}
+float4x4 final_mvp(vs_in inp) {
+    float4 _0 = matrices.Load(create_pixel_coord(inp.matrix_index.x*4 + 0));
+    float4 _1 = matrices.Load(create_pixel_coord(inp.matrix_index.x*4 + 1));
+    float4 _2 = matrices.Load(create_pixel_coord(inp.matrix_index.x*4 + 2));
+    float4 _3 = matrices.Load(create_pixel_coord(inp.matrix_index.x*4 + 3));
+    float4x4 model_matrix = float4x4(_0, _1, _2, _3);
+    return mul(mvp, model_matrix);
+}
+#endif
+
+float4 bc7_correct_alpha(float4 color) {
+    // map 254 to 255. this is because bc7 is lossy in the alpha channel and an opaque pixel often outputs as 254 alpha.
+    if (color.a > 0.995f && color.a <= 1.0f) color.a = 1.0f;
+    return color;
+}
+
+struct vs_out {
+    float4 pos: SV_Position;
+    float2 uv: UV;
+    float4 color: COLOR0;
+};
+
+vs_out vs_main(vs_in v)
+{
+    float4x4 model;
+    model[0] = matrices.Load(create_pixel_coord(v.matrix_index * 4 + 0));
+    model[1] = matrices.Load(create_pixel_coord(v.matrix_index * 4 + 1));
+    model[2] = matrices.Load(create_pixel_coord(v.matrix_index * 4 + 2));
+    model[3] = matrices.Load(create_pixel_coord(v.matrix_index * 4 + 3));
+
+    vs_out o;
+    o.pos   = mul(mvp, mul(model, float4(v.pos, 0, 1)));
+    o.uv    = v.uv;
+    o.color = v.color;
+    return o;
+}
+
+
+
+Fragment Shader:
+cbuffer user_input: register(b1) {
+float3 fill_rgb;
+float fill_alpha;
+float3 edge_rgb;
+float edge_strength;
+float edge_width;
+};
+
+Texture2D<float4> albedo: register(t0);
+sampler albedo_smp: register(s0);
+
+#define MATRIX_TEXTURE_PROVIDED
+
+struct vs_in {
+    float2 pos: POS;
+    float2 uv: UV;
+    float2 uv2: UV1;
+    float4 color: COLOR;
+    int matrix_index: MATRIX_INDEX;
+};
+
+
+cbuffer params: register(b0) {
+    float4x4 mvp;
+    float4 resolution_time;
+    int matrix_image_size;
+};
+#define FLIP_IF_GL(y) do { } while (0);
+
+Texture2D<float4> matrices: register(t0);
+sampler matrices_smp: register(s0);
+
+#ifdef MATRIX_TEXTURE_PROVIDED
+int3 create_pixel_coord(int index) {
+    int x = index % matrix_image_size;
+    int y = index / matrix_image_size;
+    return int3(x, y, 0);
+}
+float4x4 final_mvp(vs_in inp) {
+    float4 _0 = matrices.Load(create_pixel_coord(inp.matrix_index.x*4 + 0));
+    float4 _1 = matrices.Load(create_pixel_coord(inp.matrix_index.x*4 + 1));
+    float4 _2 = matrices.Load(create_pixel_coord(inp.matrix_index.x*4 + 2));
+    float4 _3 = matrices.Load(create_pixel_coord(inp.matrix_index.x*4 + 3));
+    float4x4 model_matrix = float4x4(_0, _1, _2, _3);
+    return mul(mvp, model_matrix);
+}
+#endif
+
+float4 bc7_correct_alpha(float4 color) {
+    // map 254 to 255. this is because bc7 is lossy in the alpha channel and an opaque pixel often outputs as 254 alpha.
+    if (color.a > 0.995f && color.a <= 1.0f) color.a = 1.0f;
+    return color;
+}
+
+struct ps_in {
+    float4 pos: SV_Position;
+    float2 uv: UV;
+    float4 color: COLOR0;
+};
+
+float4 ps_main(ps_in inp) : SV_Target0
+{
+    float4 tex = inp.color * albedo.Sample(albedo_smp, inp.uv);
+    float a = tex.a;
+    if (a < 0.001) {
+        return float4(0, 0, 0, 0);
+    }
+
+    // Alpha edge mask (silhouette rim / highlight)
+    float a_dx = ddx(a);
+    float a_dy = ddy(a);
+    float edgeGrad = length(float2(a_dx, a_dy));
+    float edgeMask = saturate(edgeGrad * edge_width);
+
+    float t = resolution_time.z;
+    float pulse = 0.88 + 0.12 * sin(t * 2.8);
+
+    float3 fill = fill_rgb * fill_alpha;
+    float3 edge = edge_rgb * edgeMask * edge_strength * pulse;
+    float3 straight = saturate(fill + edge);
+    float3 premul = straight * a;
+    return float4(premul, a);
+}
+

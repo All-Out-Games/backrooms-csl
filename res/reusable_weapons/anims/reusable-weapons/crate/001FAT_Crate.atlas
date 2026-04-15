@@ -1,0 +1,105 @@
+001FAT_Crate.png
+	size: 4080, 332
+	filter: Linear, Linear
+	scale: 0.5
+images/Crates/diamond crate
+	bounds: 2526, 6, 246, 154
+images/Crates/diamond interior
+	bounds: 3276, 166, 245, 160
+	offsets: 0, 1, 246, 161
+images/Crates/diamond lid
+	bounds: 1518, 122, 246, 204
+images/Crates/golden crate
+	bounds: 2274, 6, 246, 154
+images/Crates/golden interior
+	bounds: 3025, 166, 245, 160
+	offsets: 0, 1, 246, 161
+images/Crates/golden lid
+	bounds: 1266, 122, 246, 204
+images/Crates/iron crate
+	bounds: 2022, 6, 246, 154
+images/Crates/iron interior
+	bounds: 2774, 166, 245, 160
+	offsets: 0, 1, 246, 161
+images/Crates/iron lid
+	bounds: 1014, 122, 246, 204
+images/Crates/shafts/shaft1
+	bounds: 2949, 45, 132, 115
+	offsets: 1, 1, 134, 117
+images/Crates/shafts/shaft2
+	bounds: 3527, 39, 124, 180
+	offsets: 15, 1, 140, 197
+	rotate: 90
+images/Crates/shafts/shaft3
+	bounds: 3283, 119, 41, 186
+	offsets: 0, 1, 42, 220
+	rotate: 90
+images/Crates/shafts/shaft4
+	bounds: 2778, 37, 123, 165
+	offsets: 2, 0, 125, 166
+	rotate: 90
+images/Crates/shafts/shaft5
+	bounds: 3087, 111, 49, 190
+	offsets: 4, 4, 56, 218
+	rotate: 90
+images/Crates/silver crate
+	bounds: 1770, 6, 246, 154
+images/Crates/silver interior
+	bounds: 2523, 166, 245, 160
+	offsets: 0, 1, 246, 161
+images/Crates/silver lid
+	bounds: 762, 122, 246, 204
+images/Crates/steel crate
+	bounds: 3779, 12, 246, 154
+images/Crates/steel interior
+	bounds: 2272, 166, 245, 160
+	offsets: 0, 1, 246, 161
+images/Crates/steel lid
+	bounds: 510, 122, 246, 204
+images/Crates/stone crate
+	bounds: 3779, 172, 246, 154
+images/Crates/stone interior
+	bounds: 2021, 166, 245, 160
+	offsets: 0, 1, 246, 161
+images/Crates/stone lid
+	bounds: 258, 122, 246, 204
+images/Crates/wood crate
+	bounds: 3527, 169, 246, 157
+images/Crates/wood interior
+	bounds: 1770, 166, 245, 160
+	offsets: 0, 1, 246, 161
+images/Crates/wood lid
+	bounds: 6, 122, 246, 204
+images/diamond/peanut_particle
+	bounds: 3713, 122, 50, 41
+images/gold/peanut_particle
+	bounds: 4031, 157, 50, 41
+	rotate: 90
+images/silver/peanut_particle
+	bounds: 4031, 213, 50, 41
+	rotate: 90
+images/sparkles/diamond sparks/spark1
+	bounds: 248, 85, 22, 31
+	offsets: 1, 0, 25, 31
+images/sparkles/diamond sparks/spark3
+	bounds: 210, 73, 32, 43
+	offsets: 2, 0, 36, 43
+images/sparkles/diamond sparks/spark5
+	bounds: 140, 69, 47, 64
+	offsets: 3, 0, 52, 64
+	rotate: 90
+images/sparkles/gold sparks/spark1
+	bounds: 4031, 108, 32, 43
+	offsets: 2, 0, 35, 43
+images/sparkles/gold sparks/spark3
+	bounds: 4031, 269, 43, 57
+	offsets: 2, 0, 47, 57
+images/sparkles/gold sparks/spark4
+	bounds: 73, 34, 61, 82
+	offsets: 4, 0, 68, 82
+images/sparkles/silver sparks/spark1
+	bounds: 3475, 112, 36, 48
+	offsets: 2, 0, 40, 48
+images/sparkles/silver sparks/spark2
+	bounds: 6, 34, 61, 82
+	offsets: 4, 0, 68, 82

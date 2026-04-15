@@ -1,0 +1,50 @@
+draw_health_bar :: proc(player: Player) {
+    UI.push_world_draw_context();
+    defer UI.pop_draw_context();
+
+    pos := player.entity.world_position;
+    UI.push_z(pos.y - 0.0001);
+    defer UI.pop_z();
+
+    UI.push_scale_factor(5.0 / 540.0);
+    defer UI.pop_scale_factor();
+
+    health_rect := player.username_rect.top_center_rect().offset(0, 5);
+    health_rect = health_rect.grow(13, 70, 0, 70);
+    border_rect := health_rect.grow(5.5, 4, 5.5, 4).offset(0, -2);
+
+    back := get_asset(Texture_Asset, "reusable_weapons/sprites/reusable-weapons/hud_elements/health_bar_green/healthbar_back.png");
+    fill := get_asset(Texture_Asset, "reusable_weapons/sprites/reusable-weapons/hud_elements/health_bar_green/healthbar_fill.png");
+    pip := get_asset(Texture_Asset, "reusable_weapons/sprites/reusable-weapons/hud_elements/health_bar_green/healthbar_pip.png");
+
+    // Background
+    UI.quad(border_rect, back, {1, 1, 1, 1});
+
+    // Health fill
+    health_pct := player.weapon_target.health / player.weapon_target.max_health;
+    fill_rect := health_rect.subrect(0, 0, health_pct, 1);
+    UI.quad(fill_rect, fill, {1, 1, 1, 1});
+
+    // Pip markers
+    total_pips :: 6;
+    health_per_pip := player.weapon_target.max_health / total_pips.(float);
+    left_offset :: 0.05;
+    right_offset :: 0.05;
+    available_width := 1.0 - left_offset - right_offset;
+    pip_width := available_width / total_pips.(float);
+    shrink :: 0.3;
+
+    i := 0;
+    while i < total_pips {
+        pip_threshold := (i + 1).(float) * health_per_pip;
+        if player.weapon_target.health >= pip_threshold {
+            x_min := left_offset + i.(float) * pip_width;
+            new_width := pip_width * shrink;
+            new_x_min := x_min + (pip_width - new_width) / 2.0;
+            new_x_max := new_x_min + new_width;
+            pip_rect := health_rect.subrect(new_x_min, 0, new_x_max, 1);
+            UI.quad(pip_rect, pip, {1, 1, 1, 1});
+        }
+        i += 1;
+    }
+}

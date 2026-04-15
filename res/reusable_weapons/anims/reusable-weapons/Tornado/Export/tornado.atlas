@@ -1,0 +1,25 @@
+tornado.png
+	size: 1400, 352
+	filter: Linear, Linear
+	scale: 0.5
+disc
+	bounds: 1163, 115, 230, 230
+	offsets: 2, 2, 234, 234
+disc topper
+	bounds: 927, 115, 230, 230
+	offsets: 2, 2, 234, 234
+rockB
+	bounds: 927, 29, 34, 28
+	rotate: 90
+rockC
+	bounds: 927, 69, 40, 29
+	rotate: 90
+small_rockA
+	bounds: 961, 16, 19, 20
+small_rockB
+	bounds: 927, 6, 19, 17
+small_rockC
+	bounds: 961, 42, 21, 20
+	rotate: 90
+smoke
+	bounds: 6, 19, 915, 326

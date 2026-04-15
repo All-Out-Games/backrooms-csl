@@ -1,0 +1,65 @@
+bomb_shooter.png
+	size: 1688, 192
+	filter: Linear, Linear
+	scale: 0.5
+Recursive Cluster/base back
+	bounds: 533, 70, 115, 92
+	rotate: 90
+Recursive Cluster/base front
+	bounds: 1225, 120, 65, 62
+	rotate: 90
+Recursive Cluster/canon
+	bounds: 416, 39, 146, 111
+	rotate: 90
+bomb shooter/Cap
+	bounds: 1662, 166, 19, 19
+bomb shooter/Spokes
+	bounds: 1293, 125, 60, 60
+bomb shooter/back wheel
+	bounds: 1035, 116, 69, 69
+bomb shooter/canon
+	bounds: 296, 24, 161, 114
+	rotate: 90
+bomb shooter/front wheel
+	bounds: 869, 106, 79, 79
+bomb shooter/front wheelnospoke
+	bounds: 784, 106, 79, 79
+bomb shooter/shadow
+	bounds: 719, 69, 116, 59
+	offsets: 3, 3, 122, 64
+	rotate: 90
+explosion/Explosion_HitSpark_1_Inside
+	bounds: 1632, 159, 24, 26
+	offsets: 1, 0, 25, 26
+explosion/Explosion_HitSpark_1_Outside
+	bounds: 1413, 128, 55, 57
+	offsets: 0, 1, 55, 58
+explosion/Explosion_HitSpark_2_Inside
+	bounds: 631, 100, 82, 85
+explosion/Explosion_HitSpark_2_Outside
+	bounds: 6, 23, 155, 162
+explosion/Explosion_HitSpark_3_Big_1
+	bounds: 1359, 111, 48, 74
+	offsets: 0, 0, 48, 75
+explosion/Explosion_HitSpark_3_Big_5
+	bounds: 1110, 100, 85, 53
+	rotate: 90
+explosion/Explosion_HitSpark_3_Big_6
+	bounds: 1169, 96, 89, 50
+	offsets: 0, 0, 90, 50
+	rotate: 90
+faster bomb shooter/canon
+	bounds: 167, 6, 179, 123
+	rotate: 90
+smoke/smoke 1
+	bounds: 1587, 143, 42, 39
+	rotate: 90
+smoke/smoke 2
+	bounds: 1474, 127, 58, 54
+	rotate: 90
+smoke/smoke 3
+	bounds: 1534, 138, 47, 47
+smoke/smoke 4
+	bounds: 954, 109, 76, 75
+	offsets: 0, 0, 100, 75
+	rotate: 90

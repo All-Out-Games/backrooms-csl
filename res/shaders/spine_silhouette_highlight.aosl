@@ -1,0 +1,75 @@
+!!inputs {
+    texture albedo ALBEDO
+    float3 fill_rgb
+    float fill_alpha
+    float3 edge_rgb
+    float edge_strength
+    float edge_width
+}
+
+!!pipeline {
+    Pixel_Format: RGBA8_SRGB
+    Blend_Enabled: true
+    Depth_Enabled: true
+    Blend_Src: ONE
+    Blend_Dst: ONE_MINUS_SRC_ALPHA
+    Blend_Op: ADD
+    Alpha_Blend_Src: ONE
+    Alpha_Blend_Dst: ONE
+    Alpha_Blend_Op: ADD
+    Blend_Color: (1, 1, 1, 1)
+    Unlit: true
+}
+
+!!vs
+struct vs_out {
+    float4 pos: SV_Position;
+    float2 uv: UV;
+    float4 color: COLOR0;
+};
+
+vs_out vs_main(vs_in v)
+{
+    float4x4 model;
+    model[0] = matrices.Load(create_pixel_coord(v.matrix_index * 4 + 0));
+    model[1] = matrices.Load(create_pixel_coord(v.matrix_index * 4 + 1));
+    model[2] = matrices.Load(create_pixel_coord(v.matrix_index * 4 + 2));
+    model[3] = matrices.Load(create_pixel_coord(v.matrix_index * 4 + 3));
+
+    vs_out o;
+    o.pos   = mul(mvp, mul(model, float4(v.pos, 0, 1)));
+    o.uv    = v.uv;
+    o.color = v.color;
+    return o;
+}
+
+!!ps
+struct ps_in {
+    float4 pos: SV_Position;
+    float2 uv: UV;
+    float4 color: COLOR0;
+};
+
+float4 ps_main(ps_in inp) : SV_Target0
+{
+    float4 tex = inp.color * albedo.Sample(albedo_smp, inp.uv);
+    float a = tex.a;
+    if (a < 0.001) {
+        return float4(0, 0, 0, 0);
+    }
+
+    // Alpha edge mask (silhouette rim / highlight)
+    float a_dx = ddx(a);
+    float a_dy = ddy(a);
+    float edgeGrad = length(float2(a_dx, a_dy));
+    float edgeMask = saturate(edgeGrad * edge_width);
+
+    float t = resolution_time.z;
+    float pulse = 0.88 + 0.12 * sin(t * 2.8);
+
+    float3 fill = fill_rgb * fill_alpha;
+    float3 edge = edge_rgb * edgeMask * edge_strength * pulse;
+    float3 straight = saturate(fill + edge);
+    float3 premul = straight * a;
+    return float4(premul, a);
+}

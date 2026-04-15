@@ -1,0 +1,86 @@
+Piercing_Projectile :: class : Component {
+    damage: float;
+    lifetime: float;
+    direction: v2;
+    owner_id: u64;
+    speed: float;
+    max_lifetime: float;
+    hit_ids: [32]u64;
+    hit_count: s64;
+    mute_hit_sound: bool;
+
+    ao_update :: method(dt: float) {
+        lifetime += dt;
+        if max_lifetime <= 0 {
+            max_lifetime = 3.0;
+        }
+        if lifetime > max_lifetime {
+            entity.destroy();
+            return;
+        }
+
+        move := v2{direction.x * speed * dt, direction.y * speed * dt};
+        entity.add_local_position(move);
+
+        pos := entity.world_position + v2{0, -0.5};
+        nearby: [..]Weapon_Target;
+        Scene.get_all_components_in_range(pos, 0.8, ref nearby);
+
+        for hit_target: nearby {
+            if hit_target.entity.id == owner_id continue;
+
+            // Check if already hit
+            already_hit := false;
+            j := 0;
+            while j < hit_count {
+                if hit_ids[j] == hit_target.entity.id {
+                    already_hit = true;
+                }
+                j += 1;
+            }
+            if already_hit continue;
+
+            // Record hit
+            if hit_count < 32 {
+                hit_ids[hit_count] = hit_target.entity.id;
+                hit_count += 1;
+            }
+
+            weapon_target_apply_damage(hit_target, damage, owner_id);
+
+            if !mute_hit_sound {
+                hit_sfx := get_asset(SFX_Asset, "reusable_weapons/sounds/reusable-weapons/bullet_hit.wav");
+                sfx_desc := SFX.default_sfx_desc();
+                sfx_desc.set_position(pos);
+                sfx_desc.range_multiplier = 2.0;
+                SFX.play(hit_sfx, sfx_desc);
+            }
+        }
+    }
+}
+
+spawn_piercing_projectile :: proc(player: Player, direction: v2, wt: Weapon_Type) {
+    config := get_weapon_config(wt);
+    bone_local := player.animator.get_bone_local_position("PROJECTILE");
+    barrel_dist := length(bone_local);
+    dir := normalize(direction);
+    spawn_pos := v2{player.animator.entity.world_position.x + dir.x * barrel_dist, player.animator.entity.world_position.y + dir.y * barrel_dist};
+
+    proj_entity := Scene.create_entity();
+    proj_entity.set_local_position(spawn_pos);
+
+    angle := atan2(direction.y, direction.x);
+    proj_entity.set_local_rotation(to_degrees(angle));
+
+    bullet_texture := get_asset(Texture_Asset, "reusable_weapons/sprites/reusable-weapons/projectiles/MachineGunBullet.png");
+    sprite := proj_entity.add_component(Sprite_Renderer);
+    sprite.set_texture(bullet_texture);
+    proj_entity.set_local_scale({2, 2});
+
+    proj := proj_entity.add_component(Piercing_Projectile);
+    proj.damage = config.base_damage;
+    proj.direction = normalize(direction);
+    proj.owner_id = player.entity.id;
+    proj.speed = config.projectile_speed;
+    proj.max_lifetime = config.projectile_lifetime;
+}

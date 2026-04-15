@@ -1,0 +1,58 @@
+lighting_beam.png
+	size: 4052, 2020
+	filter: Linear, Linear
+images/Pink Variant/blue_electricfied_fx/electric_1
+	bounds: 3049, 124, 213, 246
+	offsets: 1, 1, 215, 248
+images/Pink Variant/blue_electricfied_fx/electric_2
+	bounds: 2633, 89, 191, 281
+	offsets: 1, 1, 193, 283
+images/Pink Variant/blue_electricfied_fx/electric_3
+	bounds: 3541, 265, 267, 105
+	offsets: 1, 1, 269, 107
+images/Pink Variant/blue_electricfied_fx/electrocute_1
+	bounds: 1267, 6, 375, 364
+	offsets: 9, 7, 393, 379
+images/Pink Variant/blue_electricfied_fx/electrocute_2
+	bounds: 446, 46, 324, 434
+	offsets: 1, 7, 331, 449
+	rotate: 90
+images/Pink Variant/blue_electricfied_fx/electrocute_3
+	bounds: 2042, 32, 338, 388
+	offsets: 8, 7, 347, 402
+	rotate: 90
+images/Pink Variant/laser_fx/laser_fx_1
+	bounds: 6, 1699, 4039, 315
+images/Pink Variant/laser_fx/laser_fx_2
+	bounds: 6, 610, 4035, 246
+images/Pink Variant/laser_fx/laser_fx_3
+	bounds: 6, 1120, 4034, 270
+images/blue_electricfied_fx/electric_1
+	bounds: 2830, 124, 213, 246
+	offsets: 1, 1, 215, 248
+images/blue_electricfied_fx/electric_2
+	bounds: 2436, 89, 191, 281
+	offsets: 1, 1, 193, 283
+images/blue_electricfied_fx/electric_3
+	bounds: 3268, 265, 267, 105
+	offsets: 1, 1, 269, 107
+images/blue_electricfied_fx/electrocute_1
+	bounds: 886, 6, 375, 364
+	offsets: 9, 7, 393, 379
+images/blue_electricfied_fx/electrocute_2
+	bounds: 6, 46, 324, 434
+	offsets: 1, 7, 331, 449
+	rotate: 90
+images/blue_electricfied_fx/electrocute_3
+	bounds: 1648, 32, 338, 388
+	offsets: 8, 7, 347, 402
+	rotate: 90
+images/laser_fx/laser_fx_1
+	bounds: 6, 1396, 4023, 297
+	offsets: 10, 9, 4039, 315
+images/laser_fx/laser_fx_2
+	bounds: 6, 376, 4019, 228
+	offsets: 10, 9, 4035, 246
+images/laser_fx/laser_fx_3
+	bounds: 6, 862, 4018, 252
+	offsets: 10, 9, 4034, 270

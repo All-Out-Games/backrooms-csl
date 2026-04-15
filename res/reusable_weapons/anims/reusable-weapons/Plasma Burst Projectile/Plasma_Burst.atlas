@@ -1,0 +1,33 @@
+Plasma_Burst.png
+	size: 1140, 412
+	filter: Linear, Linear
+Burst 1
+	bounds: 590, 130, 275, 146
+	rotate: 90
+FinalSmashGlow
+	bounds: 6, 45, 314, 360
+	offsets: 3, 3, 320, 366
+Glow
+	bounds: 742, 271, 134, 133
+	offsets: 1, 1, 136, 136
+	rotate: 90
+Glow White
+	bounds: 881, 271, 134, 133
+	offsets: 1, 1, 136, 136
+	rotate: 90
+projectile/overlay
+	bounds: 326, 6, 399, 258
+	offsets: 20, 18, 437, 294
+	rotate: 90
+projectile/spark_particle_A
+	bounds: 1020, 339, 66, 38
+	offsets: 2, 2, 70, 42
+	rotate: 90
+projectile/spark_particle_B
+	bounds: 1103, 365, 40, 28
+	offsets: 2, 2, 44, 31
+	rotate: 90
+projectile/spark_particle_C
+	bounds: 1064, 346, 59, 33
+	offsets: 2, 2, 63, 37
+	rotate: 90

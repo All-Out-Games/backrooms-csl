@@ -1,0 +1,117 @@
+013RED_projectile.png
+	size: 4096, 4096
+	filter: Linear, Linear
+MachineGunBullet
+	bounds: 386, 358, 191, 23
+OP[106]LaserBolt _Crewshia
+	bounds: 226, 685, 151, 21
+	offsets: 1, 1, 153, 23
+WaterBullet
+	bounds: 218, 12, 67, 45
+	offsets: 1, 1, 69, 47
+buzzsaw
+	bounds: 844, 105, 213, 215
+	offsets: 1, 1, 215, 217
+cannonball
+	bounds: 842, 1961, 123, 118
+	offsets: 1, 1, 125, 120
+	rotate: 90
+geyser/geyser/SpringWaterGeyser_1
+	bounds: 1375, 2651, 210, 614
+	offsets: 1, 1, 212, 616
+geyser/geyser/SpringWaterGeyser_2
+	bounds: 6, 622, 214, 596
+	offsets: 1, 1, 216, 597
+geyser/geyser/SpringWaterGeyser_3
+	bounds: 6, 27, 206, 589
+	offsets: 1, 1, 208, 591
+geyser/geyser/SpringWaterSpout_1
+	bounds: 583, 16, 150, 102
+	offsets: 1, 47, 152, 150
+geyser/geyser/SpringWaterSpout_2
+	bounds: 226, 712, 155, 139
+	offsets: 14, 8, 170, 148
+	rotate: 90
+geyser/geyser/SpringWaterSpout_3
+	bounds: 1217, 16, 144, 108
+	offsets: 1, 38, 146, 147
+geyser/splash/WaterParticle_A
+	bounds: 842, 1838, 102, 117
+geyser/splash/WaterParticle_B
+	bounds: 707, 387, 53, 64
+	rotate: 90
+geyser/splash/WaterParticle_C
+	bounds: 323, 13, 32, 44
+geyser/splash/WaterParticle_D
+	bounds: 361, 27, 28, 30
+geyser/splash/WaterSplash_A
+	bounds: 386, 387, 315, 145
+geyser/splash/WaterSplash_B
+	bounds: 427, 896, 322, 246
+	rotate: 90
+geyser/splash/WaterSplash_C
+	bounds: 226, 873, 195, 345
+geyser/splash/WaterSplash_D
+	bounds: 1063, 130, 160, 190
+geyser/splash/WaterSplash_E
+	bounds: 844, 326, 226, 246
+geyser/splash/WaterSplash_F
+	bounds: 674, 578, 312, 291
+	rotate: 90
+geyser/splash/Water_Puddle
+	bounds: 679, 910, 308, 216
+	offsets: 9, 8, 327, 233
+	rotate: 90
+geyser/splash_water/splash_water_1
+	bounds: 386, 538, 282, 329
+	offsets: 1, 1, 284, 331
+geyser/splash_water/splash_water_2
+	bounds: 3292, 3168, 922, 727
+	offsets: 1, 1, 924, 729
+	rotate: 90
+geyser/splash_water/splash_water_3
+	bounds: 6, 1224, 1172, 830
+	offsets: 1, 1, 1174, 832
+	rotate: 90
+geyser/splash_water/splash_water_4
+	bounds: 6, 2402, 1363, 863
+	offsets: 1, 1, 1365, 865
+geyser/splash_water/splash_water_5
+	bounds: 1696, 3251, 1590, 839
+	offsets: 1, 1, 1592, 841
+geyser/splash_water/splash_water_6
+	bounds: 6, 3271, 1684, 819
+	offsets: 1, 1, 1686, 821
+golden_nuke
+	bounds: 1063, 22, 102, 148
+	offsets: 1, 0, 103, 149
+	rotate: 90
+grenade
+	bounds: 812, 7, 87, 92
+	offsets: 1, 1, 89, 94
+megablade
+	bounds: 583, 124, 255, 257
+	offsets: 1, 1, 257, 259
+nullify/nuliffy_projectile_ball
+	bounds: 707, 446, 131, 126
+	offsets: 1, 1, 133, 128
+nullify/nuliffy_projectile_trail
+	bounds: 218, 63, 359, 185
+	offsets: 1, 1, 361, 187
+plasma Burst/long-projectile
+	bounds: 218, 254, 362, 162
+	offsets: 1, 1, 364, 163
+	rotate: 90
+shotgun_bullet2
+	bounds: 291, 12, 45, 26
+	offsets: 1, 1, 47, 28
+	rotate: 90
+smaller_bomb/bomb_spark_1
+	bounds: 386, 256, 78, 96
+smaller_bomb/bomb_spark_2
+	bounds: 739, 6, 67, 93
+smaller_bomb/smaller_bomb
+	bounds: 842, 2090, 123, 124
+waterballoon
+	bounds: 842, 2220, 156, 176
+	offsets: 1, 1, 158, 178

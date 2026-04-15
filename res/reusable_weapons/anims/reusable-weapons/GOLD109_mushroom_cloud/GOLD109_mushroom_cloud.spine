@@ -1,0 +1,66 @@
+{
+"skeleton": { "hash": "1qAKLS/XKWg", "spine": "4.0.64" },
+"bones": [
+	{ "name": "root" },
+	{ "name": "GOLD109/Golden Map Imposter Abilities/golden_nuclear_explosion/nuke_explosion_1", "parent": "root", "x": 1.4, "y": 30.94 }
+],
+"slots": [
+	{ "name": "GOLD109/Golden Map Imposter Abilities/golden_nuclear_explosion/nuke_explosion_1", "bone": "GOLD109/Golden Map Imposter Abilities/golden_nuclear_explosion/nuke_explosion_1" }
+],
+"skins": [
+	{
+		"name": "default",
+		"attachments": {
+			"GOLD109/Golden Map Imposter Abilities/golden_nuclear_explosion/nuke_explosion_1": {
+				"images/GOLD109/Golden Map Imposter Abilities/golden_nuclear_explosion/nuke_explosion_1": { "width": 351, "height": 338 },
+				"images/GOLD109/Golden Map Imposter Abilities/golden_nuclear_explosion/nuke_explosion_2": { "y": 59.98, "width": 579, "height": 551 },
+				"images/GOLD109/Golden Map Imposter Abilities/golden_nuclear_explosion/nuke_explosion_3": { "x": -0.5, "y": 199.13, "width": 544, "height": 816 },
+				"images/GOLD109/Golden Map Imposter Abilities/golden_nuclear_explosion/nuke_explosion_4": { "x": -0.5, "y": 281.89, "width": 880, "height": 982 },
+				"images/GOLD109/Golden Map Imposter Abilities/golden_nuclear_explosion/nuke_explosion_5": { "x": -0.5, "y": 312.92, "width": 938, "height": 1038 },
+				"images/GOLD109/Golden Map Imposter Abilities/golden_nuclear_explosion/nuke_explosion_6": { "y": 326.35, "width": 971, "height": 1061 },
+				"images/GOLD109/Golden Map Imposter Abilities/golden_nuclear_explosion/nuke_explosion_7": { "x": -0.5, "y": 328.94, "width": 988, "height": 1069 }
+			}
+		}
+	}
+],
+"animations": {
+	"GOLD109_Imposter/nuke_explosion": {
+		"slots": {
+			"GOLD109/Golden Map Imposter Abilities/golden_nuclear_explosion/nuke_explosion_1": {
+				"rgba": [
+					{ "time": 0.5667, "color": "ffffffff" },
+					{ "time": 0.7667, "color": "ffffff00" }
+				],
+				"attachment": [
+					{ "name": "images/GOLD109/Golden Map Imposter Abilities/golden_nuclear_explosion/nuke_explosion_1" },
+					{ "time": 0.0667, "name": "images/GOLD109/Golden Map Imposter Abilities/golden_nuclear_explosion/nuke_explosion_2" },
+					{ "time": 0.1667, "name": "images/GOLD109/Golden Map Imposter Abilities/golden_nuclear_explosion/nuke_explosion_3" },
+					{ "time": 0.2667, "name": "images/GOLD109/Golden Map Imposter Abilities/golden_nuclear_explosion/nuke_explosion_4" },
+					{ "time": 0.3667, "name": "images/GOLD109/Golden Map Imposter Abilities/golden_nuclear_explosion/nuke_explosion_5" },
+					{ "time": 0.4667, "name": "images/GOLD109/Golden Map Imposter Abilities/golden_nuclear_explosion/nuke_explosion_6" },
+					{ "time": 0.5667, "name": "images/GOLD109/Golden Map Imposter Abilities/golden_nuclear_explosion/nuke_explosion_7" },
+					{ "time": 0.7667, "name": null }
+				]
+			}
+		},
+		"bones": {
+			"GOLD109/Golden Map Imposter Abilities/golden_nuclear_explosion/nuke_explosion_1": {
+				"translate": [
+					{ "x": 330.16, "y": -64.67 },
+					{ "time": 0.0667, "x": 330.16, "y": 121.33 }
+				],
+				"scale": [
+					{},
+					{
+						"time": 0.0667,
+						"x": 3.221,
+						"y": 3.221,
+						"curve": [ 0.099, 3.809, 0.533, 3.95, 0.099, 3.809, 0.533, 3.95 ]
+					},
+					{ "time": 0.7667, "x": 3.95, "y": 3.95 }
+				]
+			}
+		}
+	}
+}
+}
