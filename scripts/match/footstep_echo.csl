@@ -97,15 +97,33 @@ spawn_footstep_echo :: proc(world_pos: v2, prefab_path: string) {
     }
 }
 
+get_visible_player_spine :: proc(player: Player) -> Spine_Animator {
+    if player.is_round_entity() && #alive(player.override_rig) && player.override_rig.entity.get_local_enabled() {
+        return player.override_rig;
+    }
+    return player.animator;
+}
+
+get_footstep_bone_name :: proc(player: Player, left_foot: bool) -> string {
+    if player.is_round_entity() && #alive(player.override_rig) && player.override_rig.entity.get_local_enabled() {
+        if left_foot return "IK_LegL3";
+        return "IK_LegR3";
+    }
+
+    if left_foot return "foot_L_IK";
+    return "foot_R_IK";
+}
+
 spine_bone_to_world :: proc(player: Player, bone_name: string) -> v2 {
-    local := player.animator.get_bone_local_position(bone_name);
-    sc := player.animator.scale;
+    spine := get_visible_player_spine(player);
+    local := spine.get_bone_local_position(bone_name);
+    sc := spine.scale;
     scaled := v2{local.x * sc.x, local.y * sc.y};
-    th := player.entity.world_rotation;
+    th := spine.entity.world_rotation;
     c := cos(th);
     s := sin(th);
     rot := v2{scaled.x * c - scaled.y * s, scaled.x * s + scaled.y * c};
-    return player.entity.world_position + rot;
+    return spine.entity.world_position + rot;
 }
 
 tick_footstep_echo_for_player :: proc(player: Player, dt: float) {
@@ -125,13 +143,11 @@ tick_footstep_echo_for_player :: proc(player: Player, dt: float) {
     while player.footstep_stride_accum >= FOOTSTEP_STRIDE_DISTANCE {
         player.footstep_stride_accum -= FOOTSTEP_STRIDE_DISTANCE;
 
-        bone := "foot_R_IK";
-        if player.footstep_left_next {
-            bone = "foot_L_IK";
-        }
+        bone := get_footstep_bone_name(player, player.footstep_left_next);
         player.footstep_left_next = !player.footstep_left_next;
 
         wp := spine_bone_to_world(player, bone);
         spawn_footstep_echo(wp, "Echo.prefab");
+        player.reveal_for_entity_local_view();
     }
 }

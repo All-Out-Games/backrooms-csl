@@ -4,6 +4,7 @@ import "core:ao"
 
 HEAD_START_SECONDS :: 15.0;
 MATCH_MAX_SECONDS :: 600.0; // ~10 minutes after survivors' head start ends
+HUNT_BEGIN_BANNER_SECONDS :: 2.0;
 
 MIN_TOTAL_PLAYERS :: 5; // 1 entity + 4 survivors
 MAX_TOTAL_PLAYERS :: 7; // 1 entity + 6 survivors
@@ -118,6 +119,174 @@ draw_match_lobby_ui :: proc(player: Player) {
     UIK.end();
 }
 
+format_countdown_mm_ss :: proc(total_seconds: s64) -> string {
+    minutes := total_seconds / 60;
+    seconds := total_seconds % 60;
+
+    seconds_text := format_string("%", {seconds});
+    if seconds < 10 {
+        seconds_text = format_string("0%", {seconds});
+    }
+
+    return format_string("%:%", {minutes, seconds_text});
+}
+
+draw_match_status_ui :: proc(title: string, value: string) {
+    UIK.begin(UIK.window(UIK.rect_topbar()));
+
+    shell := UIK.panel_modal(.TRANSP_BLACK);
+    shell.cross_align = .CENTER;
+    shell.main_align = .CENTER;
+    shell.gap = 4;
+    shell.padding = v4{16, 12, 16, 12};
+    UIK.panel_begin(shell);
+
+    UIK.text(title, UIK.text_body());
+    UIK.text(value, UIK.text_title());
+
+    UIK.panel_end();
+    UIK.end();
+}
+
+get_head_start_countdown_seconds :: proc(gm: Game_Manager) -> s64 {
+    if !#alive(gm) {
+        return 0;
+    }
+
+    rem := gm.head_start_ends_at - get_time();
+    if rem <= 0.0 {
+        return 0;
+    }
+
+    secs := (rem + 0.999).(s64);
+    one: s64 = 1;
+    if secs < one {
+        secs = one;
+    }
+    return secs;
+}
+
+get_match_countdown_seconds :: proc(gm: Game_Manager) -> s64 {
+    if !#alive(gm) {
+        return 0;
+    }
+
+    rem := gm.match_ends_at - get_time();
+    if rem <= 0.0 {
+        return 0;
+    }
+
+    secs := (rem + 0.999).(s64);
+    one: s64 = 1;
+    if secs < one {
+        secs = one;
+    }
+    return secs;
+}
+
+draw_head_start_ui :: proc(player: Player) {
+    gm := get_game_manager();
+    if !#alive(gm) {
+        return;
+    }
+    if gm.phase != .SURVIVOR_HEAD_START {
+        return;
+    }
+
+    countdown := get_head_start_countdown_seconds(gm);
+    if countdown <= 0 {
+        return;
+    }
+
+    title := "Headstart For";
+    if gm.is_entity_player(player) {
+        title = "Hunt In";
+    }
+
+    draw_match_status_ui(title, format_string("%", {countdown}));
+
+    if gm.is_entity_player(player) && player.is_local() {
+        UI.push_screen_draw_context();
+        defer UI.pop_draw_context();
+
+        box := UI.get_safe_screen_rect().center_rect().grow(50.0, 420.0, 50.0, 420.0).offset(0.0, 80.0);
+        ts := UI.default_text_settings();
+        ts.size = 34;
+        ts.color = v4{1.0, 1.0, 1.0, 1.0};
+        ts.halign = .CENTER;
+        ts.valign = .CENTER;
+        ts.do_outline = true;
+        ts.outline_thickness = 2;
+        ts.outline_color = v4{0.0, 0.0, 0.0, 1.0};
+        UI.text(box, ts, "Survivors Scattering...");
+    }
+}
+
+draw_match_timer_ui :: proc(player: Player) {
+    gm := get_game_manager();
+    if !#alive(gm) {
+        return;
+    }
+    if gm.phase != .ACTIVE {
+        return;
+    }
+
+    countdown := get_match_countdown_seconds(gm);
+    if countdown <= 0 {
+        return;
+    }
+
+    draw_match_status_ui("Time Remaining", format_countdown_mm_ss(countdown));
+}
+
+draw_hunt_begin_banner_ui :: proc(player: Player) {
+    gm := get_game_manager();
+    if !#alive(gm) {
+        return;
+    }
+    if gm.phase != .ACTIVE {
+        return;
+    }
+    if gm.hunt_started_at <= 0.0 {
+        return;
+    }
+
+    elapsed := get_time() - gm.hunt_started_at;
+    if elapsed < 0.0 || elapsed >= HUNT_BEGIN_BANNER_SECONDS {
+        return;
+    }
+
+    t := clamp(elapsed / HUNT_BEGIN_BANNER_SECONDS, 0.0, 1.0);
+    fade_t := pow(t, 2.0);
+    alpha := lerp(1.0, 0.0, fade_t);
+    slide_y := lerp(0.0, 24.0, t);
+
+    text := "Escape!";
+    if gm.is_entity_player(player) {
+        text = "The Hunt Begins!";
+    }
+
+    UI.push_screen_draw_context();
+    defer UI.pop_draw_context();
+
+    bg := get_asset(Texture_Asset, "$AO/white.png");
+    box := UI.get_safe_screen_rect().center_rect().grow(70.0, 360.0, 70.0, 360.0).offset(0.0, slide_y);
+    glow := box.grow(8, 8, 8, 8);
+
+    UI.quad(glow, bg, v4{0.08, 0.08, 0.08, alpha * 0.22});
+    UI.quad(box, bg, v4{0.0, 0.0, 0.0, alpha * 0.82});
+
+    ts := UI.default_text_settings();
+    ts.size = 42;
+    ts.color = v4{1.0, 1.0, 1.0, alpha};
+    ts.halign = .CENTER;
+    ts.valign = .CENTER;
+    ts.do_outline = true;
+    ts.outline_thickness = 2;
+    ts.outline_color = v4{0.0, 0.0, 0.0, alpha};
+    UI.text(box, ts, text);
+}
+
 Game_Manager :: class : Component {
     phase: Match_Phase;
     result: Match_Result;
@@ -129,6 +298,7 @@ Game_Manager :: class : Component {
     emergency_systems_online: bool;
 
     head_start_ends_at: float;
+    hunt_started_at: float;
     match_ends_at: float;
 
     // LOBBY: 0 = countdown not running; otherwise get_time() when autostart fires.
@@ -148,6 +318,7 @@ Game_Manager :: class : Component {
         survivors_alive = 0;
         emergency_systems_online = false;
         head_start_ends_at = 0.0;
+        hunt_started_at = 0.0;
         match_ends_at = 0.0;
         lobby_countdown_ends_at = 0.0;
         match_rng = rng_root_seed();
@@ -209,6 +380,14 @@ Game_Manager :: class : Component {
         return n >= MIN_TOTAL_PLAYERS && n <= MAX_TOTAL_PLAYERS;
     }
 
+    can_force_start_match :: method() -> bool {
+        players: [..]Player;
+        collect_players(ref players);
+        n := players.count;
+        players.clear();
+        return n >= 2 && n <= MAX_TOTAL_PLAYERS;
+    }
+
     update_lobby_autostart :: method() {
         n := count_players();
 
@@ -230,18 +409,26 @@ Game_Manager :: class : Component {
     // --- Lobby → round ---
 
     // Picks one Entity (random among connected players). Survivors are everyone else.
-    // Call when player count is in [MIN_TOTAL_PLAYERS, MAX_TOTAL_PLAYERS].
-    start_match :: method() -> bool {
+    // `ignore_min_players` is only for admin cheats and still respects MAX_TOTAL_PLAYERS.
+    start_match :: method(ignore_min_players: bool = false) -> bool {
         if phase != .LOBBY {
             return false;
         }
-        if !can_start_match() {
+        if ignore_min_players {
+            if !can_force_start_match() {
+                return false;
+            }
+        } else if !can_start_match() {
             return false;
         }
 
         players: [..]Player;
         collect_players(ref players);
-        if players.count < MIN_TOTAL_PLAYERS || players.count > MAX_TOTAL_PLAYERS {
+        min_players := MIN_TOTAL_PLAYERS;
+        if ignore_min_players {
+            min_players = 2;
+        }
+        if players.count < min_players || players.count > MAX_TOTAL_PLAYERS {
             players.clear();
             return false;
         }
@@ -274,6 +461,7 @@ Game_Manager :: class : Component {
 
         now := get_time();
         head_start_ends_at = now + HEAD_START_SECONDS;
+        hunt_started_at = 0.0;
         // Match clock starts after head start (full hunt window).
         match_ends_at = head_start_ends_at + MATCH_MAX_SECONDS;
         phase = .SURVIVOR_HEAD_START;
@@ -291,6 +479,7 @@ Game_Manager :: class : Component {
             entity_player.remove_freeze_reason(FREEZE_ENTITY_HEAD_START);
         }
 
+        hunt_started_at = get_time();
         phase = .ACTIVE;
         log_info("Game_Manager: Hunt started; match ends at t=%", {match_ends_at});
     }
@@ -356,3 +545,17 @@ Game_Manager :: class : Component {
         }
     }
 }
+
+start :: proc(player: Player) {
+    gm := get_game_manager();
+    if !#alive(gm) {
+        log_info("start: no game manager found", {});
+        return;
+    }
+
+    if gm.start_match(true) {
+        log_info("start: % force-started the match", {player.get_username()});
+    } else {
+        log_info("start: unable to start match from current state", {});
+    }
+} @chat_command

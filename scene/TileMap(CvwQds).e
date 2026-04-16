@@ -12,7 +12,8 @@
     "X": 1,
     "Y": 1
   },
-  "previous_sibling": 2943448783
+  "previous_sibling": 2943448783,
+  "next_sibling": 2944678581
 },
 {
   "cid": 1,
@@ -25,7 +26,7 @@
         "layer_id": 1,
         "sort_order": 1,
         "layer_mode": 1,
-        "manual_layer": -1,
+        "manual_layer": -2,
         "chunks": [
           {
             "chunk_x": 5,
@@ -228,6 +229,64 @@
         "collision_offset": {
           "Y": 1
         }
+      },
+      {
+        "layer_id": 3,
+        "sort_order": 3,
+        "layer_mode": 1,
+        "manual_layer": -1,
+        "chunks": [
+          {
+            "chunk_x": 4,
+            "chunk_y": 5,
+            "tiles": [
+              18302628885633695744,
+              18374686483949813760,
+              17870283325566877696,
+              4160749568,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ]
+          },
+          {
+            "chunk_x": 5,
+            "chunk_y": 5,
+            "tiles": [
+              0,
+              17587891077127,
+              1095216662527,
+              1,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ]
+          }
+        ],
+        "textures": [
+          {
+            "texture": "Tiles/Filler.png"
+          }
+        ],
+        "mask": "$AO/tile_mask.png"
       }
     ]
   }

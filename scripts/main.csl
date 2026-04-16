@@ -18,25 +18,67 @@ ao_late_update :: proc(dt: float) {
     // Called once per frame after physics has been resolved
 }
 
+// Per-local-player vision: Light + LOS_Caster on a child entity (viewer-specific).
+PLAYER_LIGHT_BASE_INNER_RADIUS :: 12;
+PLAYER_LIGHT_MIN_INNER_RADIUS :: 5;
+PLAYER_LIGHT_MIN_OUTER_RADIUS :: 7;
+PLAYER_LIGHT_RADIUS_Y_PADDING :: 2.0;
+PLAYER_LIGHT_FIXED_RADIUS :: 40.0;
+PLAYER_LIGHT_INTENSITY :: 1.0;
+PLAYER_LIGHT_COLOR := v4.{1.0, 1.0, 1.0, 1.0};
+ENTITY_FILM_GRAIN_STRENGTH :: 0.045;
+ENTITY_FILM_GRAIN_NOISE_SCALE :: 1.75;
+ENTITY_COLOR_GRADE_FILTER := v3.{1.0, 1.0, 1.0};
+ENTITY_COLOR_GRADE_SATURATION :: 0.0;
+ENTITY_COLOR_GRADE_CONTRAST :: 2.0;
+ENTITY_VIEW_PLAYER_REVEAL_FADE_OUT_SECONDS :: 1.0;
+ENTITY_NAME_INVISIBILITY_REASON :: "entity_role_active";
 
+ENTITY_OVERRIDE_RIG_PATH :: "Animations/Bacteria/imposter_monster.spine";
+// `imposter_monster.spine` is authored much larger than the reusable player rig,
+// so start with a reduced scale and a small downward offset.
+ENTITY_OVERRIDE_SCALE := v2.{1, 1};
+ENTITY_OVERRIDE_OFFSET := v2.{0.0, -0.55};
 
 // Translucent highlighted silhouette for the player spine (see res/shaders/spine_silhouette_highlight.aosl).
-apply_player_spine_silhouette_material :: proc(player: Player) {
+create_player_spine_silhouette_material :: proc() -> Material {
     shader := get_asset(Shader_Asset, "shaders/spine_silhouette_highlight.aosl");
-    if shader == null return;
+    if shader == null return null;
     mat := Material.create(shader);
-    if mat == null return;
+    if mat == null return null;
     mat.set_float3("fill_rgb", v3{0.18, 0.72, 1.0});
     mat.set_float("fill_alpha", 0.36);
     mat.set_float3("edge_rgb", v3{0.45, 1.0, 1.0});
     mat.set_float("edge_strength", 1.2);
     mat.set_float("edge_width", 10.0);
-    player.animator.set_material(mat, true);
+    return mat;
+}
+
+get_local_player :: proc() -> Player {
+    for p: component_iterator(Player) {
+        if p.is_local() {
+            return p;
+        }
+    }
+    return null;
+}
+
+is_hidden_by_entity_local_view :: proc(player: Player) -> bool {
+    if player == null return false;
+    if !player.is_round_survivor() return false;
+
+    local_player := get_local_player();
+    if !#alive(local_player) return false;
+    if local_player == player return false;
+    return local_player.is_round_entity();
 }
 
 Player :: class : Player_Base {
     // Lobby: prefer being randomly chosen as Entity (synced for match start).
     entity_opt_in: bool;
+    override_rig: Spine_Animator;
+    entity_override_rig_asset: Spine_Asset;
+    entity_override_state_machine: State_Machine;
     weapon_target: Weapon_Target;
     equipped_weapon_type: Weapon_Type;
     equipped_item_def: Item_Definition;
@@ -45,11 +87,110 @@ Player :: class : Player_Base {
 
     footstep_stride_accum: float;
     footstep_left_next: bool;
+    entity_local_view_alpha: float;
+    entity_local_view_is_active: bool;
+    entity_name_hidden: bool;
+    silhouette_material: Material;
+    silhouette_material_applied: bool;
+
+    // Local-only LOS light (viewer-specific).
+    local_light_entity: Entity;
+    local_light: Light;
+    local_light_caster: LOS_Caster;
+
+    ensure_entity_override_rig :: method() -> bool {
+        if entity_override_state_machine != null {
+            return #alive(override_rig) && override_rig.instance != null;
+        }
+
+        if entity_override_rig_asset == null {
+            entity_override_rig_asset = get_asset(Spine_Asset, ENTITY_OVERRIDE_RIG_PATH);
+        }
+
+        if entity_override_rig_asset == null || !#alive(override_rig) || override_rig.instance == null {
+            return false;
+        }
+
+        override_rig.instance.set_skeleton(entity_override_rig_asset);
+        override_rig.instance.disable_all_skins();
+        override_rig.instance.enable_skin("default");
+        override_rig.instance.refresh_skins();
+
+        sm := State_Machine.create();
+        entity_override_state_machine = sm;
+
+        layer := sm.create_layer("main", 0);
+        idle_state := layer.create_state("idle", true);
+        run_state := layer.create_state("run", true);
+        bite_state := layer.create_state("bite", false);
+        convertbreath_state := layer.create_state("convertbreath", false);
+        scream_state := layer.create_state("scream", false);
+        teleport_appear_state := layer.create_state("teleport_appear", false);
+        teleport_disappear_state := layer.create_state("teleport_disapear", false);
+        vomit_state := layer.create_state("vomit", false);
+
+        layer.set_initial_state(idle_state);
+
+        is_moving_var := sm.create_variable("is_moving", .BOOL);
+        bite_var := sm.create_variable("bite", .TRIGGER);
+        convertbreath_var := sm.create_variable("convertbreath", .TRIGGER);
+        scream_var := sm.create_variable("scream", .TRIGGER);
+        teleport_appear_var := sm.create_variable("teleport_appear", .TRIGGER);
+        teleport_disappear_var := sm.create_variable("teleport_disapear", .TRIGGER);
+        vomit_var := sm.create_variable("vomit", .TRIGGER);
+
+        layer.create_transition(idle_state, run_state, false).create_bool_condition(is_moving_var, true);
+        layer.create_transition(run_state, idle_state, false).create_bool_condition(is_moving_var, false);
+
+        to_bite := layer.create_global_transition(bite_state, true);
+        to_bite.create_trigger_condition(bite_var);
+        layer.create_transition(bite_state, idle_state, true);
+
+        to_convertbreath := layer.create_global_transition(convertbreath_state, true);
+        to_convertbreath.create_trigger_condition(convertbreath_var);
+        layer.create_transition(convertbreath_state, idle_state, true);
+
+        to_scream := layer.create_global_transition(scream_state, true);
+        to_scream.create_trigger_condition(scream_var);
+        layer.create_transition(scream_state, idle_state, true);
+
+        to_teleport_appear := layer.create_global_transition(teleport_appear_state, true);
+        to_teleport_appear.create_trigger_condition(teleport_appear_var);
+        layer.create_transition(teleport_appear_state, idle_state, true);
+
+        to_teleport_disappear := layer.create_global_transition(teleport_disappear_state, true);
+        to_teleport_disappear.create_trigger_condition(teleport_disappear_var);
+        layer.create_transition(teleport_disappear_state, idle_state, true);
+
+        to_vomit := layer.create_global_transition(vomit_state, true);
+        to_vomit.create_trigger_condition(vomit_var);
+        layer.create_transition(vomit_state, idle_state, true);
+
+        override_rig.instance.set_state_machine(sm, true);
+        return true;
+    }
+
+    set_entity_override_active :: method(active: bool) {
+        if #alive(override_rig) {
+            override_rig.entity.set_local_enabled(active);
+            override_rig.entity.set_local_position(ENTITY_OVERRIDE_OFFSET);
+        }
+        if animator != null {
+            if active {
+                this.set_animator_alpha(0.0);
+            } else {
+                this.set_animator_alpha(1.0);
+            }
+        }
+    }
 
     ao_start :: method() {
         entity_opt_in = false;
         footstep_stride_accum = 0.0;
         footstep_left_next = false;
+        entity_local_view_alpha = 0.0;
+        entity_local_view_is_active = false;
+        silhouette_material_applied = false;
 
         wt := entity.add_component(Weapon_Target);
         wt.health = 100.0;
@@ -59,14 +200,26 @@ Player :: class : Player_Base {
 
         last_selected_index = -1;
 
+        override_entity := Scene.create_entity();
+        override_entity.set_parent(this.entity, false);
+        override_entity.set_local_enabled(true);
+        override_entity.set_local_position(v2.{0.0, 0.0});
+        override_entity.set_local_rotation(0.0);
+        override_entity.set_local_scale(ENTITY_OVERRIDE_SCALE);
+        override_entity.set_local_enabled(false);
+
+        override_rig = override_entity.add_component(Spine_Animator);
+
         init_weapon_items();
         setup_reusable_weapons_player_state_machine(this);
-        apply_player_spine_silhouette_material(this);
     }
 
     is_round_entity :: method() -> bool {
         gm := get_game_manager();
         if !#alive(gm) {
+            return false;
+        }
+        if gm.phase != .SURVIVOR_HEAD_START && gm.phase != .ACTIVE {
             return false;
         }
         return gm.is_entity_player(this);
@@ -77,16 +230,57 @@ Player :: class : Player_Base {
         if !#alive(gm) {
             return false;
         }
+        if gm.phase != .SURVIVOR_HEAD_START && gm.phase != .ACTIVE {
+            return false;
+        }
         return gm.is_survivor_player(this);
     }
 
     ao_update :: method(dt: float) {
+        should_use_entity_override := false;
+        if this.is_round_entity() {
+            should_use_entity_override = this.ensure_entity_override_rig();
+        }
+        this.set_entity_override_active(should_use_entity_override);
+
+        if should_use_entity_override && equipped_weapon_type != .NONE {
+            weapon_unequip(this, equipped_weapon_type);
+            equipped_weapon_type = .NONE;
+            equipped_item_def = null;
+        }
+
+        is_moving := false;
+        if #alive(agent) {
+            vel := agent.velocity;
+            speed_sq := vel.x * vel.x + vel.y * vel.y;
+            if speed_sq > 0.0001 {
+                is_moving = true;
+            }
+        }
+        if should_use_entity_override && entity_override_state_machine != null {
+            entity_override_state_machine.set_bool("is_moving", is_moving);
+        }
+
+        if this.is_local_or_server() && this.is_local() {
+            this.update_local_vision_light();
+        }
+        this.tick_entity_local_view_reveal_state(dt);
+        this.update_entity_local_player_visibility(dt);
+        this.sync_entity_local_silhouette_material();
+        this.update_entity_local_nameplate_visibility();
         tick_footstep_echo_for_player(this, dt);
     }
 
     ao_late_update :: method(dt: float) {
+        if this.is_local() && this.is_round_entity() {
+            this.apply_entity_local_post_processing();
+        }
+
         if is_local_or_server() {
             draw_match_lobby_ui(this);
+            draw_head_start_ui(this);
+            draw_hunt_begin_banner_ui(this);
+            draw_match_timer_ui(this);
             gm := get_game_manager();
             if #alive(gm) && gm.phase == .LOBBY {
                 if entity_opt_in {
@@ -97,34 +291,60 @@ Player :: class : Player_Base {
             }
         }
 
-         if is_local_or_server() {
-        // Draw fire ability button based on equipped weapon
-        if equipped_weapon_type != .NONE {
-            config := get_weapon_config(equipped_weapon_type);
-            switch config.fire_mode {
-                case .CONTINUOUS:  { draw_ability_button(this, Continuous_Fire_Ability, 0); }
-                case .SINGLE_SHOT: { draw_ability_button(this, Single_Shot_Ability, 0); }
-                case .SPREAD:      { draw_ability_button(this, Spread_Shot_Ability, 0); }
-                case .LOBBED:      { draw_ability_button(this, Lobbed_Shot_Ability, 0); }
-                case .BEAM:        { draw_ability_button(this, Beam_Ability, 0); }
-                case .SPECIAL:     { draw_ability_button(this, Special_Ability, 0); }
+        if is_local_or_server() {
+            if !this.is_round_entity() {
+                // Draw fire ability button based on equipped weapon
+                if equipped_weapon_type != .NONE {
+                    config := get_weapon_config(equipped_weapon_type);
+                    switch config.fire_mode {
+                        case .CONTINUOUS:  { draw_ability_button(this, Continuous_Fire_Ability, 0); }
+                        case .SINGLE_SHOT: { draw_ability_button(this, Single_Shot_Ability, 0); }
+                        case .SPREAD:      { draw_ability_button(this, Spread_Shot_Ability, 0); }
+                        case .LOBBED:      { draw_ability_button(this, Lobbed_Shot_Ability, 0); }
+                        case .BEAM:        { draw_ability_button(this, Beam_Ability, 0); }
+                        case .SPECIAL:     { draw_ability_button(this, Special_Ability, 0); }
+                    }
+                    draw_ability_button(this, Melee_Ability, 1); // optional melee
+                }
+
+                // Draw hotbar and handle equip/unequip
+                options := Inventory_Draw_Options.default();
+                hotbar := Items.draw_hotbar(this, default_inventory, options);
+                handle_equipped_item_changing(hotbar.selected_item_index);
+            } else if equipped_weapon_type != .NONE {
+                weapon_unequip(this, equipped_weapon_type);
+                equipped_weapon_type = .NONE;
+                equipped_item_def = null;
+                last_selected_index = -1;
             }
-            draw_ability_button(this, Melee_Ability, 1); // optional melee
         }
 
-        // Draw hotbar and handle equip/unequip
-        options := Inventory_Draw_Options.default();
-        hotbar := Items.draw_hotbar(this, default_inventory, options);
-        handle_equipped_item_changing(hotbar.selected_item_index);
-        }
-
-        if !Game.is_server() {
-            draw_health_bar(this); // from weapons_ui_helpers.csl
-        }
     }
 
     ao_end :: method() {
-        // Called when this component is destroyed
+        if entity_name_hidden {
+            this.remove_name_invisibility_reason(ENTITY_NAME_INVISIBILITY_REASON);
+            entity_name_hidden = false;
+        }
+
+        if silhouette_material_applied && animator != null {
+            animator.set_material(null, false);
+        }
+        if silhouette_material != null {
+            silhouette_material.destroy();
+            silhouette_material = null;
+        }
+        silhouette_material_applied = false;
+
+        // Local-only: destroy LOS light entity.
+        if this.is_local_or_server() {
+            if local_light_entity != null && #alive(local_light_entity) {
+                local_light_entity.destroy();
+            }
+            local_light_entity = null;
+            local_light = null;
+            local_light_caster = null;
+        }
     }
 
     ao_can_use_ability :: method(ability: Ability_Base) -> bool {
@@ -148,8 +368,173 @@ Player :: class : Player_Base {
     ao_on_state_sync :: method() {
         // Called on the client after applying a state sync from the server
         // Use this to override things for the local player only like name colors or lighting for example
+        this.sync_entity_local_silhouette_material();
     }
 
+    get_local_light_radii :: proc(using this: Player) -> v2 {
+        // When integrating global darkness / phases, drive night_blend from Game_Manager (or similar).
+        night_blend := 0.0;
+
+        base_inner := PLAYER_LIGHT_BASE_INNER_RADIUS.(float);
+        min_inner := PLAYER_LIGHT_MIN_INNER_RADIUS.(float);
+        min_outer := PLAYER_LIGHT_MIN_OUTER_RADIUS.(float);
+
+        inner_radius := lerp(base_inner, min_inner, night_blend);
+        inner_radius = max(inner_radius, min_inner);
+
+        outer_radius := inner_radius + PLAYER_LIGHT_RADIUS_Y_PADDING;
+        outer_radius = max(outer_radius, min_outer);
+
+        return v2.{inner_radius, outer_radius};
+    }
+
+    apply_entity_local_post_processing :: proc(using this: Player) {
+        color_grade := Post_Processing.Color_Grade_Config{
+            color_filter = ENTITY_COLOR_GRADE_FILTER,
+            saturation = ENTITY_COLOR_GRADE_SATURATION,
+            contrast = ENTITY_COLOR_GRADE_CONTRAST
+        };
+        Post_Processing.color_grade(color_grade);
+
+        film_grain := Post_Processing.Film_Grain_Config{
+            strength = ENTITY_FILM_GRAIN_STRENGTH,
+            noise_scale = ENTITY_FILM_GRAIN_NOISE_SCALE
+        };
+        Post_Processing.film_grain(film_grain);
+    }
+
+    set_animator_alpha :: proc(using this: Player, alpha: float) {
+        if animator == null return;
+
+        tint := animator.color_multiplier;
+        tint.w = alpha;
+        animator.color_multiplier = tint;
+    }
+
+    reveal_for_entity_local_view :: proc(using this: Player) {
+        if this.is_round_entity() return;
+        entity_local_view_alpha = 1.0;
+        entity_local_view_is_active = true;
+    }
+
+    tick_entity_local_view_reveal_state :: proc(using this: Player, dt: float) {
+        if this.is_round_entity() return;
+        if !entity_local_view_is_active return;
+
+        entity_local_view_alpha -= dt / ENTITY_VIEW_PLAYER_REVEAL_FADE_OUT_SECONDS;
+        entity_local_view_alpha = clamp(entity_local_view_alpha, 0.0, 1.0);
+        if entity_local_view_alpha <= 0.0 {
+            entity_local_view_alpha = 0.0;
+            entity_local_view_is_active = false;
+        }
+    }
+
+    update_entity_local_player_visibility :: proc(using this: Player, dt: float) {
+        if animator == null return;
+
+        if this.is_round_entity() {
+            return;
+        }
+
+        if !is_hidden_by_entity_local_view(this) {
+            this.set_animator_alpha(1.0);
+            return;
+        }
+
+        this.set_animator_alpha(entity_local_view_alpha);
+    }
+
+    sync_entity_local_silhouette_material :: proc(using this: Player) {
+        if animator == null return;
+
+        should_apply := is_hidden_by_entity_local_view(this);
+        if should_apply {
+            if silhouette_material == null {
+                silhouette_material = create_player_spine_silhouette_material();
+            }
+            if silhouette_material == null return;
+
+            if !silhouette_material_applied {
+                animator.set_material(silhouette_material, false);
+                silhouette_material_applied = true;
+            }
+            return;
+        }
+
+        if silhouette_material_applied {
+            animator.set_material(null, false);
+            silhouette_material_applied = false;
+        }
+    }
+
+    sync_entity_name_visibility :: proc(using this: Player) {
+        should_hide_name := this.is_round_entity();
+        if should_hide_name == entity_name_hidden return;
+
+        entity_name_hidden = should_hide_name;
+        if should_hide_name {
+            this.add_name_invisibility_reason(ENTITY_NAME_INVISIBILITY_REASON);
+            return;
+        }
+
+        this.remove_name_invisibility_reason(ENTITY_NAME_INVISIBILITY_REASON);
+    }
+
+    update_entity_local_nameplate_visibility :: proc(using this: Player) {
+        this.sync_entity_name_visibility();
+
+        if this.is_round_entity() {
+            do_name_color_override = false;
+            return;
+        }
+
+        if is_hidden_by_entity_local_view(this) {
+            do_name_color_override = true;
+            name_color_override = v4.{1.0, 1.0, 1.0, 0.0};
+            return;
+        }
+
+        do_name_color_override = false;
+    }
+
+    ensure_local_vision_light :: proc(using this: Player) {
+        if local_light_entity != null && #alive(local_light_entity) return;
+
+        local_light_entity = Scene.create_entity();
+        local_light_entity.set_parent(this.entity, false);
+        local_light_entity.set_local_enabled(true);
+        local_light_entity.set_local_position(v2.{0.0, 0.0});
+        local_light_entity.set_local_rotation(0.0);
+        local_light_entity.set_local_scale(v2.{1.0, 1.0});
+
+        local_light = local_light_entity.add_component(Light);
+        local_light.color = PLAYER_LIGHT_COLOR;
+        local_light.intensity = PLAYER_LIGHT_INTENSITY;
+        local_light.radii = v2.{PLAYER_LIGHT_FIXED_RADIUS, PLAYER_LIGHT_FIXED_RADIUS + PLAYER_LIGHT_RADIUS_Y_PADDING};
+
+        local_light_caster = local_light_entity.add_component(LOS_Caster);
+        local_light_caster.radii = this.get_local_light_radii();
+    }
+
+    update_local_vision_light :: proc(using this: Player) {
+        if !this.is_local() return;
+        if !#alive(this.entity) return;
+
+        this.ensure_local_vision_light();
+
+        if local_light == null && local_light_entity != null {
+            local_light = local_light_entity.get_component(Light);
+        }
+        if local_light_caster == null && local_light_entity != null {
+            local_light_caster = local_light_entity.get_component(LOS_Caster);
+        }
+        if local_light == null || local_light_caster == null return;
+
+        radii := this.get_local_light_radii();
+        local_light.intensity = PLAYER_LIGHT_INTENSITY;
+        local_light.radii = v2.{PLAYER_LIGHT_FIXED_RADIUS, PLAYER_LIGHT_FIXED_RADIUS + PLAYER_LIGHT_RADIUS_Y_PADDING};
+        local_light_caster.radii = radii;
+    }
 
      handle_equipped_item_changing :: method(selected_index: s64) {
         // Resolve item from hotbar index
