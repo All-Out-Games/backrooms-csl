@@ -144,6 +144,10 @@ ping_player_with_footstep_echo :: proc(player: Player, fade_out_seconds: float) 
 tick_footstep_echo_for_player :: proc(player: Player, dt: float) {
     if player == null return;
     if player.entity == null return;
+    if player.is_round_dead() {
+        player.footstep_stride_accum = 0.0;
+        return;
+    }
     if player.is_round_entity() {
         player.footstep_stride_accum = 0.0;
         return;

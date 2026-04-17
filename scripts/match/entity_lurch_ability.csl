@@ -1,0 +1,54 @@
+import "core:ao"
+
+ENTITY_LURCH_DURATION_SECONDS :: 4.0;
+ENTITY_LURCH_MOVEMENT_MULTIPLIER :: 2.0;
+ENTITY_LURCH_ANIMATION_SPEED_MULTIPLIER :: 2.0;
+
+play_entity_lurch_sfx :: proc(player: Player) {
+    if player == null || !#alive(player.entity) return;
+
+    desc := SFX.default_sfx_desc();
+    desc.volume = 1.2;
+    SFX.play(get_asset(SFX_Asset, "SFX/entityrun.wav"), desc);
+}
+
+Entity_Lurch_Ability :: class : Ability_Base {
+    on_init :: method() {
+        name = "Lurch";
+        icon = get_asset(Texture_Asset, "AbilityIcons/SprintIcon.png");
+    }
+
+    can_use :: method() -> bool {
+        if player == null || player.agent == null {
+            return false;
+        }
+        if !player.is_round_entity() {
+            return false;
+        }
+
+        gm := get_game_manager();
+        if !#alive(gm) || gm.phase != .ACTIVE {
+            return false;
+        }
+
+        if player.entity.get_active_effect() != null {
+            return false;
+        }
+
+        return player.entity_lurch_remaining <= 0.0;
+    }
+
+    on_update :: method(params: ref Ability_Update_Params) {
+        if !params.clicked || !params.can_use {
+            return;
+        }
+
+        player.entity_lurch_remaining = ENTITY_LURCH_DURATION_SECONDS;
+        play_entity_lurch_sfx(player);
+        current_cooldown = 30;
+    }
+
+    on_draw_button :: proc(instance: Entity_Lurch_Ability, rect: Rect) {
+		draw_ability_name_label(rect, "Lurch");
+	}
+}

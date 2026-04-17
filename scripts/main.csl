@@ -134,6 +134,7 @@ ENTITY_COLOR_GRADE_SATURATION :: 0.0;
 ENTITY_COLOR_GRADE_CONTRAST :: 2.0;
 ENTITY_VIEW_PLAYER_REVEAL_FADE_OUT_SECONDS :: 2.0;
 ENTITY_NAME_INVISIBILITY_REASON :: "entity_role_active";
+ENTITY_DEAD_INVISIBILITY_REASON :: "Dead";
 ROUND_SURVIVOR_NORMAL_MOVEMENT_MULTIPLIER :: 0.75;
 
 ENTITY_OVERRIDE_RIG_PATH :: "Animations/Bacteria/imposter_monster.spine";
@@ -195,6 +196,8 @@ Player :: class : Player_Base {
     sprint_lockout_remaining: float;
     sprint_input_held: bool;
     sprint_active: bool;
+    entity_lurch_remaining: float;
+    round_dead: bool;
 
     footstep_stride_accum: float;
     footstep_left_next: bool;
@@ -315,6 +318,8 @@ Player :: class : Player_Base {
         sprint_lockout_remaining = 0.0;
         sprint_input_held = false;
         sprint_active = false;
+        entity_lurch_remaining = 0.0;
+        round_dead = false;
 
         wt := entity.add_component(Weapon_Target);
         wt.health = 100.0;
@@ -357,13 +362,73 @@ Player :: class : Player_Base {
         if !#alive(gm) {
             return false;
         }
+        if round_dead {
+            return false;
+        }
         if gm.phase != .SURVIVOR_HEAD_START && gm.phase != .ACTIVE {
             return false;
         }
         return gm.is_survivor_player(this);
     }
 
+    is_round_dead :: method() -> bool {
+        return round_dead;
+    }
+
+    clear_round_death_state :: method() {
+        round_dead = false;
+        this.remove_invisibility_reason(ENTITY_DEAD_INVISIBILITY_REASON);
+        entity_local_view_alpha = 0.0;
+        entity_local_view_is_active = false;
+        entity_local_view_fade_out_seconds = ENTITY_VIEW_PLAYER_REVEAL_FADE_OUT_SECONDS;
+        entity_scream_reveal_remaining = 0.0;
+
+        if animator != null && animator.instance != null {
+            animator.state_machine.set_bool("ghost_form", false);
+            animator.state_machine.set_trigger("RESET");
+        }
+    }
+
+    mark_round_dead :: method() {
+        if round_dead {
+            return;
+        }
+
+        round_dead = true;
+        this.remove_invisibility_reason(ENTITY_DEAD_INVISIBILITY_REASON);
+        entity_local_view_alpha = 0.0;
+        entity_local_view_is_active = false;
+        entity_local_view_fade_out_seconds = ENTITY_VIEW_PLAYER_REVEAL_FADE_OUT_SECONDS;
+        entity_scream_reveal_remaining = 0.0;
+        sprint_input_held = false;
+        sprint_active = false;
+
+        if equipped_weapon_type != .NONE {
+            weapon_unequip(this, equipped_weapon_type);
+            equipped_weapon_type = .NONE;
+            equipped_item_def = null;
+            last_selected_index = -1;
+        }
+
+        if animator != null && animator.instance != null {
+            animator.state_machine.set_bool("ghost_form", false);
+        }
+
+        gm := get_game_manager();
+        if #alive(gm) {
+            gm.register_survivor_eliminated();
+        }
+    }
+
     ao_update :: method(dt: float) {
+        active_effect := entity.get_active_effect();
+        gm := get_game_manager();
+        if round_dead &&
+            active_effect == null &&
+            (!#alive(gm) || (gm.phase != .SURVIVOR_HEAD_START && gm.phase != .ACTIVE)) {
+            this.clear_round_death_state();
+        }
+
         should_use_entity_override := false;
         if this.is_round_entity() {
             should_use_entity_override = this.ensure_entity_override_rig();
@@ -388,7 +453,7 @@ Player :: class : Player_Base {
             entity_override_state_machine.set_bool("is_moving", is_moving);
         }
 
-        if this.is_round_entity() {
+        if this.is_round_entity() || round_dead {
             sprint_input_held = false;
         }
 
@@ -397,7 +462,12 @@ Player :: class : Player_Base {
             sprint_lockout_remaining = max(sprint_lockout_remaining, 0.0);
         }
 
-        wants_sprint := sprint_input_held && sprint_lockout_remaining <= 0.0 && current_stamina > 0.0;
+        if entity_lurch_remaining > 0.0 {
+            entity_lurch_remaining -= dt;
+            entity_lurch_remaining = max(entity_lurch_remaining, 0.0);
+        }
+
+        wants_sprint := !round_dead && sprint_input_held && sprint_lockout_remaining <= 0.0 && current_stamina > 0.0;
         sprint_active = wants_sprint && is_moving;
 
         if sprint_active {
@@ -416,6 +486,8 @@ Player :: class : Player_Base {
             movement_speed_multiplier := 1.0;
             if sprint_active {
                 movement_speed_multiplier = SPRINT_MOVEMENT_MULTIPLIER;
+            } else if this.is_round_entity() && entity_lurch_remaining > 0.0 {
+                movement_speed_multiplier = ENTITY_LURCH_MOVEMENT_MULTIPLIER;
             } else if this.is_round_survivor() {
                 movement_speed_multiplier = ROUND_SURVIVOR_NORMAL_MOVEMENT_MULTIPLIER;
             }
@@ -434,6 +506,12 @@ Player :: class : Player_Base {
         if animator != null && animator.instance != null {
             animator.state_machine.set_bool("sprinting", sprint_active);
             animator.instance.speed_multiplier = 1.0;
+        }
+        if #alive(override_rig) && override_rig.instance != null {
+            override_rig.instance.speed_multiplier = 1.0;
+            if this.is_round_entity() && entity_lurch_remaining > 0.0 && is_moving {
+                override_rig.instance.speed_multiplier = ENTITY_LURCH_ANIMATION_SPEED_MULTIPLIER;
+            }
         }
 
         if this.is_local_or_server() && this.is_local() {
@@ -469,14 +547,19 @@ Player :: class : Player_Base {
 
         if is_local_or_server() {
             if this.is_round_entity() {
-                draw_ability_button(this, Entity_Scream_Ability, 0);
+                draw_ability_button(this, Entity_Bite_Ability, 0);
+                draw_ability_button(this, Entity_Scream_Ability, 1);
+                gm := get_game_manager();
+                if #alive(gm) && gm.phase == .ACTIVE {
+                    draw_ability_button(this, Entity_Lurch_Ability, 2);
+                }
                 if equipped_weapon_type != .NONE {
                     weapon_unequip(this, equipped_weapon_type);
                     equipped_weapon_type = .NONE;
                     equipped_item_def = null;
                     last_selected_index = -1;
                 }
-            } else {
+            } else if !round_dead {
                 draw_ability_button(this, Sprint_Ability, 2);
                 // Draw fire ability button based on equipped weapon
                 if equipped_weapon_type != .NONE {
@@ -500,6 +583,7 @@ Player :: class : Player_Base {
         }
 
         if !this.is_round_entity() &&
+            !round_dead &&
             !is_hidden_by_entity_local_view(this) &&
             (current_stamina < max_stamina || sprint_active || sprint_lockout_remaining > 0.0) {
             draw_stamina_bar(this);
@@ -508,6 +592,7 @@ Player :: class : Player_Base {
     }
 
     ao_end :: method() {
+        this.remove_invisibility_reason(ENTITY_DEAD_INVISIBILITY_REASON);
         this.remove_name_invisibility_reason(ENTITY_NAME_INVISIBILITY_REASON);
         entity_name_hidden = false;
 
@@ -536,10 +621,16 @@ Player :: class : Player_Base {
         if animator != null && animator.instance != null {
             animator.instance.speed_multiplier = 1.0;
         }
+        if #alive(override_rig) && override_rig.instance != null {
+            override_rig.instance.speed_multiplier = 1.0;
+        }
     }
 
     ao_can_use_ability :: method(ability: Ability_Base) -> bool {
         // Called to determine if the player is allowed to use the given ability
+        if round_dead {
+            return false;
+        }
         if this.is_round_entity() && ability.#type == Sprint_Ability {
             return false;
         }
@@ -548,7 +639,7 @@ Player :: class : Player_Base {
 
     ao_can_use_interactable :: method(interactable: Interactable) -> bool {
         // Called to determine if the player is allowed to use the given interactable
-        return true;
+        return !round_dead;
     }
 
     ao_on_interactable_used :: method(interactable: Interactable) {
@@ -701,7 +792,7 @@ Player :: class : Player_Base {
     }
 
     sync_entity_name_visibility :: proc(using this: Player) {
-        should_hide_name := this.is_round_entity() || is_hidden_by_entity_local_view(this);
+        should_hide_name := this.is_round_entity() || round_dead || is_hidden_by_entity_local_view(this);
         if should_hide_name {
             this.add_name_invisibility_reason(ENTITY_NAME_INVISIBILITY_REASON);
             return;

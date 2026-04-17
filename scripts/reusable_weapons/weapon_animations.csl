@@ -20,6 +20,12 @@ setup_reusable_weapons_player_state_machine :: proc(player: Player) {
     idle_to_run.create_bool_condition(use_2h_ik, false);
     idle_to_run.create_bool_condition(use_1h_ik, false);
 
+    to_normal_run := base_layer.create_global_transition(ao_run, false);
+    to_normal_run.create_bool_condition(moving_var, true);
+    to_normal_run.create_bool_condition(sprinting_var, false);
+    to_normal_run.create_bool_condition(use_2h_ik, false);
+    to_normal_run.create_bool_condition(use_1h_ik, false);
+
     run_to_idle := base_layer.create_transition(ao_run, ao_idle, false);
     run_to_idle.create_bool_condition(moving_var, false);
 
