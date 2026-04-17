@@ -432,15 +432,7 @@ Player :: class : Player_Base {
         }
 
         if animator != null && animator.instance != null {
-            should_play_sprint_animation := sprint_active;
-            if equipped_weapon_type != .NONE {
-                config := get_weapon_config(equipped_weapon_type);
-                if config.use_ik_var != "" {
-                    should_play_sprint_animation = false;
-                }
-            }
-
-            animator.state_machine.set_bool("sprinting", should_play_sprint_animation);
+            animator.state_machine.set_bool("sprinting", sprint_active);
             animator.instance.speed_multiplier = 1.0;
         }
 
