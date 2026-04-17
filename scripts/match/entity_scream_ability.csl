@@ -3,6 +3,7 @@ import "core:ao"
 ENTITY_SCREAM_EFFECT_SECONDS :: 0.8;
 ENTITY_SCREAM_COOLDOWN_SECONDS :: 10.0;
 ENTITY_SCREAM_REVEAL_FADE_OUT_SECONDS :: 5.0;
+ENTITY_SCREAM_ARROW_SECONDS :: 3.0;
 
 play_entity_scream_sfx :: proc(player: Player) {
     if player == null || !#alive(player.entity) return;
@@ -69,6 +70,7 @@ Entity_Scream_Ability :: class : Ability_Base {
 
         play_entity_scream_sfx(player);
         ping_all_survivors_with_entity_scream(player);
+        player.show_entity_scream_arrows(ENTITY_SCREAM_ARROW_SECONDS);
 
         current_cooldown = ENTITY_SCREAM_COOLDOWN_SECONDS;
     }

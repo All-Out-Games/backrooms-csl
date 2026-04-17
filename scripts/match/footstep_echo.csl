@@ -8,6 +8,8 @@
 FOOTSTEP_STRIDE_DISTANCE :: 2.16; // ~1/3 spawn rate vs 0.72
 FOOTSTEP_FIRST_SPRINT_DISTANCE :: 0.1;
 FOOTSTEP_MIN_SPEED :: 0.12;
+ENTITY_HEARING_RADIUS :: 5.0;
+ENTITY_HEARING_MIN_SPEED :: 0.02;
 
 FootstepEcho :: class : Component {
     target_scale: v2 @ao_serialize;
@@ -141,6 +143,31 @@ ping_player_with_footstep_echo :: proc(player: Player, fade_out_seconds: float) 
     player.reveal_for_entity_local_view_with_duration(fade_out_seconds);
 }
 
+is_player_within_entity_hearing_radius :: proc(player: Player) -> bool {
+    if player == null || !#alive(player.entity) {
+        return false;
+    }
+    if player.is_round_entity() || player.is_round_dead() {
+        return false;
+    }
+
+    radius_sq := ENTITY_HEARING_RADIUS * ENTITY_HEARING_RADIUS;
+    origin := player.entity.world_position;
+    for other: component_iterator(Player) {
+        if other == player continue;
+        if !other.is_round_entity() continue;
+        if !#alive(other.entity) continue;
+
+        delta := other.entity.world_position - origin;
+        distance_sq := delta.x * delta.x + delta.y * delta.y;
+        if distance_sq <= radius_sq {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 tick_footstep_echo_for_player :: proc(player: Player, dt: float) {
     if player == null return;
     if player.entity == null return;
@@ -152,16 +179,25 @@ tick_footstep_echo_for_player :: proc(player: Player, dt: float) {
         player.footstep_stride_accum = 0.0;
         return;
     }
-    if !player.sprint_active {
+    agent := player.agent;
+    if agent == null {
         player.footstep_stride_accum = 0.0;
         return;
     }
 
-    agent := player.agent;
-    if agent == null return;
-
     speed := length(agent.velocity);
-    if speed < FOOTSTEP_MIN_SPEED {
+    within_entity_hearing_radius := is_player_within_entity_hearing_radius(player);
+    min_speed := FOOTSTEP_MIN_SPEED;
+    if !player.sprint_active && within_entity_hearing_radius {
+        min_speed = ENTITY_HEARING_MIN_SPEED;
+    }
+
+    if speed < min_speed {
+        player.footstep_stride_accum = 0.0;
+        return;
+    }
+
+    if !player.sprint_active && !within_entity_hearing_radius {
         player.footstep_stride_accum = 0.0;
         return;
     }

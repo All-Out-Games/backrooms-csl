@@ -9,6 +9,8 @@ braam2_next_play_at: float;
 
 ENTITY_AMBIENCE_REPLAY_SECONDS :: 10.0;
 BRAAM2_REPLAY_SECONDS :: 45.0;
+ENTITY_CAMERA_SIZE_DELTA :: 1.5;
+ROUND_DEAD_LOCAL_PLAYER_ALPHA :: 150.0 / 255.0;
 
 is_round_audio_active :: proc() -> bool {
     gm := get_game_manager();
@@ -25,7 +27,7 @@ get_round_entity_player :: proc() -> Player {
     }
 
     entity_player, ok := find_player_by_user_id(gm.entity_user_id);
-    if !ok || !#alive(entity_player) {
+    if !ok || !#alive(entity_player) || !#alive(entity_player.entity) {
         return null;
     }
     return entity_player;
@@ -134,7 +136,6 @@ ENTITY_COLOR_GRADE_SATURATION :: 0.0;
 ENTITY_COLOR_GRADE_CONTRAST :: 2.0;
 ENTITY_VIEW_PLAYER_REVEAL_FADE_OUT_SECONDS :: 2.0;
 ENTITY_NAME_INVISIBILITY_REASON :: "entity_role_active";
-ENTITY_DEAD_INVISIBILITY_REASON :: "Dead";
 ROUND_SURVIVOR_NORMAL_MOVEMENT_MULTIPLIER :: 0.75;
 
 ENTITY_OVERRIDE_RIG_PATH :: "Animations/Bacteria/imposter_monster.spine";
@@ -176,6 +177,25 @@ is_hidden_by_entity_local_view :: proc(player: Player) -> bool {
     return local_player.is_round_entity();
 }
 
+is_revealed_in_entity_local_view :: proc(player: Player) -> bool {
+    if player == null return false;
+    if !is_hidden_by_entity_local_view(player) return false;
+    return player.entity_local_view_is_active && player.entity_local_view_alpha > 0.0;
+}
+
+is_hidden_by_round_dead_local_view :: proc(player: Player) -> bool {
+    if player == null return false;
+    if !player.is_round_dead() return false;
+
+    local_player := get_local_player();
+    if !#alive(local_player) return false;
+    if local_player == player return false;
+    if local_player.is_round_dead() {
+        return false;
+    }
+    return true;
+}
+
 Player :: class : Player_Base {
     // Lobby: prefer being randomly chosen as Entity (synced for match start).
     entity_opt_in: bool;
@@ -189,6 +209,7 @@ Player :: class : Player_Base {
     boomwheel_cannon: Boomwheel_Cannon; // only needed if using Boomwheel
 
     base_movement_speed: float;
+    default_camera_size: float;
     sprint_last_applied_speed: float;
     sprint_has_applied_speed: bool;
     current_stamina: float;
@@ -198,6 +219,7 @@ Player :: class : Player_Base {
     sprint_active: bool;
     entity_lurch_remaining: float;
     round_dead: bool;
+    round_dead_ghost_state_active: bool;
 
     footstep_stride_accum: float;
     footstep_left_next: bool;
@@ -205,6 +227,7 @@ Player :: class : Player_Base {
     entity_local_view_is_active: bool;
     entity_local_view_fade_out_seconds: float;
     entity_scream_reveal_remaining: float;
+    entity_scream_arrow_remaining: float;
     entity_name_hidden: bool;
     silhouette_material: Material;
     silhouette_material_applied: bool;
@@ -301,6 +324,24 @@ Player :: class : Player_Base {
         }
     }
 
+    sync_local_camera_size :: proc(using this: Player) {
+        if !this.is_local() {
+            return;
+        }
+
+        desired_camera_size := default_camera_size;
+        if desired_camera_size <= 0.0 {
+            desired_camera_size = camera.size;
+            default_camera_size = desired_camera_size;
+        }
+
+        if this.is_round_entity() {
+            desired_camera_size += ENTITY_CAMERA_SIZE_DELTA;
+        }
+
+        camera.size = desired_camera_size;
+    }
+
     ao_start :: method() {
         entity_opt_in = false;
         ensure_sprint_resources();
@@ -310,9 +351,11 @@ Player :: class : Player_Base {
         entity_local_view_is_active = false;
         entity_local_view_fade_out_seconds = ENTITY_VIEW_PLAYER_REVEAL_FADE_OUT_SECONDS;
         entity_scream_reveal_remaining = 0.0;
+        entity_scream_arrow_remaining = 0.0;
         silhouette_material_applied = false;
         current_stamina = SPRINT_STAMINA_MAX;
         max_stamina = SPRINT_STAMINA_MAX;
+        default_camera_size = camera.size;
         sprint_last_applied_speed = 0.0;
         sprint_has_applied_speed = false;
         sprint_lockout_remaining = 0.0;
@@ -320,6 +363,7 @@ Player :: class : Player_Base {
         sprint_active = false;
         entity_lurch_remaining = 0.0;
         round_dead = false;
+        round_dead_ghost_state_active = false;
 
         wt := entity.add_component(Weapon_Target);
         wt.health = 100.0;
@@ -344,6 +388,7 @@ Player :: class : Player_Base {
         if #alive(agent) {
             base_movement_speed = agent.movement_speed;
         }
+        lock_player_to_game_navmesh(this);
     }
 
     is_round_entity :: method() -> bool {
@@ -377,14 +422,21 @@ Player :: class : Player_Base {
 
     clear_round_death_state :: method() {
         round_dead = false;
-        this.remove_invisibility_reason(ENTITY_DEAD_INVISIBILITY_REASON);
+        round_dead_ghost_state_active = false;
         entity_local_view_alpha = 0.0;
         entity_local_view_is_active = false;
         entity_local_view_fade_out_seconds = ENTITY_VIEW_PLAYER_REVEAL_FADE_OUT_SECONDS;
         entity_scream_reveal_remaining = 0.0;
+        entity_scream_arrow_remaining = 0.0;
+
+        if #alive(agent) {
+            agent.velocity = v2{0.0, 0.0};
+            agent.movement_speed = base_movement_speed;
+        }
 
         if animator != null && animator.instance != null {
             animator.state_machine.set_bool("ghost_form", false);
+            animator.state_machine.set_bool("sprinting", false);
             animator.state_machine.set_trigger("RESET");
         }
     }
@@ -394,12 +446,15 @@ Player :: class : Player_Base {
             return;
         }
 
+        was_round_survivor := this.is_round_survivor();
+
         round_dead = true;
-        this.remove_invisibility_reason(ENTITY_DEAD_INVISIBILITY_REASON);
+        round_dead_ghost_state_active = false;
         entity_local_view_alpha = 0.0;
         entity_local_view_is_active = false;
         entity_local_view_fade_out_seconds = ENTITY_VIEW_PLAYER_REVEAL_FADE_OUT_SECONDS;
         entity_scream_reveal_remaining = 0.0;
+        entity_scream_arrow_remaining = 0.0;
         sprint_input_held = false;
         sprint_active = false;
 
@@ -410,17 +465,51 @@ Player :: class : Player_Base {
             last_selected_index = -1;
         }
 
+        if #alive(agent) {
+            agent.velocity = v2{0.0, 0.0};
+        }
+
         if animator != null && animator.instance != null {
             animator.state_machine.set_bool("ghost_form", false);
+            animator.state_machine.set_bool("sprinting", false);
         }
 
         gm := get_game_manager();
-        if #alive(gm) {
+        if was_round_survivor && #alive(gm) {
             gm.register_survivor_eliminated();
         }
     }
 
+    start_round_death_animation :: method() {
+        if animator == null || animator.instance == null {
+            return;
+        }
+
+        round_dead_ghost_state_active = false;
+        animator.state_machine.set_bool("ghost_form", false);
+        animator.state_machine.set_bool("sprinting", false);
+        animator.state_machine.set_trigger("death");
+    }
+
+    enter_round_dead_ghost_state :: method() {
+        if !round_dead || round_dead_ghost_state_active {
+            return;
+        }
+
+        round_dead_ghost_state_active = true;
+
+        if animator == null || animator.instance == null {
+            return;
+        }
+
+        animator.state_machine.set_bool("sprinting", false);
+        animator.state_machine.set_bool("ghost_form", true);
+        animator.state_machine.set_trigger("RESET");
+    }
+
     ao_update :: method(dt: float) {
+        this.sync_local_camera_size();
+
         active_effect := entity.get_active_effect();
         gm := get_game_manager();
         if round_dead &&
@@ -483,6 +572,7 @@ Player :: class : Player_Base {
         }
 
         if #alive(agent) {
+            if !round_dead {
             movement_speed_multiplier := 1.0;
             if sprint_active {
                 movement_speed_multiplier = SPRINT_MOVEMENT_MULTIPLIER;
@@ -501,11 +591,15 @@ Player :: class : Player_Base {
             agent.movement_speed = target_speed;
             sprint_last_applied_speed = target_speed;
             sprint_has_applied_speed = true;
+            }
         }
 
         if animator != null && animator.instance != null {
             animator.state_machine.set_bool("sprinting", sprint_active);
             animator.instance.speed_multiplier = 1.0;
+            if round_dead_ghost_state_active {
+                animator.state_machine.set_bool("ghost_form", true);
+            }
         }
         if #alive(override_rig) && override_rig.instance != null {
             override_rig.instance.speed_multiplier = 1.0;
@@ -514,11 +608,16 @@ Player :: class : Player_Base {
             }
         }
 
+        if round_dead && active_effect == null {
+            this.enter_round_dead_ghost_state();
+        }
+
         if this.is_local_or_server() && this.is_local() {
             this.update_local_vision_light();
         }
         this.tick_entity_local_view_reveal_state(dt);
         this.tick_entity_scream_reveal_state(dt);
+        this.tick_entity_scream_arrow_state(dt);
         this.update_entity_local_player_visibility(dt);
         this.sync_entity_local_silhouette_material();
         this.update_entity_local_nameplate_visibility();
@@ -592,7 +691,6 @@ Player :: class : Player_Base {
     }
 
     ao_end :: method() {
-        this.remove_invisibility_reason(ENTITY_DEAD_INVISIBILITY_REASON);
         this.remove_name_invisibility_reason(ENTITY_NAME_INVISIBILITY_REASON);
         entity_name_hidden = false;
 
@@ -727,6 +825,14 @@ Player :: class : Player_Base {
         entity_scream_reveal_remaining = max(entity_scream_reveal_remaining, fade_out_seconds);
     }
 
+    show_entity_scream_arrows :: proc(using this: Player, duration_seconds: float) {
+        if duration_seconds <= 0.0 {
+            return;
+        }
+
+        entity_scream_arrow_remaining = max(entity_scream_arrow_remaining, duration_seconds);
+    }
+
     tick_entity_local_view_reveal_state :: proc(using this: Player, dt: float) {
         if this.is_round_entity() return;
         if !entity_local_view_is_active return;
@@ -753,10 +859,28 @@ Player :: class : Player_Base {
         entity_scream_reveal_remaining = max(entity_scream_reveal_remaining, 0.0);
     }
 
+    tick_entity_scream_arrow_state :: proc(using this: Player, dt: float) {
+        if !this.is_round_entity() return;
+        if entity_scream_arrow_remaining <= 0.0 return;
+
+        entity_scream_arrow_remaining -= dt;
+        entity_scream_arrow_remaining = max(entity_scream_arrow_remaining, 0.0);
+    }
+
     update_entity_local_player_visibility :: proc(using this: Player, dt: float) {
         if animator == null return;
 
         if this.is_round_entity() {
+            return;
+        }
+
+        if this.is_round_dead() && this.is_local() {
+            this.set_animator_alpha(ROUND_DEAD_LOCAL_PLAYER_ALPHA);
+            return;
+        }
+
+        if is_hidden_by_round_dead_local_view(this) {
+            this.set_animator_alpha(0.0);
             return;
         }
 
@@ -771,7 +895,7 @@ Player :: class : Player_Base {
     sync_entity_local_silhouette_material :: proc(using this: Player) {
         if animator == null return;
 
-        should_apply := is_hidden_by_entity_local_view(this);
+        should_apply := is_hidden_by_entity_local_view(this) && !is_revealed_in_entity_local_view(this);
         if should_apply {
             if silhouette_material == null {
                 silhouette_material = create_player_spine_silhouette_material();
@@ -792,7 +916,7 @@ Player :: class : Player_Base {
     }
 
     sync_entity_name_visibility :: proc(using this: Player) {
-        should_hide_name := this.is_round_entity() || round_dead || is_hidden_by_entity_local_view(this);
+        should_hide_name := this.is_round_entity() || is_hidden_by_round_dead_local_view(this) || (is_hidden_by_entity_local_view(this) && !is_revealed_in_entity_local_view(this));
         if should_hide_name {
             this.add_name_invisibility_reason(ENTITY_NAME_INVISIBILITY_REASON);
             return;
@@ -809,7 +933,7 @@ Player :: class : Player_Base {
             return;
         }
 
-        if is_hidden_by_entity_local_view(this) {
+        if is_hidden_by_round_dead_local_view(this) || (is_hidden_by_entity_local_view(this) && !is_revealed_in_entity_local_view(this)) {
             do_name_color_override = true;
             name_color_override = v4.{1.0, 1.0, 1.0, 0.0};
             return;

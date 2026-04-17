@@ -1,10 +1,9 @@
 {
-    csl: true
-    projects:
-    [
-        {
-            name: "My Cool Game"
-            id: "69dea535e6c39cb4b2cfebb3"
-        }
-    ]
+  "csl": true,
+  "projects": [
+    {
+      "name": "Backrooms",
+      "id": "69dea535e6c39cb4b2cfebb3"
+    }
+  ]
 }

@@ -1,8 +1,8 @@
 14
-1
-2943448783
+12884901889
+2936949740
 {
-  "name": "GameManager",
+  "name": "NavMesh",
   "local_enabled": true,
   "local_position": {
 
@@ -12,14 +12,14 @@
     "X": 1,
     "Y": 1
   },
-  "next_sibling": 2944678581
+  "parent": 2943448783
 },
 {
   "cid": 1,
-  "aoid": 2941782314,
+  "aoid": 2941197339,
   "component_type": "Internal_Component",
-  "internal_component_type": "Game_Manager",
+  "internal_component_type": "Navmesh",
   "data": {
-    "navmesh_to_lock_to": 2941197339
+
   }
 }

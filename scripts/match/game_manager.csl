@@ -10,6 +10,7 @@ MIN_TOTAL_PLAYERS :: 5; // 1 entity + 4 survivors
 MAX_TOTAL_PLAYERS :: 7; // 1 entity + 6 survivors
 
 LOBBY_COUNTDOWN_SECONDS :: 10.0;
+ENTITY_SCREAM_ARROW_MIN_DISTANCE :: 20.0;
 
 // Matchmaking queue name for players who prefer Entity (Server.queue_add_player)
 ENTITY_QUEUE_NAME :: "entity";
@@ -58,6 +59,14 @@ reset_all_entity_opt_ins :: proc() {
     }
 }
 
+find_scene_navmesh :: proc() -> Navmesh {
+    navmesh_entity := Scene.get_entity_by_name("NavMesh");
+    if !#alive(navmesh_entity) {
+        return null;
+    }
+    return navmesh_entity.get_component(Navmesh);
+}
+
 find_player_by_user_id :: proc(user_id: string) -> Player, bool {
     for p: component_iterator(Player) {
         if p.get_user_id() == user_id {
@@ -73,6 +82,14 @@ count_players :: proc() -> s64 {
         n += 1;
     }
     return n;
+}
+
+lock_player_to_game_navmesh :: proc(player: Player) {
+    gm := get_game_manager();
+    if !#alive(gm) {
+        return;
+    }
+    gm.lock_player_to_navmesh(player);
 }
 
 // UIK must be drawn from Player.ao_late_update (see UIK skill).
@@ -184,6 +201,31 @@ get_match_countdown_seconds :: proc(gm: Game_Manager) -> s64 {
     return secs;
 }
 
+draw_entity_scream_arrow_ui :: proc(player: Player) {
+    if !player.is_local() || !player.is_round_entity() {
+        return;
+    }
+    if player.entity_scream_arrow_remaining <= 0.0 {
+        return;
+    }
+
+    for other: component_iterator(Player) {
+        if other == player continue;
+        if !other.is_round_survivor() continue;
+        if !#alive(other.entity) continue;
+
+        to_survivor := other.entity.world_position - player.entity.world_position;
+        if length(to_survivor) <= ENTITY_SCREAM_ARROW_MIN_DISTANCE {
+            continue;
+        }
+
+        options := Tutorial_Arrow.default_options();
+        options.far = true;
+        options.near = false;
+        Tutorial_Arrow.draw(player, other.entity.world_position, options);
+    }
+}
+
 draw_head_start_ui :: proc(player: Player) {
     gm := get_game_manager();
     if !#alive(gm) {
@@ -256,6 +298,7 @@ draw_match_timer_ui :: proc(player: Player) {
 
     UIK.panel_end();
     UIK.end();
+    draw_entity_scream_arrow_ui(player);
 }
 
 draw_hunt_begin_banner_ui :: proc(player: Player) {
@@ -280,7 +323,7 @@ draw_hunt_begin_banner_ui :: proc(player: Player) {
     alpha := lerp(1.0, 0.0, fade_t);
     slide_y := lerp(0.0, 24.0, t);
 
-    text := "Escape!";
+    text := "Escape the Backrooms";
     if gm.is_entity_player(player) {
         text = "The Hunt Begins!";
     }
@@ -309,6 +352,7 @@ draw_hunt_begin_banner_ui :: proc(player: Player) {
 Game_Manager :: class : Component {
     phase: Match_Phase;
     result: Match_Result;
+    navmesh_to_lock_to: Navmesh @ao_serialize;
 
     // Authoritative identity for the Entity this round (synced with gameplay state).
     entity_user_id: string;
@@ -331,6 +375,10 @@ Game_Manager :: class : Component {
         }
         game_manager_singleton = this;
 
+        if !#alive(navmesh_to_lock_to) {
+            navmesh_to_lock_to = find_scene_navmesh();
+        }
+
         phase = .LOBBY;
         result = .NONE;
         entity_user_id = "";
@@ -352,6 +400,8 @@ Game_Manager :: class : Component {
     }
 
     ao_update :: method(dt: float) {
+        sync_player_navmesh_locks();
+
         if phase == .LOBBY {
             update_lobby_autostart();
         }
@@ -405,6 +455,32 @@ Game_Manager :: class : Component {
         n := players.count;
         players.clear();
         return n >= 2 && n <= MAX_TOTAL_PLAYERS;
+    }
+
+    sync_player_navmesh_locks :: method() {
+        if !#alive(navmesh_to_lock_to) {
+            navmesh_to_lock_to = find_scene_navmesh();
+        }
+        if !#alive(navmesh_to_lock_to) {
+            return;
+        }
+
+        for player: component_iterator(Player) {
+            lock_player_to_navmesh(player);
+        }
+    }
+
+    lock_player_to_navmesh :: method(player: Player) {
+        if player == null || !#alive(player.agent) {
+            return;
+        }
+        if !#alive(navmesh_to_lock_to) {
+            navmesh_to_lock_to = find_scene_navmesh();
+        }
+        if !#alive(navmesh_to_lock_to) {
+            return;
+        }
+        player.agent.set_navmesh_to_lock_to(navmesh_to_lock_to);
     }
 
     update_lobby_autostart :: method() {
