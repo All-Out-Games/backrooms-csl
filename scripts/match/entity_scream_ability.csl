@@ -1,0 +1,75 @@
+import "core:ao"
+
+ENTITY_SCREAM_EFFECT_SECONDS :: 0.8;
+ENTITY_SCREAM_COOLDOWN_SECONDS :: 20.0;
+ENTITY_SCREAM_REVEAL_FADE_OUT_SECONDS :: 5.0;
+
+play_entity_scream_sfx :: proc(player: Player) {
+    if player == null || !#alive(player.entity) return;
+
+    desc := SFX.default_sfx_desc();
+    desc.entity_to_follow = player.entity.id;
+    desc.local_only = false;
+    desc.volume = 1.25;
+    SFX.play(get_asset(SFX_Asset, "SFX/entityscream.wav"), desc);
+}
+
+ping_all_survivors_with_entity_scream :: proc(entity_player: Player) {
+    for other: component_iterator(Player) {
+        if other == entity_player continue;
+        if !other.is_round_survivor() continue;
+        ping_player_with_footstep_echo(other, ENTITY_SCREAM_REVEAL_FADE_OUT_SECONDS);
+        other.reveal_for_entity_scream_local_view(ENTITY_SCREAM_REVEAL_FADE_OUT_SECONDS);
+    }
+}
+
+Entity_Scream_Effect :: class : Effect_Base {
+    effect_start :: method() {
+        player_specific.freeze_player = true;
+        set_duration(ENTITY_SCREAM_EFFECT_SECONDS);
+
+        if player == null return;
+        if !player.ensure_entity_override_rig() return;
+        if player.entity_override_state_machine == null return;
+
+        player.entity_override_state_machine.set_trigger("scream");
+    }
+}
+
+Entity_Scream_Ability :: class : Ability_Base {
+    on_init :: method() {
+        name = "Scream";
+        icon = get_asset(Texture_Asset, "AbilityIcons/Scream.png");
+    }
+
+    can_use :: method() -> bool {
+        if player == null || !player.is_round_entity() {
+            return false;
+        }
+
+        gm := get_game_manager();
+        if !#alive(gm) || gm.phase != .ACTIVE {
+            return false;
+        }
+
+        if !player.ensure_entity_override_rig() {
+            return false;
+        }
+
+        return player.entity.get_active_effect() == null;
+    }
+
+    on_update :: method(params: ref Ability_Update_Params) {
+        if !params.clicked || !params.can_use {
+            return;
+        }
+
+        effect := new(Entity_Scream_Effect);
+        player.entity.set_active_effect(effect);
+
+        play_entity_scream_sfx(player);
+        ping_all_survivors_with_entity_scream(player);
+
+        current_cooldown = ENTITY_SCREAM_COOLDOWN_SECONDS;
+    }
+}

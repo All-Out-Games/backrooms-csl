@@ -1,0 +1,86 @@
+import "core:ao"
+
+SPRINT_STAMINA_MAX :: 100.0;
+SPRINT_STAMINA_DRAIN_PER_SECOND :: 25.0;
+SPRINT_STAMINA_REGEN_PER_SECOND :: 20.0;
+SPRINT_MOVEMENT_MULTIPLIER :: 1.25;
+SPRINT_ANIMATION_SPEED_MULTIPLIER :: 1.15;
+SPRINT_EXHAUST_LOCKOUT_SECONDS :: 1.0;
+
+sprint_keybind: Keybind;
+sprint_bar_back: Texture_Asset;
+sprint_bar_fill: Texture_Asset;
+sprint_shift_icon: Texture_Asset;
+
+ensure_sprint_resources :: proc() {
+    if sprint_keybind == 0 {
+        sprint_keybind = Keybinds.register("Sprint", .LEFT_SHIFT);
+    }
+    if sprint_bar_back == null {
+        sprint_bar_back = get_asset(Texture_Asset, "reusable_weapons/sprites/reusable-weapons/hud_elements/health_bar_green/healthbar_back.png");
+    }
+    if sprint_bar_fill == null {
+        sprint_bar_fill = get_asset(Texture_Asset, "reusable_weapons/sprites/reusable-weapons/hud_elements/health_bar_green/healthbar_fill.png");
+    }
+    if sprint_shift_icon == null {
+        sprint_shift_icon = get_asset(Texture_Asset, "shift.png");
+    }
+}
+
+get_sprint_keybind :: proc() -> Keybind {
+    ensure_sprint_resources();
+    return sprint_keybind;
+}
+
+Sprint_Ability :: class : Ability_Base {
+    on_init :: method() {
+        ensure_sprint_resources();
+        name = "Sprint";
+        disable_keybind = true;
+    }
+
+    can_use :: method() -> bool {
+        if player == null || player.agent == null {
+            return false;
+        }
+        return player.current_stamina > 0.0 && player.sprint_lockout_remaining <= 0.0;
+    }
+
+    on_update :: method(params: ref Ability_Update_Params) {
+        hold := Ability_Utilities.update_holding_ability(player, ref params, get_sprint_keybind());
+        player.sprint_input_held = hold.active && params.can_use;
+    }
+
+    on_draw_button :: proc(instance: Sprint_Ability, rect: Rect) {
+        if instance.player.device_kind != .PC return;
+        if sprint_shift_icon == null return;
+
+        icon_rect := rect.top_left_rect().grow(35).offset(10, -10);
+        UI.quad(icon_rect.fit_aspect(sprint_shift_icon.get_aspect(), .KEEP_BIGGER), sprint_shift_icon);
+    }
+}
+
+draw_stamina_bar :: proc(player: Player) {
+    ensure_sprint_resources();
+
+    UI.push_world_draw_context();
+    defer UI.pop_draw_context();
+
+    pos := player.entity.world_position;
+    UI.push_z(pos.y - 0.0001);
+    defer UI.pop_z();
+
+    UI.push_scale_factor(5.0 / 540.0);
+    defer UI.pop_scale_factor();
+
+    stamina_rect := player.username_rect.top_center_rect().offset(0, 5);
+    stamina_rect = stamina_rect.grow(13, 70, 0, 70);
+    border_rect := stamina_rect.grow(5.5, 4, 5.5, 4).offset(0, -2);
+
+    UI.quad(border_rect, sprint_bar_back, {1, 1, 1, 1});
+
+    stamina_pct := player.current_stamina / player.max_stamina;
+    stamina_pct = clamp(stamina_pct, 0.0, 1.0);
+    fill_rect := stamina_rect.subrect(0, 0, stamina_pct, 1);
+    UI.quad(fill_rect, sprint_bar_fill, {1, 1, 1, 1});
+}

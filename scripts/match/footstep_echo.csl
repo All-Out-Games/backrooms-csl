@@ -6,6 +6,7 @@
 // swap `tick_footstep_echo_for_player` to drain `"footstep"` events and use each event's world position.
 
 FOOTSTEP_STRIDE_DISTANCE :: 2.16; // ~1/3 spawn rate vs 0.72
+FOOTSTEP_FIRST_SPRINT_DISTANCE :: 0.1;
 FOOTSTEP_MIN_SPEED :: 0.12;
 
 FootstepEcho :: class : Component {
@@ -126,9 +127,31 @@ spine_bone_to_world :: proc(player: Player, bone_name: string) -> v2 {
     return spine.entity.world_position + rot;
 }
 
+ping_player_with_footstep_echo :: proc(player: Player, fade_out_seconds: float) {
+    if player == null || !#alive(player.entity) return;
+    if player.is_round_entity() return;
+
+    if fade_out_seconds <= 0.0 {
+        fade_out_seconds = ENTITY_VIEW_PLAYER_REVEAL_FADE_OUT_SECONDS;
+    }
+
+    bone := get_footstep_bone_name(player, player.footstep_left_next);
+    wp := spine_bone_to_world(player, bone);
+    spawn_footstep_echo(wp, "Echo.prefab");
+    player.reveal_for_entity_local_view_with_duration(fade_out_seconds);
+}
+
 tick_footstep_echo_for_player :: proc(player: Player, dt: float) {
     if player == null return;
     if player.entity == null return;
+    if player.is_round_entity() {
+        player.footstep_stride_accum = 0.0;
+        return;
+    }
+    if !player.sprint_active {
+        player.footstep_stride_accum = 0.0;
+        return;
+    }
 
     agent := player.agent;
     if agent == null return;
@@ -139,15 +162,15 @@ tick_footstep_echo_for_player :: proc(player: Player, dt: float) {
         return;
     }
 
+    if player.footstep_stride_accum <= 0.0 {
+        player.footstep_stride_accum = FOOTSTEP_STRIDE_DISTANCE - FOOTSTEP_FIRST_SPRINT_DISTANCE;
+    }
+
     player.footstep_stride_accum += speed * dt;
     while player.footstep_stride_accum >= FOOTSTEP_STRIDE_DISTANCE {
         player.footstep_stride_accum -= FOOTSTEP_STRIDE_DISTANCE;
 
-        bone := get_footstep_bone_name(player, player.footstep_left_next);
+        ping_player_with_footstep_echo(player, ENTITY_VIEW_PLAYER_REVEAL_FADE_OUT_SECONDS);
         player.footstep_left_next = !player.footstep_left_next;
-
-        wp := spine_bone_to_world(player, bone);
-        spawn_footstep_echo(wp, "Echo.prefab");
-        player.reveal_for_entity_local_view();
     }
 }

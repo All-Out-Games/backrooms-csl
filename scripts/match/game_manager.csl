@@ -236,7 +236,26 @@ draw_match_timer_ui :: proc(player: Player) {
         return;
     }
 
-    draw_match_status_ui("Time Remaining", format_countdown_mm_ss(countdown));
+    UIK.begin(UIK.window(UIK.rect_topbar()));
+
+    shell := UIK.panel_modal(.TRANSP_BLACK);
+    shell.cross_align = .CENTER;
+    shell.main_align = .CENTER;
+    shell.gap = 4;
+    shell.padding = v4{16, 12, 16, 12};
+    UIK.panel_begin(shell);
+
+    UIK.text("Time Remaining", UIK.text_body());
+    UIK.text(format_countdown_mm_ss(countdown), UIK.text_title());
+
+    if player.is_local() && !player.is_round_entity() && player.entity_scream_reveal_remaining > 0.0 {
+        UIK.spacer(UIK.pixels(1), UIK.pixels(10));
+        remaining_text := format_string("Revealed: %", {format_float(player.entity_scream_reveal_remaining, decimals=1)});
+        UIK.text(remaining_text, UIK.text_body());
+    }
+
+    UIK.panel_end();
+    UIK.end();
 }
 
 draw_hunt_begin_banner_ui :: proc(player: Player) {
@@ -478,6 +497,10 @@ Game_Manager :: class : Component {
         if entity_player, ok := find_player_by_user_id(entity_user_id); ok {
             entity_player.remove_freeze_reason(FREEZE_ENTITY_HEAD_START);
         }
+
+        braam_desc := SFX.default_sfx_desc();
+        braam_desc.volume = 0.7;
+        SFX.play(get_asset(SFX_Asset, "SFX/braam.wav"), braam_desc);
 
         hunt_started_at = get_time();
         phase = .ACTIVE;

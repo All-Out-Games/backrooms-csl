@@ -2,20 +2,121 @@ import "core:ao"
 import "match"
 import "reusable_weapons"
 
+ambient_light_loop_sound_id: u64;
+round_atmosphere_loop_sound_id: u64;
+entity_ambience_next_play_at: float;
+braam2_next_play_at: float;
+
+ENTITY_AMBIENCE_REPLAY_SECONDS :: 10.0;
+BRAAM2_REPLAY_SECONDS :: 45.0;
+
+is_round_audio_active :: proc() -> bool {
+    gm := get_game_manager();
+    if !#alive(gm) {
+        return false;
+    }
+    return gm.phase == .SURVIVOR_HEAD_START || gm.phase == .ACTIVE;
+}
+
+get_round_entity_player :: proc() -> Player {
+    gm := get_game_manager();
+    if !#alive(gm) || gm.entity_user_id.count == 0 {
+        return null;
+    }
+
+    entity_player, ok := find_player_by_user_id(gm.entity_user_id);
+    if !ok || !#alive(entity_player) {
+        return null;
+    }
+    return entity_player;
+}
+
+stop_round_atmosphere_loop :: proc() {
+    if round_atmosphere_loop_sound_id != 0 {
+        SFX.stop(round_atmosphere_loop_sound_id);
+        round_atmosphere_loop_sound_id = 0;
+    }
+}
+
+has_round_entity_assignment :: proc() -> bool {
+    gm := get_game_manager();
+    if !#alive(gm) {
+        return false;
+    }
+    return gm.entity_user_id.count != 0;
+}
+
 ao_before_scene_load :: proc() {
     // Called before the scene is loaded
 }
 
 ao_start :: proc() {
     // Called after the scene is loaded
+    if ambient_light_loop_sound_id == 0 {
+        light_loop_desc := SFX.default_sfx_desc();
+        light_loop_desc.loop = true;
+        light_loop_desc.volume = 0.45;
+        ambient_light_loop_sound_id = SFX.play(get_asset(SFX_Asset, "SFX/lightslongloop.wav"), light_loop_desc);
+    }
 }
 
 ao_update :: proc(dt: float) {
-    // Called once per frame
+    round_audio_active := is_round_audio_active();
+
+    if round_audio_active {
+        if round_atmosphere_loop_sound_id == 0 {
+            atmosphere_desc := SFX.default_sfx_desc();
+            atmosphere_desc.loop = true;
+            atmosphere_desc.volume = 0.55;
+            atmosphere_desc.channel = .MUSIC;
+            round_atmosphere_loop_sound_id = SFX.play(get_asset(SFX_Asset, "SFX/atmosphere.wav"), atmosphere_desc);
+        }
+    } else {
+        stop_round_atmosphere_loop();
+    }
+
+    entity_assigned := has_round_entity_assignment();
+    if !round_audio_active || !entity_assigned {
+        entity_ambience_next_play_at = 0.0;
+        braam2_next_play_at = 0.0;
+        return;
+    }
+
+    if braam2_next_play_at <= 0.0 || get_time() >= braam2_next_play_at {
+        braam2_desc := SFX.default_sfx_desc();
+        braam2_desc.volume = 0.85;
+        SFX.play(get_asset(SFX_Asset, "SFX/braam2.wav"), braam2_desc);
+        braam2_next_play_at = get_time() + BRAAM2_REPLAY_SECONDS;
+    }
+
+    entity_player := get_round_entity_player();
+    if !#alive(entity_player) {
+        return;
+    }
+
+    if entity_ambience_next_play_at <= 0.0 || get_time() >= entity_ambience_next_play_at {
+        entity_ambience_desc := SFX.default_sfx_desc();
+        entity_ambience_desc.local_only = false;
+        entity_ambience_desc.volume = 1;
+        entity_ambience_desc.range_multiplier = 2.0;
+        entity_ambience_desc.set_position(entity_player.entity.world_position);
+        SFX.play(get_asset(SFX_Asset, "SFX/entityambience.wav"), entity_ambience_desc);
+        entity_ambience_next_play_at = get_time() + ENTITY_AMBIENCE_REPLAY_SECONDS;
+    }
 }
 
 ao_late_update :: proc(dt: float) {
     // Called once per frame after physics has been resolved
+}
+
+ao_end :: proc() {
+    if ambient_light_loop_sound_id != 0 {
+        SFX.stop(ambient_light_loop_sound_id);
+        ambient_light_loop_sound_id = 0;
+    }
+    stop_round_atmosphere_loop();
+    entity_ambience_next_play_at = 0.0;
+    braam2_next_play_at = 0.0;
 }
 
 // Per-local-player vision: Light + LOS_Caster on a child entity (viewer-specific).
@@ -31,8 +132,9 @@ ENTITY_FILM_GRAIN_NOISE_SCALE :: 1.75;
 ENTITY_COLOR_GRADE_FILTER := v3.{1.0, 1.0, 1.0};
 ENTITY_COLOR_GRADE_SATURATION :: 0.0;
 ENTITY_COLOR_GRADE_CONTRAST :: 2.0;
-ENTITY_VIEW_PLAYER_REVEAL_FADE_OUT_SECONDS :: 1.0;
+ENTITY_VIEW_PLAYER_REVEAL_FADE_OUT_SECONDS :: 2.0;
 ENTITY_NAME_INVISIBILITY_REASON :: "entity_role_active";
+ROUND_SURVIVOR_NORMAL_MOVEMENT_MULTIPLIER :: 0.75;
 
 ENTITY_OVERRIDE_RIG_PATH :: "Animations/Bacteria/imposter_monster.spine";
 // `imposter_monster.spine` is authored much larger than the reusable player rig,
@@ -85,10 +187,21 @@ Player :: class : Player_Base {
     last_selected_index: s64;
     boomwheel_cannon: Boomwheel_Cannon; // only needed if using Boomwheel
 
+    base_movement_speed: float;
+    sprint_last_applied_speed: float;
+    sprint_has_applied_speed: bool;
+    current_stamina: float;
+    max_stamina: float;
+    sprint_lockout_remaining: float;
+    sprint_input_held: bool;
+    sprint_active: bool;
+
     footstep_stride_accum: float;
     footstep_left_next: bool;
     entity_local_view_alpha: float;
     entity_local_view_is_active: bool;
+    entity_local_view_fade_out_seconds: float;
+    entity_scream_reveal_remaining: float;
     entity_name_hidden: bool;
     silhouette_material: Material;
     silhouette_material_applied: bool;
@@ -176,6 +289,7 @@ Player :: class : Player_Base {
             override_rig.entity.set_local_position(ENTITY_OVERRIDE_OFFSET);
         }
         if animator != null {
+            animator.set_enabled(!active);
             if active {
                 this.set_animator_alpha(0.0);
             } else {
@@ -186,11 +300,21 @@ Player :: class : Player_Base {
 
     ao_start :: method() {
         entity_opt_in = false;
+        ensure_sprint_resources();
         footstep_stride_accum = 0.0;
         footstep_left_next = false;
         entity_local_view_alpha = 0.0;
         entity_local_view_is_active = false;
+        entity_local_view_fade_out_seconds = ENTITY_VIEW_PLAYER_REVEAL_FADE_OUT_SECONDS;
+        entity_scream_reveal_remaining = 0.0;
         silhouette_material_applied = false;
+        current_stamina = SPRINT_STAMINA_MAX;
+        max_stamina = SPRINT_STAMINA_MAX;
+        sprint_last_applied_speed = 0.0;
+        sprint_has_applied_speed = false;
+        sprint_lockout_remaining = 0.0;
+        sprint_input_held = false;
+        sprint_active = false;
 
         wt := entity.add_component(Weapon_Target);
         wt.health = 100.0;
@@ -212,6 +336,9 @@ Player :: class : Player_Base {
 
         init_weapon_items();
         setup_reusable_weapons_player_state_machine(this);
+        if #alive(agent) {
+            base_movement_speed = agent.movement_speed;
+        }
     }
 
     is_round_entity :: method() -> bool {
@@ -261,10 +388,67 @@ Player :: class : Player_Base {
             entity_override_state_machine.set_bool("is_moving", is_moving);
         }
 
+        if this.is_round_entity() {
+            sprint_input_held = false;
+        }
+
+        if sprint_lockout_remaining > 0.0 {
+            sprint_lockout_remaining -= dt;
+            sprint_lockout_remaining = max(sprint_lockout_remaining, 0.0);
+        }
+
+        wants_sprint := sprint_input_held && sprint_lockout_remaining <= 0.0 && current_stamina > 0.0;
+        sprint_active = wants_sprint && is_moving;
+
+        if sprint_active {
+            current_stamina -= SPRINT_STAMINA_DRAIN_PER_SECOND * dt;
+            if current_stamina <= 0.0 {
+                current_stamina = 0.0;
+                sprint_active = false;
+                sprint_lockout_remaining = SPRINT_EXHAUST_LOCKOUT_SECONDS;
+            }
+        } else if current_stamina < max_stamina {
+            current_stamina += SPRINT_STAMINA_REGEN_PER_SECOND * dt;
+            current_stamina = min(current_stamina, max_stamina);
+        }
+
+        if #alive(agent) {
+            movement_speed_multiplier := 1.0;
+            if sprint_active {
+                movement_speed_multiplier = SPRINT_MOVEMENT_MULTIPLIER;
+            } else if this.is_round_survivor() {
+                movement_speed_multiplier = ROUND_SURVIVOR_NORMAL_MOVEMENT_MULTIPLIER;
+            }
+
+            current_speed := agent.movement_speed;
+            if !sprint_has_applied_speed || abs(current_speed - sprint_last_applied_speed) > 0.001 {
+                base_movement_speed = current_speed / movement_speed_multiplier;
+            }
+
+            target_speed := base_movement_speed * movement_speed_multiplier;
+            agent.movement_speed = target_speed;
+            sprint_last_applied_speed = target_speed;
+            sprint_has_applied_speed = true;
+        }
+
+        if animator != null && animator.instance != null {
+            should_play_sprint_animation := sprint_active;
+            if equipped_weapon_type != .NONE {
+                config := get_weapon_config(equipped_weapon_type);
+                if config.use_ik_var != "" {
+                    should_play_sprint_animation = false;
+                }
+            }
+
+            animator.state_machine.set_bool("sprinting", should_play_sprint_animation);
+            animator.instance.speed_multiplier = 1.0;
+        }
+
         if this.is_local_or_server() && this.is_local() {
             this.update_local_vision_light();
         }
         this.tick_entity_local_view_reveal_state(dt);
+        this.tick_entity_scream_reveal_state(dt);
         this.update_entity_local_player_visibility(dt);
         this.sync_entity_local_silhouette_material();
         this.update_entity_local_nameplate_visibility();
@@ -292,7 +476,16 @@ Player :: class : Player_Base {
         }
 
         if is_local_or_server() {
-            if !this.is_round_entity() {
+            if this.is_round_entity() {
+                draw_ability_button(this, Entity_Scream_Ability, 0);
+                if equipped_weapon_type != .NONE {
+                    weapon_unequip(this, equipped_weapon_type);
+                    equipped_weapon_type = .NONE;
+                    equipped_item_def = null;
+                    last_selected_index = -1;
+                }
+            } else {
+                draw_ability_button(this, Sprint_Ability, 2);
                 // Draw fire ability button based on equipped weapon
                 if equipped_weapon_type != .NONE {
                     config := get_weapon_config(equipped_weapon_type);
@@ -311,21 +504,20 @@ Player :: class : Player_Base {
                 options := Inventory_Draw_Options.default();
                 hotbar := Items.draw_hotbar(this, default_inventory, options);
                 handle_equipped_item_changing(hotbar.selected_item_index);
-            } else if equipped_weapon_type != .NONE {
-                weapon_unequip(this, equipped_weapon_type);
-                equipped_weapon_type = .NONE;
-                equipped_item_def = null;
-                last_selected_index = -1;
             }
+        }
+
+        if !this.is_round_entity() &&
+            !is_hidden_by_entity_local_view(this) &&
+            (current_stamina < max_stamina || sprint_active || sprint_lockout_remaining > 0.0) {
+            draw_stamina_bar(this);
         }
 
     }
 
     ao_end :: method() {
-        if entity_name_hidden {
-            this.remove_name_invisibility_reason(ENTITY_NAME_INVISIBILITY_REASON);
-            entity_name_hidden = false;
-        }
+        this.remove_name_invisibility_reason(ENTITY_NAME_INVISIBILITY_REASON);
+        entity_name_hidden = false;
 
         if silhouette_material_applied && animator != null {
             animator.set_material(null, false);
@@ -345,10 +537,20 @@ Player :: class : Player_Base {
             local_light = null;
             local_light_caster = null;
         }
+
+        if #alive(agent) {
+            agent.movement_speed = base_movement_speed;
+        }
+        if animator != null && animator.instance != null {
+            animator.instance.speed_multiplier = 1.0;
+        }
     }
 
     ao_can_use_ability :: method(ability: Ability_Base) -> bool {
         // Called to determine if the player is allowed to use the given ability
+        if this.is_round_entity() && ability.#type == Sprint_Ability {
+            return false;
+        }
         return true;
     }
 
@@ -369,6 +571,7 @@ Player :: class : Player_Base {
         // Called on the client after applying a state sync from the server
         // Use this to override things for the local player only like name colors or lighting for example
         this.sync_entity_local_silhouette_material();
+        this.sync_entity_name_visibility();
     }
 
     get_local_light_radii :: proc(using this: Player) -> v2 {
@@ -412,21 +615,59 @@ Player :: class : Player_Base {
     }
 
     reveal_for_entity_local_view :: proc(using this: Player) {
+        this.reveal_for_entity_local_view_with_duration(ENTITY_VIEW_PLAYER_REVEAL_FADE_OUT_SECONDS);
+    }
+
+    reveal_for_entity_local_view_with_duration :: proc(using this: Player, fade_out_seconds: float) {
         if this.is_round_entity() return;
+
+        if fade_out_seconds <= 0.0 {
+            fade_out_seconds = ENTITY_VIEW_PLAYER_REVEAL_FADE_OUT_SECONDS;
+        }
+
+        current_remaining := 0.0;
+        if entity_local_view_is_active {
+            current_remaining = entity_local_view_alpha * entity_local_view_fade_out_seconds;
+        }
+
         entity_local_view_alpha = 1.0;
         entity_local_view_is_active = true;
+        entity_local_view_fade_out_seconds = max(current_remaining, fade_out_seconds);
+    }
+
+    reveal_for_entity_scream_local_view :: proc(using this: Player, fade_out_seconds: float) {
+        if fade_out_seconds <= 0.0 {
+            fade_out_seconds = ENTITY_VIEW_PLAYER_REVEAL_FADE_OUT_SECONDS;
+        }
+
+        this.reveal_for_entity_local_view_with_duration(fade_out_seconds);
+        entity_scream_reveal_remaining = max(entity_scream_reveal_remaining, fade_out_seconds);
     }
 
     tick_entity_local_view_reveal_state :: proc(using this: Player, dt: float) {
         if this.is_round_entity() return;
         if !entity_local_view_is_active return;
 
-        entity_local_view_alpha -= dt / ENTITY_VIEW_PLAYER_REVEAL_FADE_OUT_SECONDS;
+        fade_out_seconds := entity_local_view_fade_out_seconds;
+        if fade_out_seconds <= 0.0 {
+            fade_out_seconds = ENTITY_VIEW_PLAYER_REVEAL_FADE_OUT_SECONDS;
+        }
+
+        entity_local_view_alpha -= dt / fade_out_seconds;
         entity_local_view_alpha = clamp(entity_local_view_alpha, 0.0, 1.0);
         if entity_local_view_alpha <= 0.0 {
             entity_local_view_alpha = 0.0;
             entity_local_view_is_active = false;
+            entity_local_view_fade_out_seconds = ENTITY_VIEW_PLAYER_REVEAL_FADE_OUT_SECONDS;
         }
+    }
+
+    tick_entity_scream_reveal_state :: proc(using this: Player, dt: float) {
+        if this.is_round_entity() return;
+        if entity_scream_reveal_remaining <= 0.0 return;
+
+        entity_scream_reveal_remaining -= dt;
+        entity_scream_reveal_remaining = max(entity_scream_reveal_remaining, 0.0);
     }
 
     update_entity_local_player_visibility :: proc(using this: Player, dt: float) {
@@ -468,10 +709,7 @@ Player :: class : Player_Base {
     }
 
     sync_entity_name_visibility :: proc(using this: Player) {
-        should_hide_name := this.is_round_entity();
-        if should_hide_name == entity_name_hidden return;
-
-        entity_name_hidden = should_hide_name;
+        should_hide_name := this.is_round_entity() || is_hidden_by_entity_local_view(this);
         if should_hide_name {
             this.add_name_invisibility_reason(ENTITY_NAME_INVISIBILITY_REASON);
             return;
