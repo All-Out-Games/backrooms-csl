@@ -1,7 +1,7 @@
 import "core:ao"
 
 ENTITY_SCREAM_EFFECT_SECONDS :: 0.8;
-ENTITY_SCREAM_COOLDOWN_SECONDS :: 10.0;
+ENTITY_SCREAM_COOLDOWN_SECONDS :: 15.0;
 ENTITY_SCREAM_REVEAL_FADE_OUT_SECONDS :: 5.0;
 ENTITY_SCREAM_ARROW_SECONDS :: 3.0;
 
@@ -9,8 +9,9 @@ play_entity_scream_sfx :: proc(player: Player) {
     if player == null || !#alive(player.entity) return;
 
     desc := SFX.default_sfx_desc();
-    desc.entity_to_follow = player.entity.id;
     desc.local_only = false;
+    desc.positional = false;
+    desc.entity_to_follow = 0;
     desc.volume = 1.25;
     SFX.play(get_asset(SFX_Asset, "SFX/entityscream.wav"), desc);
 }

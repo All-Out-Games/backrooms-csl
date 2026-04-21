@@ -20,6 +20,7 @@
   "component_type": "Internal_Component",
   "internal_component_type": "Game_Manager",
   "data": {
-    "navmesh_to_lock_to": 2941197339
+    "navmesh_to_lock_to": 2941197339,
+    "hearing_radius_entity": 2936247284
   }
 }

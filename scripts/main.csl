@@ -10,7 +10,9 @@ braam2_next_play_at: float;
 ENTITY_AMBIENCE_REPLAY_SECONDS :: 10.0;
 BRAAM2_REPLAY_SECONDS :: 45.0;
 ENTITY_CAMERA_SIZE_DELTA :: 1.5;
+ROUND_DEAD_CAMERA_SIZE_DELTA :: 2.5;
 ROUND_DEAD_LOCAL_PLAYER_ALPHA :: 150.0 / 255.0;
+ROUND_DEAD_ENTITY_POINTER_DISTANCE :: 15.0;
 
 is_round_audio_active :: proc() -> bool {
     gm := get_game_manager();
@@ -335,7 +337,9 @@ Player :: class : Player_Base {
             default_camera_size = desired_camera_size;
         }
 
-        if this.is_round_entity() {
+        if this.is_round_dead() {
+            desired_camera_size += ROUND_DEAD_CAMERA_SIZE_DELTA;
+        } else if this.is_round_entity() {
             desired_camera_size += ENTITY_CAMERA_SIZE_DELTA;
         }
 
@@ -433,6 +437,7 @@ Player :: class : Player_Base {
             agent.velocity = v2{0.0, 0.0};
             agent.movement_speed = base_movement_speed;
         }
+        lock_player_to_game_navmesh(this);
 
         if animator != null && animator.instance != null {
             animator.state_machine.set_bool("ghost_form", false);
@@ -467,6 +472,7 @@ Player :: class : Player_Base {
 
         if #alive(agent) {
             agent.velocity = v2{0.0, 0.0};
+            agent.set_navmesh_to_lock_to(null);
         }
 
         if animator != null && animator.instance != null {
@@ -566,15 +572,16 @@ Player :: class : Player_Base {
                 sprint_active = false;
                 sprint_lockout_remaining = SPRINT_EXHAUST_LOCKOUT_SECONDS;
             }
-        } else if current_stamina < max_stamina {
+        } else if !is_moving && current_stamina < max_stamina {
             current_stamina += SPRINT_STAMINA_REGEN_PER_SECOND * dt;
             current_stamina = min(current_stamina, max_stamina);
         }
 
         if #alive(agent) {
-            if !round_dead {
             movement_speed_multiplier := 1.0;
-            if sprint_active {
+            if round_dead {
+                movement_speed_multiplier = SPRINT_MOVEMENT_MULTIPLIER;
+            } else if sprint_active {
                 movement_speed_multiplier = SPRINT_MOVEMENT_MULTIPLIER;
             } else if this.is_round_entity() && entity_lurch_remaining > 0.0 {
                 movement_speed_multiplier = ENTITY_LURCH_MOVEMENT_MULTIPLIER;
@@ -591,10 +598,10 @@ Player :: class : Player_Base {
             agent.movement_speed = target_speed;
             sprint_last_applied_speed = target_speed;
             sprint_has_applied_speed = true;
-            }
         }
 
         if animator != null && animator.instance != null {
+            animator.state_machine.set_bool("round_dead", round_dead);
             animator.state_machine.set_bool("sprinting", sprint_active);
             animator.instance.speed_multiplier = 1.0;
             if round_dead_ghost_state_active {
@@ -634,6 +641,8 @@ Player :: class : Player_Base {
             draw_head_start_ui(this);
             draw_hunt_begin_banner_ui(this);
             draw_match_timer_ui(this);
+            draw_match_end_ui(this);
+            this.draw_round_dead_player_pointers();
             gm := get_game_manager();
             if #alive(gm) && gm.phase == .LOBBY {
                 if entity_opt_in {
@@ -874,13 +883,13 @@ Player :: class : Player_Base {
             return;
         }
 
-        if this.is_round_dead() && this.is_local() {
-            this.set_animator_alpha(ROUND_DEAD_LOCAL_PLAYER_ALPHA);
-            return;
-        }
-
-        if is_hidden_by_round_dead_local_view(this) {
-            this.set_animator_alpha(0.0);
+        local_player := get_local_player();
+        if this.is_round_dead() {
+            if #alive(local_player) && local_player.is_round_dead() {
+                this.set_animator_alpha(ROUND_DEAD_LOCAL_PLAYER_ALPHA);
+            } else {
+                this.set_animator_alpha(0.0);
+            }
             return;
         }
 
@@ -1015,6 +1024,131 @@ Player :: class : Player_Base {
                 equipped_weapon_type = wt;
                 equipped_item_def = new_def;
             }
+        }
+    }
+
+    draw_round_dead_player_pointers :: proc(using this: Player) {
+        if !this.is_local() || !this.is_round_dead() || !#alive(entity) {
+            return;
+        }
+
+        entity_player := get_round_entity_player();
+        if #alive(entity_player) && entity_player != this && #alive(entity_player.entity) {
+            offset := entity_player.entity.world_position - entity.world_position;
+            if length_squared(offset) > ROUND_DEAD_ENTITY_POINTER_DISTANCE * ROUND_DEAD_ENTITY_POINTER_DISTANCE {
+                this.DrawArrowToPosition(entity_player.entity.world_position, "AbilityIcons/Bite.png");
+            }
+        }
+
+        for other: component_iterator(Player) {
+            if other == this || other == entity_player {
+                continue;
+            }
+            if !other.is_round_survivor() || !#alive(other.entity) {
+                continue;
+            }
+
+            offset := other.entity.world_position - entity.world_position;
+            if length_squared(offset) <= ROUND_DEAD_ENTITY_POINTER_DISTANCE * ROUND_DEAD_ENTITY_POINTER_DISTANCE {
+                continue;
+            }
+
+            this.DrawArrowToPosition(other.entity.world_position, "UI/schleem_hologram.png");
+        }
+    }
+
+    // Port of the provided C# DrawArrowToPosition.
+    // Draws a screen-space arrow pointing toward a world-space `position`.
+    DrawArrowToPosition :: proc(using this: Player, position: v2, texture_path: string = "") {
+        if this == null return;
+        if entity == null || entity.self == null return;
+        if this.is_local() {
+
+        // Screen-space overlay so it can't be occluded by world sprites.
+        UI.push_screen_draw_context();
+        defer UI.pop_draw_context();
+
+        // Above almost everything else in the HUD.
+        UI.push_layer(1000);
+        defer UI.pop_layer();
+
+        screen := UI.get_screen_rect();
+        screen_height := screen.height();
+        if screen_height <= 0 {
+            return;
+        }
+        aspect := screen.width() / screen_height;
+        if aspect <= 0 {
+            aspect = 1.0;
+        }
+
+        world_offset := position - entity.world_position;
+        distance := length(world_offset);
+
+        target_screen := world_to_screen(position + v2{0, 1.5});
+        player_screen := world_to_screen(entity.world_position + v2{0, 1.5});
+
+        delta_screen := target_screen - player_screen;
+        dir := v2{1, 0};
+        if length_squared(delta_screen) >= 0.00001 {
+            dir = normalize(delta_screen);
+        }
+
+        arrow_size_px :: 40.0;
+        anim := pow(abs(sin(PI * get_time())), 0.75);
+
+        // distanceThreshold = ((dir * threshold) / (1, aspect)).Length
+        distance_threshold_world :: 6.5;
+        dvec := v2{dir.x * distance_threshold_world, dir.y * distance_threshold_world};
+        scaled := v2{dvec.x, dvec.y / aspect};
+        distance_threshold := length(scaled);
+
+        arrow_tex: Texture_Asset;
+        if texture_path.count > 0 {
+            arrow_tex = get_asset(Texture_Asset, texture_path);
+        }
+        else {
+            #static default_arrow_tex := get_asset(Texture_Asset, "UI/Arrow.png");
+            arrow_tex = default_arrow_tex;
+        }
+        if arrow_tex == null {
+            return;
+        }
+
+        if distance >= (distance_threshold + 0.5) {
+            t := 1.0 - Ease.T(distance - distance_threshold, 1.0);
+            t = clamp(t, 0.0, 1.0);
+
+            arrow_screen := Rect{player_screen, player_screen}.offset(dir.x * 300.0, dir.y * 300.0).center();
+            arrow_screen = lerp(arrow_screen, target_screen, t);
+
+            rect := Rect{arrow_screen, arrow_screen}.grow(arrow_size_px);
+            rotation := to_degrees(atan2(dir.y, dir.x));
+
+            // Rotate around rect center via UI matrix.
+            c := rect.center();
+            UI.push_matrix(Matrix4.translate(v3{c.x, c.y, 0}));
+            defer UI.pop_matrix();
+            UI.push_matrix(Matrix4.rotate(rotation, v3{0, 0, 1}));
+            defer UI.pop_matrix();
+            UI.push_matrix(Matrix4.translate(v3{-c.x, -c.y, 0}));
+            defer UI.pop_matrix();
+            UI.quad(rect, arrow_tex, {1, 1, 1, 1});
+        }
+        else {
+            rect := Rect{target_screen, target_screen}.grow(arrow_size_px);
+            rect = rect.offset(0, anim * 50.0);
+
+            // Near target: fixed "down" arrow (270 degrees).
+            c := rect.center();
+            UI.push_matrix(Matrix4.translate(v3{c.x, c.y, 0}));
+            defer UI.pop_matrix();
+            UI.push_matrix(Matrix4.rotate(270, v3{0, 0, 1}));
+            defer UI.pop_matrix();
+            UI.push_matrix(Matrix4.translate(v3{-c.x, -c.y, 0}));
+            defer UI.pop_matrix();
+            UI.quad(rect, arrow_tex, {1, 1, 1, 1});
+        }
         }
     }
 

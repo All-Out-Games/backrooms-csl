@@ -5,9 +5,11 @@ setup_reusable_weapons_player_state_machine :: proc(player: Player) {
 
     ao_idle := base_layer.try_get_state("Idle");
     ao_run := base_layer.create_state("Run_Slow", true);
+    ao_run_ghost := base_layer.create_state("Run_Ghost", true);
     //ao_run := base_layer.try_get_state("Run_Slow");
     moving_var := sm.try_get_variable("moving");
     sprinting_var := sm.create_variable("sprinting", .BOOL);
+    round_dead_var := sm.create_variable("round_dead", .BOOL);
     sprint_state := base_layer.create_state("SL/Sprint", true);
 
     //--- Base Layer: IK variables ---//
@@ -17,17 +19,36 @@ setup_reusable_weapons_player_state_machine :: proc(player: Player) {
     idle_to_run := base_layer.create_transition(ao_idle, ao_run, false);
     idle_to_run.create_bool_condition(moving_var, true);
     idle_to_run.create_bool_condition(sprinting_var, false);
+    idle_to_run.create_bool_condition(round_dead_var, false);
     idle_to_run.create_bool_condition(use_2h_ik, false);
     idle_to_run.create_bool_condition(use_1h_ik, false);
 
     to_normal_run := base_layer.create_global_transition(ao_run, false);
     to_normal_run.create_bool_condition(moving_var, true);
     to_normal_run.create_bool_condition(sprinting_var, false);
+    to_normal_run.create_bool_condition(round_dead_var, false);
     to_normal_run.create_bool_condition(use_2h_ik, false);
     to_normal_run.create_bool_condition(use_1h_ik, false);
 
+    idle_to_ghost_run := base_layer.create_transition(ao_idle, ao_run_ghost, false);
+    idle_to_ghost_run.create_bool_condition(moving_var, true);
+    idle_to_ghost_run.create_bool_condition(round_dead_var, true);
+    idle_to_ghost_run.create_bool_condition(use_2h_ik, false);
+    idle_to_ghost_run.create_bool_condition(use_1h_ik, false);
+
+    to_ghost_run := base_layer.create_global_transition(ao_run_ghost, false);
+    to_ghost_run.create_bool_condition(moving_var, true);
+    to_ghost_run.create_bool_condition(round_dead_var, true);
+    to_ghost_run.create_bool_condition(use_2h_ik, false);
+    to_ghost_run.create_bool_condition(use_1h_ik, false);
+
     run_to_idle := base_layer.create_transition(ao_run, ao_idle, false);
     run_to_idle.create_bool_condition(moving_var, false);
+
+    ghost_run_to_idle := base_layer.create_transition(ao_run_ghost, ao_idle, false);
+    ghost_run_to_idle.create_bool_condition(moving_var, false);
+    base_layer.create_transition(ao_run, ao_run_ghost, false).create_bool_condition(round_dead_var, true);
+    base_layer.create_transition(ao_run_ghost, ao_run, false).create_bool_condition(round_dead_var, false);
 
 
     to_sprint := base_layer.create_global_transition(sprint_state, false);

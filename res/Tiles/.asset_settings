@@ -1,5 +1,11 @@
 [
   {
+    "id": "Tiles/Wallv3.png",
+    "texture": {
+      "wrap_repeat": true
+    }
+  },
+  {
     "id": "Tiles/Filler.png",
     "texture": {
       "wrap_repeat": true

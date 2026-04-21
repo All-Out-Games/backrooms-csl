@@ -5,6 +5,8 @@ import "core:ao"
 HEAD_START_SECONDS :: 15.0;
 MATCH_MAX_SECONDS :: 600.0; // ~10 minutes after survivors' head start ends
 HUNT_BEGIN_BANNER_SECONDS :: 2.0;
+LAST_SURVIVOR_ENTITY_WIN_DELAY_SECONDS :: 5.0;
+ENDED_TO_LOBBY_SECONDS :: 10.0;
 
 MIN_TOTAL_PLAYERS :: 5; // 1 entity + 4 survivors
 MAX_TOTAL_PLAYERS :: 7; // 1 entity + 6 survivors
@@ -16,6 +18,9 @@ ENTITY_SCREAM_ARROW_MIN_DISTANCE :: 20.0;
 ENTITY_QUEUE_NAME :: "entity";
 
 FREEZE_ENTITY_HEAD_START :: "game_manager_entity_head_start";
+ENTITY_HEARING_VISUAL_BUFFER :: 2.0;
+ENTITY_HEARING_VISUAL_MAX_ALPHA :: 245.0 / 255.0;
+ENTITY_HEARING_VISUAL_FADE_SPEED :: 6.0;
 
 Match_Phase :: enum {
     LOBBY;
@@ -201,6 +206,24 @@ get_match_countdown_seconds :: proc(gm: Game_Manager) -> s64 {
     return secs;
 }
 
+get_end_countdown_seconds :: proc(gm: Game_Manager) -> s64 {
+    if !#alive(gm) {
+        return 0;
+    }
+
+    rem := (gm.ended_at + ENDED_TO_LOBBY_SECONDS) - get_time();
+    if rem <= 0.0 {
+        return 0;
+    }
+
+    secs := (rem + 0.999).(s64);
+    one: s64 = 1;
+    if secs < one {
+        secs = one;
+    }
+    return secs;
+}
+
 draw_entity_scream_arrow_ui :: proc(player: Player) {
     if !player.is_local() || !player.is_round_entity() {
         return;
@@ -349,10 +372,46 @@ draw_hunt_begin_banner_ui :: proc(player: Player) {
     UI.text(box, ts, text);
 }
 
+draw_match_end_ui :: proc(player: Player) {
+    gm := get_game_manager();
+    if !#alive(gm) {
+        return;
+    }
+    if gm.phase != .ENDED {
+        return;
+    }
+
+    countdown := get_end_countdown_seconds(gm);
+    result_text := "Round Over";
+    switch gm.result {
+        case .SURVIVORS_WIN: result_text = "Survivors Win";
+        case .ENTITY_WIN:    result_text = "Entity Wins";
+        default: {}
+    }
+
+    UIK.begin(UIK.window(UIK.rect_topbar()));
+
+    shell := UIK.panel_modal(.TRANSP_BLACK);
+    shell.cross_align = .CENTER;
+    shell.main_align = .CENTER;
+    shell.gap = 4;
+    shell.padding = v4{16, 12, 16, 12};
+    UIK.panel_begin(shell);
+
+    UIK.text(result_text, UIK.text_title());
+    if countdown > 0 {
+        UIK.text(format_string("Returning to Lobby in %", {countdown}), UIK.text_body());
+    }
+
+    UIK.panel_end();
+    UIK.end();
+}
+
 Game_Manager :: class : Component {
     phase: Match_Phase;
     result: Match_Result;
     navmesh_to_lock_to: Navmesh @ao_serialize;
+    hearing_radius_entity: Entity @ao_serialize;
 
     // Authoritative identity for the Entity this round (synced with gameplay state).
     entity_user_id: string;
@@ -363,11 +422,14 @@ Game_Manager :: class : Component {
     head_start_ends_at: float;
     hunt_started_at: float;
     match_ends_at: float;
+    entity_win_delay_ends_at: float;
+    ended_at: float;
 
     // LOBBY: 0 = countdown not running; otherwise get_time() when autostart fires.
     lobby_countdown_ends_at: float;
 
     match_rng: u64;
+    hearing_radius_sprite: Sprite_Renderer;
 
     ao_start :: method() {
         if #alive(game_manager_singleton) {
@@ -387,13 +449,18 @@ Game_Manager :: class : Component {
         head_start_ends_at = 0.0;
         hunt_started_at = 0.0;
         match_ends_at = 0.0;
+        entity_win_delay_ends_at = 0.0;
+        ended_at = 0.0;
         lobby_countdown_ends_at = 0.0;
         match_rng = rng_root_seed();
+        cache_hearing_radius_sprite();
+        sync_entity_hearing_radius_visual(0.0);
 
         reset_all_entity_opt_ins();
     }
 
     ao_end :: method() {
+        sync_entity_hearing_radius_visual(0.0);
         if game_manager_singleton == this {
             game_manager_singleton = null;
         }
@@ -401,12 +468,23 @@ Game_Manager :: class : Component {
 
     ao_update :: method(dt: float) {
         sync_player_navmesh_locks();
+        sync_entity_hearing_radius_visual(dt);
 
         if phase == .LOBBY {
             update_lobby_autostart();
         }
 
         if phase == .ENDED {
+            if ended_at > 0.0 && get_time() >= ended_at + ENDED_TO_LOBBY_SECONDS {
+                reset_to_lobby();
+            }
+            return;
+        }
+
+        if entity_win_delay_ends_at > 0.0 &&
+            (phase == .SURVIVOR_HEAD_START || phase == .ACTIVE) &&
+            get_time() >= entity_win_delay_ends_at {
+            end_match_entity_win();
             return;
         }
 
@@ -457,6 +535,59 @@ Game_Manager :: class : Component {
         return n >= 2 && n <= MAX_TOTAL_PLAYERS;
     }
 
+    cache_hearing_radius_sprite :: method() {
+        if hearing_radius_sprite != null && #alive(hearing_radius_entity) {
+            return;
+        }
+        if #alive(hearing_radius_entity) {
+            hearing_radius_sprite = hearing_radius_entity.get_component(Sprite_Renderer);
+        }
+    }
+
+    get_local_player :: method() -> Player {
+        for player: component_iterator(Player) {
+            if player.is_local() {
+                return player;
+            }
+        }
+        return null;
+    }
+
+    sync_entity_hearing_radius_visual :: method(dt: float) {
+        cache_hearing_radius_sprite();
+        if !#alive(hearing_radius_entity) || hearing_radius_sprite == null {
+            return;
+        }
+
+        target_alpha := 0.0;
+        visual_radius := ENTITY_HEARING_RADIUS + ENTITY_HEARING_VISUAL_BUFFER;
+
+        if entity_player, ok := find_player_by_user_id(entity_user_id); ok && #alive(entity_player.entity) {
+            hearing_radius_entity.set_local_position(entity_player.entity.world_position);
+
+            local_player := get_local_player();
+            if #alive(local_player) &&
+                local_player != entity_player &&
+                !local_player.is_round_dead() &&
+                !is_entity_player(local_player) &&
+                #alive(local_player.entity) {
+                delta := local_player.entity.world_position - entity_player.entity.world_position;
+                if length_squared(delta) <= visual_radius * visual_radius {
+                    target_alpha = ENTITY_HEARING_VISUAL_MAX_ALPHA;
+                }
+            }
+        }
+
+        tint := hearing_radius_sprite.color;
+        if dt <= 0.0 {
+            tint.w = target_alpha;
+        } else {
+            fade_t := clamp(dt * ENTITY_HEARING_VISUAL_FADE_SPEED, 0.0, 1.0);
+            tint.w = lerp(tint.w, target_alpha, fade_t);
+        }
+        hearing_radius_sprite.color = tint;
+    }
+
     sync_player_navmesh_locks :: method() {
         if !#alive(navmesh_to_lock_to) {
             navmesh_to_lock_to = find_scene_navmesh();
@@ -472,6 +603,10 @@ Game_Manager :: class : Component {
 
     lock_player_to_navmesh :: method(player: Player) {
         if player == null || !#alive(player.agent) {
+            return;
+        }
+        if player.is_round_dead() {
+            player.agent.set_navmesh_to_lock_to(null);
             return;
         }
         if !#alive(navmesh_to_lock_to) {
@@ -559,6 +694,7 @@ Game_Manager :: class : Component {
         hunt_started_at = 0.0;
         // Match clock starts after head start (full hunt window).
         match_ends_at = head_start_ends_at + MATCH_MAX_SECONDS;
+        entity_win_delay_ends_at = 0.0;
         phase = .SURVIVOR_HEAD_START;
 
         log_info("Game_Manager: Entity is % (head start % sec)", {entity_user_id, HEAD_START_SECONDS});
@@ -597,8 +733,8 @@ Game_Manager :: class : Component {
         if survivors_alive > 0 {
             survivors_alive -= 1;
         }
-        if survivors_alive <= 0 {
-            end_match_entity_win();
+        if survivors_alive <= 0 && entity_win_delay_ends_at <= 0.0 {
+            entity_win_delay_ends_at = get_time() + LAST_SURVIVOR_ENTITY_WIN_DELAY_SECONDS;
         }
     }
 
@@ -618,13 +754,36 @@ Game_Manager :: class : Component {
 
     // --- Internal ---
 
+    reset_to_lobby :: method() {
+        phase = .LOBBY;
+        result = .NONE;
+        entity_user_id = "";
+        survivors_alive = 0;
+        emergency_systems_online = false;
+        head_start_ends_at = 0.0;
+        hunt_started_at = 0.0;
+        match_ends_at = 0.0;
+        entity_win_delay_ends_at = 0.0;
+        ended_at = 0.0;
+        lobby_countdown_ends_at = 0.0;
+    }
+
+    restore_round_end_name_visibility :: method() {
+        for player: component_iterator(Player) {
+            player.remove_name_invisibility_reason(ENTITY_NAME_INVISIBILITY_REASON);
+        }
+    }
+
     end_match_survivors_win :: method() {
         if phase == .ENDED {
             return;
         }
         phase = .ENDED;
         result = .SURVIVORS_WIN;
+        entity_win_delay_ends_at = 0.0;
+        ended_at = get_time();
         unfreeze_entity_if_needed();
+        restore_round_end_name_visibility();
         log_info("Game_Manager: Survivors win", {});
     }
 
@@ -634,7 +793,10 @@ Game_Manager :: class : Component {
         }
         phase = .ENDED;
         result = .ENTITY_WIN;
+        entity_win_delay_ends_at = 0.0;
+        ended_at = get_time();
         unfreeze_entity_if_needed();
+        restore_round_end_name_visibility();
         log_info("Game_Manager: Entity win", {});
     }
 
