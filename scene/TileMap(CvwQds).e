@@ -12,7 +12,7 @@
     "X": 1,
     "Y": 1
   },
-  "next_sibling": 2943355818,
+  "next_sibling": 2940753850,
   "parent": 2936949740
 },
 {
@@ -1114,7 +1114,7 @@
               0,
               0,
               0,
-              18446744073709551615,
+              17293822568834269183,
               9223372245185855536,
               9223385237436760064,
               9366994641599073281,
@@ -2151,6 +2151,63 @@
           }
         ],
         "mask": "$AO/tile_mask.png"
+      },
+      {
+        "layer_id": 4,
+        "sort_order": 4,
+        "kind": 1,
+        "manual_layer": 1,
+        "outline_color": {
+          "W": 1
+        },
+        "chunks": [
+          {
+            "chunk_x": 4,
+            "chunk_y": 7
+          },
+          {
+            "chunk_x": 3,
+            "chunk_y": 7
+          },
+          {
+            "chunk_x": 6,
+            "chunk_y": 3
+          },
+          {
+            "chunk_x": 4,
+            "chunk_y": 3,
+            "tiles": [
+              0,
+              0,
+              0,
+              0,
+              4035225267063488512,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ]
+          }
+        ],
+        "textures": [
+          {
+            "texture": "Tiles/Wallv3.png"
+          }
+        ],
+        "mask": "$AO/tile_mask.png",
+        "wall_height": 3,
+        "wall_outline_color": {
+          "W": 1
+        },
+        "wall_top_texture": "Tiles/Level1WallTop.png",
+        "wall_top_mask": "$AO/tile_mask.png"
       }
     ]
   }

@@ -13,8 +13,7 @@
     "X": 1,
     "Y": 1
   },
-  "previous_sibling": 2936247284,
-  "next_sibling": 2938525091
+  "previous_sibling": 2936247284
 },
 {
   "cid": 1,
