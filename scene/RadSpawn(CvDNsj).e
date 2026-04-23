@@ -1,0 +1,18 @@
+14
+433791696897
+2936855331
+{
+  "name": "RadSpawn",
+  "local_enabled": true,
+  "local_position": {
+    "X": -23.0957756042480469,
+    "Y": -1.3857469558715820
+  },
+  "local_rotation": 0,
+  "local_scale": {
+    "X": 1,
+    "Y": 1
+  },
+  "next_sibling": 2938257187,
+  "parent": 2951500453
+}

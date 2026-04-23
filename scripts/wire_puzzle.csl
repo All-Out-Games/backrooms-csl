@@ -1,0 +1,896 @@
+import "core:ao"
+
+WIRE_RESET_PROMPT      :: "Reconnect Wire";
+WIRE_COMPLETE_PROMPT   :: "Wire Connected";
+WIRE_HINT_TEXTURE_PATH :: "wire coil_8d2d25.png";
+
+WIRE_UI_LAYER                   :: 453;
+WIRE_WINDOW_SIZE                :: 1000.0;
+WIRE_SUCCESS_DISPLAY_TIME       :: 0.6;
+WIRE_CLOSE_BUTTON_HALF_SIZE     :: 20.0;
+WIRE_GRID_W                     :: 4;
+WIRE_GRID_H                     :: 4;
+WIRE_GRID_CELLS                 :: WIRE_GRID_W * WIRE_GRID_H;
+WIRE_GRID_SIZE_FRACTION         :: 0.68;
+WIRE_GRID_OFFSET_X_FRACTION     :: 0.001;
+WIRE_GRID_OFFSET_Y_FRACTION     :: 0.091;
+WIRE_TILE_GAP_FRACTION          :: 0.0;
+WIRE_INSET_FRACTION             :: 0.02;
+WIRE_DRAG_PIECE_SCALE           :: 0.90;
+WIRE_PRESET_COUNT               :: 5;
+
+WIRE_TILE_EMPTY    :: 0;
+WIRE_TILE_BLOCKER  :: 1;
+WIRE_TILE_STRAIGHT :: 2;
+WIRE_TILE_CORNER   :: 3;
+
+WIRE_DIR_UP    :: 0;
+WIRE_DIR_RIGHT :: 1;
+WIRE_DIR_DOWN  :: 2;
+WIRE_DIR_LEFT  :: 3;
+
+is_generator_solved :: proc() -> bool {
+    for generator: component_iterator(Generator) {
+        return generator.solved;
+    }
+    return false;
+}
+
+is_wire_connected :: proc() -> bool {
+    for wire: component_iterator(Wire_Puzzle) {
+        return wire.solved;
+    }
+    return false;
+}
+
+reset_all_wire_puzzles_for_round :: proc(round_seed_key: u64) {
+    for wire: component_iterator(Wire_Puzzle) {
+        wire.reset_for_round(round_seed_key);
+    }
+}
+
+refresh_emergency_systems_online_state :: proc() {
+    gm := get_game_manager();
+    if !#alive(gm) {
+        return;
+    }
+
+    gm.set_emergency_systems_online(
+        is_generator_solved() &&
+        is_wire_connected()
+    );
+}
+
+get_wire_hint_position :: proc() -> v2 {
+    for wire: component_iterator(Wire_Puzzle) {
+        return wire.entity.world_position;
+    }
+    return v2{8.5, 16.0};
+}
+
+Wire_Puzzle_Effect :: class : Effect_Base {
+    wire: Wire_Puzzle;
+
+    bg_texture: Texture_Asset;
+    lid_texture: Texture_Asset;
+    blocker_texture: Texture_Asset;
+    conn_left_texture: Texture_Asset;
+    conn_left_on_texture: Texture_Asset;
+    conn_right_texture: Texture_Asset;
+    conn_right_on_texture: Texture_Asset;
+    corner_texture: Texture_Asset;
+    corner_on_texture: Texture_Asset;
+    straight_h_texture: Texture_Asset;
+    straight_h_on_texture: Texture_Asset;
+    straight_v_texture: Texture_Asset;
+    straight_v_on_texture: Texture_Asset;
+
+    generated: bool;
+    preset_idx: s64;
+    start_row: s64;
+    end_row: s64;
+
+    revealed: [..]bool;
+    tile_kind: [..]s64;
+    tile_rot: [..]s64;
+    connected_cache: [..]bool;
+    bfs_queue: [..]s64;
+
+    dragging: bool;
+    drag_from: s64;
+    drag_kind: s64;
+    drag_rot: s64;
+    drag_offset: v2;
+    drag_pos: v2;
+
+    success_time: float;
+
+    init_textures :: method() {
+        if bg_texture != null {
+            return;
+        }
+
+        bg_texture = get_asset(Texture_Asset, "sprites/tasks/electrical_routing/ER_Box.png");
+        lid_texture = get_asset(Texture_Asset, "sprites/tasks/electrical_routing/ER_RemovableLid.png");
+        blocker_texture = get_asset(Texture_Asset, "sprites/tasks/electrical_routing/ER_Blocker.png");
+
+        conn_left_texture = get_asset(Texture_Asset, "sprites/tasks/electrical_routing/ER_ConnectorLeft.png");
+        conn_left_on_texture = get_asset(Texture_Asset, "sprites/tasks/electrical_routing/ER_ConnectorLeftON.png");
+        conn_right_texture = get_asset(Texture_Asset, "sprites/tasks/electrical_routing/ER_ConnectorRight.png");
+        conn_right_on_texture = get_asset(Texture_Asset, "sprites/tasks/electrical_routing/ER_ConnectorRightON.png");
+
+        corner_texture = get_asset(Texture_Asset, "sprites/tasks/electrical_routing/ER_CornerWires.png");
+        corner_on_texture = get_asset(Texture_Asset, "sprites/tasks/electrical_routing/ER_CornerWiresON.png");
+        straight_h_texture = get_asset(Texture_Asset, "sprites/tasks/electrical_routing/ER_StraightHoriz.png");
+        straight_h_on_texture = get_asset(Texture_Asset, "sprites/tasks/electrical_routing/ER_StraightHorizON.png");
+        straight_v_texture = get_asset(Texture_Asset, "sprites/tasks/electrical_routing/ER_StraightVert.png");
+        straight_v_on_texture = get_asset(Texture_Asset, "sprites/tasks/electrical_routing/ER_StraightVertON.png");
+
+        if conn_left_on_texture == null { conn_left_on_texture = conn_left_texture; }
+        if conn_right_on_texture == null { conn_right_on_texture = conn_right_texture; }
+        if corner_on_texture == null { corner_on_texture = corner_texture; }
+        if straight_h_on_texture == null { straight_h_on_texture = straight_h_texture; }
+        if straight_v_on_texture == null { straight_v_on_texture = straight_v_texture; }
+    }
+
+    ensure_grid_buffers :: method() {
+        if revealed.count == WIRE_GRID_CELLS &&
+            tile_kind.count == WIRE_GRID_CELLS &&
+            tile_rot.count == WIRE_GRID_CELLS &&
+            connected_cache.count == WIRE_GRID_CELLS &&
+            bfs_queue.count == WIRE_GRID_CELLS {
+            return;
+        }
+
+        revealed.clear();
+        tile_kind.clear();
+        tile_rot.clear();
+        connected_cache.clear();
+        bfs_queue.clear();
+
+        for i: 0..WIRE_GRID_CELLS - 1 {
+            revealed.append(false);
+            tile_kind.append(WIRE_TILE_EMPTY);
+            tile_rot.append(0);
+            connected_cache.append(false);
+            bfs_queue.append(0);
+        }
+    }
+
+    reset_attempt_state :: method() {
+        generated = false;
+        dragging = false;
+        drag_from = -1;
+        drag_kind = WIRE_TILE_EMPTY;
+        drag_rot = 0;
+        drag_offset = v2{0.0, 0.0};
+        drag_pos = v2{0.0, 0.0};
+        success_time = 0.0;
+    }
+
+    effect_start :: method() {
+        player_specific.freeze_player = true;
+        player_specific.disable_movement_inputs = true;
+
+        init_textures();
+        ensure_grid_buffers();
+        reset_attempt_state();
+
+        if !#alive(wire) {
+            return;
+        }
+        wire.in_use = true;
+    }
+
+    effect_end :: method(interrupt: bool) {
+        if !#alive(wire) {
+            return;
+        }
+        wire.in_use = false;
+    }
+}
+
+Wire_Puzzle :: class : Interactable {
+    solved: bool;
+    in_use: bool;
+    last_round_seed_key: u64;
+    marker_sprite: Sprite_Renderer;
+
+    reset_for_round :: method(round_seed_key: u64) {
+        solved = false;
+        in_use = false;
+        this.set_text(WIRE_RESET_PROMPT);
+        last_round_seed_key = round_seed_key;
+        refresh_emergency_systems_online_state();
+    }
+
+    ao_start :: method() {
+        this.set_listener(this);
+        this.set_text(WIRE_RESET_PROMPT);
+        required_hold_time = 0.0;
+        radius = 1.25;
+        prompt_offset = v2{0.0, 0.8};
+        priority = 10;
+
+        solved = false;
+        in_use = false;
+        last_round_seed_key = 0;
+        marker_sprite = entity.get_component(Sprite_Renderer);
+        if marker_sprite != null {
+            marker_sprite.set_enabled(false);
+        }
+    }
+
+    can_use :: method(player: Player) -> bool {
+        if player == null || !#alive(player.entity) {
+            return false;
+        }
+        if solved || in_use {
+            return false;
+        }
+        if player.entity.get_active_effect() != null {
+            return false;
+        }
+        if !player.is_round_survivor() {
+            return false;
+        }
+
+        gm := get_game_manager();
+        if !#alive(gm) {
+            return false;
+        }
+        if !is_generator_solved() {
+            return false;
+        }
+        return gm.phase == .SURVIVOR_HEAD_START || gm.phase == .ACTIVE;
+    }
+
+    on_interact :: method(player: Player) {
+        if !can_use(player) {
+            return;
+        }
+
+        effect := new(Wire_Puzzle_Effect);
+        effect.wire = this;
+        player.entity.set_active_effect(effect);
+    }
+
+    complete :: method(player: Player) {
+        if solved {
+            return;
+        }
+
+        solved = true;
+        in_use = false;
+        this.set_text(WIRE_COMPLETE_PROMPT);
+
+        complete_task_for_survivors(TASK_ID_RECONNECT_WIRE);
+        refresh_emergency_systems_online_state();
+        notify_survivors("% reconnected the wire.", {player.get_username()});
+    }
+
+    ao_update :: method(dt: float) {
+        gm := get_game_manager();
+        if !#alive(gm) {
+            return;
+        }
+
+        show_marker := (gm.phase == .SURVIVOR_HEAD_START || gm.phase == .ACTIVE) && is_generator_solved() && !solved;
+        if marker_sprite != null {
+            marker_sprite.set_enabled(show_marker);
+        }
+
+        if gm.phase != .SURVIVOR_HEAD_START && gm.phase != .ACTIVE {
+            return;
+        }
+
+        round_seed_key := (gm.head_start_ends_at * 1000.0).(u64);
+        if round_seed_key != 0 && round_seed_key != last_round_seed_key {
+            reset_for_round(round_seed_key);
+        }
+    }
+}
+
+get_wire_puzzle_effect :: proc(player: Player) -> Wire_Puzzle_Effect {
+    if player == null || !#alive(player.entity) {
+        return null;
+    }
+
+    active_effect := player.entity.get_active_effect();
+    if active_effect == null || active_effect.#type != Wire_Puzzle_Effect {
+        return null;
+    }
+    return active_effect.(Wire_Puzzle_Effect);
+}
+
+wire_tile_index :: proc(x: s64, row: s64) -> s64 {
+    return row * WIRE_GRID_W + x;
+}
+
+wire_tile_xy :: proc(idx: s64, x: ref s64, row: ref s64) {
+    row = idx / WIRE_GRID_W;
+    x = idx - row * WIRE_GRID_W;
+}
+
+wire_is_piece_kind :: proc(kind: s64) -> bool {
+    return kind == WIRE_TILE_STRAIGHT || kind == WIRE_TILE_CORNER;
+}
+
+wire_get_piece_mask :: proc(kind: s64, rot: s64) -> s64 {
+    if kind == WIRE_TILE_STRAIGHT {
+        if rot == 1 {
+            return (1 << WIRE_DIR_UP) | (1 << WIRE_DIR_DOWN);
+        }
+        return (1 << WIRE_DIR_LEFT) | (1 << WIRE_DIR_RIGHT);
+    }
+
+    if kind == WIRE_TILE_CORNER {
+        r := rot;
+        while r < 0 { r += 4; }
+        while r >= 4 { r -= 4; }
+
+        if r == 0 { return (1 << WIRE_DIR_UP) | (1 << WIRE_DIR_RIGHT); }
+        if r == 1 { return (1 << WIRE_DIR_RIGHT) | (1 << WIRE_DIR_DOWN); }
+        if r == 2 { return (1 << WIRE_DIR_DOWN) | (1 << WIRE_DIR_LEFT); }
+        return (1 << WIRE_DIR_LEFT) | (1 << WIRE_DIR_UP);
+    }
+
+    return 0;
+}
+
+wire_get_tile_mask :: proc(effect: Wire_Puzzle_Effect, idx: s64) -> s64 {
+    return wire_get_piece_mask(effect.tile_kind[idx], effect.tile_rot[idx]);
+}
+
+wire_set_tile :: proc(effect: Wire_Puzzle_Effect, idx: s64, kind: s64, rot: s64) {
+    if idx < 0 || idx >= WIRE_GRID_CELLS {
+        return;
+    }
+
+    effect.tile_kind[idx] = kind;
+    effect.tile_rot[idx] = rot;
+}
+
+wire_apply_preset :: proc(effect: Wire_Puzzle_Effect, which: s64) {
+    for i: 0..WIRE_GRID_CELLS - 1 {
+        effect.revealed[i] = false;
+        effect.tile_kind[i] = WIRE_TILE_EMPTY;
+        effect.tile_rot[i] = 0;
+    }
+
+    effect.dragging = false;
+    effect.success_time = 0.0;
+
+    switch which {
+        case 0: {
+            effect.start_row = 3;
+            effect.end_row = 0;
+
+            wire_set_tile(effect, 2, WIRE_TILE_BLOCKER, 0);
+            wire_set_tile(effect, 4, WIRE_TILE_BLOCKER, 0);
+
+            wire_set_tile(effect, 1, WIRE_TILE_CORNER, 1);
+            wire_set_tile(effect, 3, WIRE_TILE_CORNER, 3);
+            wire_set_tile(effect, 6, WIRE_TILE_CORNER, 3);
+            wire_set_tile(effect, 9, WIRE_TILE_CORNER, 1);
+            wire_set_tile(effect, 12, WIRE_TILE_STRAIGHT, 0);
+            wire_set_tile(effect, 14, WIRE_TILE_CORNER, 1);
+            wire_set_tile(effect, 15, WIRE_TILE_CORNER, 3);
+        }
+        case 1: {
+            effect.start_row = 0;
+            effect.end_row = 3;
+
+            wire_set_tile(effect, 10, WIRE_TILE_BLOCKER, 0);
+            wire_set_tile(effect, 13, WIRE_TILE_BLOCKER, 0);
+
+            wire_set_tile(effect, 0, WIRE_TILE_CORNER, 0);
+            wire_set_tile(effect, 2, WIRE_TILE_CORNER, 2);
+            wire_set_tile(effect, 3, WIRE_TILE_STRAIGHT, 0);
+            wire_set_tile(effect, 5, WIRE_TILE_CORNER, 2);
+            wire_set_tile(effect, 4, WIRE_TILE_STRAIGHT, 1);
+            wire_set_tile(effect, 7, WIRE_TILE_STRAIGHT, 1);
+            wire_set_tile(effect, 6, WIRE_TILE_CORNER, 0);
+            wire_set_tile(effect, 8, WIRE_TILE_CORNER, 1);
+            wire_set_tile(effect, 11, WIRE_TILE_CORNER, 3);
+        }
+        case 2: {
+            effect.start_row = 1;
+            effect.end_row = 1;
+
+            wire_set_tile(effect, 0, WIRE_TILE_BLOCKER, 0);
+            wire_set_tile(effect, 15, WIRE_TILE_BLOCKER, 0);
+
+            wire_set_tile(effect, 1, WIRE_TILE_CORNER, 1);
+            wire_set_tile(effect, 3, WIRE_TILE_CORNER, 3);
+            wire_set_tile(effect, 4, WIRE_TILE_CORNER, 0);
+            wire_set_tile(effect, 5, WIRE_TILE_CORNER, 2);
+            wire_set_tile(effect, 6, WIRE_TILE_CORNER, 3);
+            wire_set_tile(effect, 7, WIRE_TILE_CORNER, 1);
+            wire_set_tile(effect, 9, WIRE_TILE_CORNER, 0);
+            wire_set_tile(effect, 12, WIRE_TILE_CORNER, 2);
+        }
+        case 3: {
+            effect.start_row = 2;
+            effect.end_row = 0;
+
+            wire_set_tile(effect, 5, WIRE_TILE_BLOCKER, 0);
+            wire_set_tile(effect, 14, WIRE_TILE_BLOCKER, 0);
+
+            wire_set_tile(effect, 1, WIRE_TILE_STRAIGHT, 1);
+            wire_set_tile(effect, 2, WIRE_TILE_CORNER, 1);
+            wire_set_tile(effect, 6, WIRE_TILE_STRAIGHT, 0);
+            wire_set_tile(effect, 8, WIRE_TILE_CORNER, 3);
+            wire_set_tile(effect, 9, WIRE_TILE_STRAIGHT, 0);
+            wire_set_tile(effect, 12, WIRE_TILE_STRAIGHT, 0);
+        }
+        case 4: {
+            effect.start_row = 1;
+            effect.end_row = 2;
+
+            wire_set_tile(effect, 0, WIRE_TILE_BLOCKER, 0);
+            wire_set_tile(effect, 15, WIRE_TILE_BLOCKER, 0);
+
+            wire_set_tile(effect, 4, WIRE_TILE_STRAIGHT, 0);
+            wire_set_tile(effect, 7, WIRE_TILE_STRAIGHT, 0);
+            wire_set_tile(effect, 10, WIRE_TILE_CORNER, 0);
+            wire_set_tile(effect, 11, WIRE_TILE_STRAIGHT, 0);
+            wire_set_tile(effect, 13, WIRE_TILE_CORNER, 2);
+        }
+        default: {
+            wire_apply_preset(effect, 0);
+        }
+    }
+}
+
+wire_generate_puzzle :: proc(effect: Wire_Puzzle_Effect) {
+    if effect.generated || effect.wire == null {
+        return;
+    }
+
+    effect.ensure_grid_buffers();
+
+    seed := effect.wire.entity.id * 1664525 + effect.wire.last_round_seed_key * 1013904223;
+    effect.preset_idx = rng_range_int(ref seed, 0, WIRE_PRESET_COUNT - 1);
+    wire_apply_preset(effect, effect.preset_idx);
+    effect.generated = true;
+}
+
+wire_compute_connected_from_left :: proc(effect: Wire_Puzzle_Effect) -> bool {
+    for i: 0..WIRE_GRID_CELLS - 1 {
+        effect.connected_cache[i] = false;
+    }
+
+    start_idx := wire_tile_index(0, effect.start_row);
+    end_idx := wire_tile_index(WIRE_GRID_W - 1, effect.end_row);
+
+    if !wire_is_piece_kind(effect.tile_kind[start_idx]) {
+        return false;
+    }
+    start_mask := wire_get_tile_mask(effect, start_idx);
+    if (start_mask & (1 << WIRE_DIR_LEFT)) == 0 {
+        return false;
+    }
+
+    q_head: s64 = 0;
+    q_tail: s64 = 0;
+
+    effect.bfs_queue[q_tail] = start_idx;
+    q_tail += 1;
+    effect.connected_cache[start_idx] = true;
+
+    while q_head < q_tail {
+        cur := effect.bfs_queue[q_head];
+        q_head += 1;
+
+        cur_x: s64;
+        cur_row: s64;
+        wire_tile_xy(cur, ref cur_x, ref cur_row);
+
+        mask := wire_get_tile_mask(effect, cur);
+        for dir: 0..3 {
+            if (mask & (1 << dir)) == 0 {
+                continue;
+            }
+
+            nx := cur_x;
+            ny := cur_row;
+            if dir == WIRE_DIR_UP { ny -= 1; }
+            if dir == WIRE_DIR_DOWN { ny += 1; }
+            if dir == WIRE_DIR_LEFT { nx -= 1; }
+            if dir == WIRE_DIR_RIGHT { nx += 1; }
+
+            if nx < 0 || nx >= WIRE_GRID_W || ny < 0 || ny >= WIRE_GRID_H {
+                continue;
+            }
+
+            nidx := wire_tile_index(nx, ny);
+            if !wire_is_piece_kind(effect.tile_kind[nidx]) {
+                continue;
+            }
+
+            opp := dir + 2;
+            if opp >= 4 { opp -= 4; }
+            nmask := wire_get_tile_mask(effect, nidx);
+            if (nmask & (1 << opp)) == 0 {
+                continue;
+            }
+
+            if !effect.connected_cache[nidx] {
+                effect.connected_cache[nidx] = true;
+                effect.bfs_queue[q_tail] = nidx;
+                q_tail += 1;
+            }
+        }
+    }
+
+    return effect.connected_cache[end_idx] && (wire_get_tile_mask(effect, end_idx) & (1 << WIRE_DIR_RIGHT)) != 0;
+}
+
+wire_point_in_rect :: proc(point: v2, rect: Rect) -> bool {
+    if point.x < rect.min.x return false;
+    if point.x > rect.max.x return false;
+    if point.y < rect.min.y return false;
+    if point.y > rect.max.y return false;
+    return true;
+}
+
+wire_draw_piece :: proc(effect: Wire_Puzzle_Effect, rect: Rect, kind: s64, rot: s64, is_on: bool) {
+    if kind == WIRE_TILE_STRAIGHT {
+        tex := effect.straight_h_texture;
+        if rot == 1 {
+            tex = effect.straight_v_texture;
+            if is_on { tex = effect.straight_v_on_texture; }
+        } else {
+            if is_on { tex = effect.straight_h_on_texture; }
+        }
+
+        if tex == null {
+            UI.quad(rect, core_globals.white_sprite, v4{1.0, 0.8, 0.2, 1.0});
+            return;
+        }
+
+        UI.quad(rect.fit_aspect(tex.get_aspect(), .KEEP_HEIGHT), tex, v4{1.0, 1.0, 1.0, 1.0});
+        return;
+    }
+
+    if kind == WIRE_TILE_CORNER {
+        tex := effect.corner_texture;
+        if is_on { tex = effect.corner_on_texture; }
+        if tex == null {
+            UI.quad(rect, core_globals.white_sprite, v4{1.0, 0.8, 0.2, 1.0});
+            return;
+        }
+
+        draw_rect := rect.fit_aspect(tex.get_aspect(), .KEEP_HEIGHT);
+        center := draw_rect.center();
+        UI.push_matrix(Matrix4.rotate_about_point(center, -(rot.(float) * 90.0)));
+        defer UI.pop_matrix();
+        UI.quad(draw_rect, tex, v4{1.0, 1.0, 1.0, 1.0});
+    }
+}
+
+draw_wire_close_button :: proc(panel_rect: Rect) -> bool {
+    close_bs := UI.default_button_settings();
+    close_bs.sprite = core_globals.white_sprite;
+    close_bs.press_scaling = 0.35;
+    close_bs.color = v4{0.1, 0.1, 0.1, 0.82};
+    close_bs.hovered_color = v4{0.2, 0.2, 0.2, 0.95};
+    close_bs.pressed_color = v4{0.06, 0.06, 0.06, 1.0};
+
+    close_ts := UI.default_text_settings();
+    close_ts.size = 24;
+    close_ts.color = v4{1.0, 1.0, 1.0, 1.0};
+    close_ts.halign = .CENTER;
+    close_ts.valign = .CENTER;
+    close_ts.do_outline = true;
+    close_ts.outline_thickness = 2;
+    close_ts.outline_color = v4{0.0, 0.0, 0.0, 1.0};
+
+    close_rect := panel_rect.top_right_rect().offset(-20.0, -20.0).grow(
+        WIRE_CLOSE_BUTTON_HALF_SIZE,
+        WIRE_CLOSE_BUTTON_HALF_SIZE,
+        WIRE_CLOSE_BUTTON_HALF_SIZE,
+        WIRE_CLOSE_BUTTON_HALF_SIZE
+    );
+    return UI.button(close_rect, close_bs, close_ts, "X").clicked;
+}
+
+draw_wire_puzzle_panel :: proc(player: Player, effect: Wire_Puzzle_Effect, success_state: bool) -> bool {
+    full_screen := UI.get_screen_rect();
+    safe_screen := UI.get_safe_screen_rect();
+    UI.quad(full_screen, core_globals.white_sprite, v4{0.0, 0.0, 0.0, 0.85});
+
+    panel_rect := safe_screen.center_rect().grow(WIRE_WINDOW_SIZE * 0.5);
+    if effect.bg_texture != null {
+        panel_rect = panel_rect.fit_aspect(effect.bg_texture.get_aspect(), .KEEP_HEIGHT);
+        UI.quad(panel_rect, effect.bg_texture, v4{1.0, 1.0, 1.0, 1.0});
+    } else {
+        UI.quad(panel_rect, core_globals.white_sprite, v4{0.1, 0.1, 0.1, 0.98});
+    }
+
+    if draw_wire_close_button(panel_rect) {
+        return true;
+    }
+
+    w := panel_rect.width();
+    h := panel_rect.height();
+
+    grid_size := min(w, h) * WIRE_GRID_SIZE_FRACTION;
+    grid_rect := panel_rect.center_rect().grow_unscaled(grid_size * 0.5, grid_size * 0.5, grid_size * 0.5, grid_size * 0.5);
+    grid_rect = grid_rect.offset_unscaled(w * WIRE_GRID_OFFSET_X_FRACTION, h * WIRE_GRID_OFFSET_Y_FRACTION);
+
+    cell_w := grid_rect.width() / WIRE_GRID_W.(float);
+    cell_h := grid_rect.height() / WIRE_GRID_H.(float);
+    cell_size := min(cell_w, cell_h);
+    cell_pad := cell_size * WIRE_TILE_GAP_FRACTION;
+    wire_inset := cell_size * WIRE_INSET_FRACTION;
+
+    solved := wire_compute_connected_from_left(effect);
+    start_idx := wire_tile_index(0, effect.start_row);
+    left_on := effect.connected_cache[start_idx];
+    right_on := solved;
+
+    conn_h := cell_h * 0.9;
+    left_tex := effect.conn_left_texture;
+    if left_on { left_tex = effect.conn_left_on_texture; }
+    if left_tex != null {
+        conn_w := conn_h * left_tex.get_aspect();
+        y1s := 1.0 - ((effect.start_row.(float) + 1.0) / WIRE_GRID_H.(float));
+        y2s := 1.0 - (effect.start_row.(float) / WIRE_GRID_H.(float));
+        start_row_rect := grid_rect.subrect(0.0, y1s, 1.0, y2s);
+        left_center := v2{grid_rect.min.x - conn_w * 0.35, start_row_rect.center().y};
+        left_rect := Rect{left_center - v2{conn_w * 0.5, conn_h * 0.5}, left_center + v2{conn_w * 0.5, conn_h * 0.5}};
+        UI.quad(left_rect, left_tex, v4{1.0, 1.0, 1.0, 1.0});
+    }
+
+    right_tex := effect.conn_right_texture;
+    if right_on { right_tex = effect.conn_right_on_texture; }
+    if right_tex != null {
+        conn_w_r := conn_h * right_tex.get_aspect();
+        y1e := 1.0 - ((effect.end_row.(float) + 1.0) / WIRE_GRID_H.(float));
+        y2e := 1.0 - (effect.end_row.(float) / WIRE_GRID_H.(float));
+        end_row_rect := grid_rect.subrect(0.0, y1e, 1.0, y2e);
+        right_center := v2{grid_rect.max.x + conn_w_r * 0.35, end_row_rect.center().y};
+        right_rect := Rect{right_center - v2{conn_w_r * 0.5, conn_h * 0.5}, right_center + v2{conn_w_r * 0.5, conn_h * 0.5}};
+        UI.quad(right_rect, right_tex, v4{1.0, 1.0, 1.0, 1.0});
+    }
+
+    drag_release_pos := v2{0.0, 0.0};
+    drag_released := false;
+    if effect.dragging {
+        UI.push_id("wire_cell_%", {effect.drag_from});
+        defer UI.pop_id();
+
+        capture_bs := UI.default_button_settings();
+        capture_bs.sprite = core_globals.white_sprite;
+        capture_bs.press_scaling = 0.0;
+        capture_bs.color = v4{0.0, 0.0, 0.0, 0.0};
+        capture_bs.hovered_color = v4{0.0, 0.0, 0.0, 0.0};
+        capture_bs.pressed_color = v4{0.0, 0.0, 0.0, 0.0};
+        capture_bs.disabled_color = v4{0.0, 0.0, 0.0, 0.0};
+        capture_bs.background_color_multiplier = v4{0.0, 0.0, 0.0, 0.0};
+
+        interact := UI.button(full_screen, capture_bs, UI.default_text_settings(), "");
+        effect.drag_pos = interact.mouse_position + effect.drag_offset;
+        if interact.released {
+            drag_released = true;
+            drag_release_pos = interact.mouse_position;
+        }
+    }
+
+    draw_only := effect.dragging || success_state;
+    for row: 0..WIRE_GRID_H - 1 {
+        for col: 0..WIRE_GRID_W - 1 {
+            y1 := 1.0 - ((row.(float) + 1.0) / WIRE_GRID_H.(float));
+            y2 := 1.0 - (row.(float) / WIRE_GRID_H.(float));
+            x1 := col.(float) / WIRE_GRID_W.(float);
+            x2 := (col.(float) + 1.0) / WIRE_GRID_W.(float);
+
+            cell := grid_rect.subrect(x1, y1, x2, y2);
+            cell = cell.inset_unscaled(cell_pad, cell_pad, cell_pad, cell_pad);
+
+            idx := wire_tile_index(col, row);
+            if draw_only {
+                if !effect.revealed[idx] {
+                    if effect.lid_texture != null {
+                        UI.quad(cell.fit_aspect(effect.lid_texture.get_aspect(), .KEEP_HEIGHT), effect.lid_texture, v4{1.0, 1.0, 1.0, 1.0});
+                    }
+                    continue;
+                }
+
+                if effect.tile_kind[idx] == WIRE_TILE_BLOCKER {
+                    if effect.blocker_texture != null {
+                        UI.quad(cell.fit_aspect(effect.blocker_texture.get_aspect(), .KEEP_HEIGHT), effect.blocker_texture, v4{1.0, 1.0, 1.0, 1.0});
+                    }
+                    continue;
+                }
+
+                if wire_is_piece_kind(effect.tile_kind[idx]) {
+                    piece_rect := cell.inset_unscaled(wire_inset, wire_inset, wire_inset, wire_inset);
+                    wire_draw_piece(effect, piece_rect, effect.tile_kind[idx], effect.tile_rot[idx], effect.connected_cache[idx]);
+                }
+                continue;
+            }
+
+            UI.push_id("wire_cell_%", {idx});
+            button_bs := UI.default_button_settings();
+            button_bs.sprite = core_globals.white_sprite;
+            button_bs.press_scaling = 0.0;
+            button_bs.color = v4{0.0, 0.0, 0.0, 0.0};
+            button_bs.hovered_color = v4{0.0, 0.0, 0.0, 0.0};
+            button_bs.pressed_color = v4{0.0, 0.0, 0.0, 0.0};
+            button_bs.disabled_color = v4{0.0, 0.0, 0.0, 0.0};
+            button_bs.background_color_multiplier = v4{0.0, 0.0, 0.0, 0.0};
+            interact := UI.button(cell, button_bs, UI.default_text_settings(), "");
+
+            if !effect.revealed[idx] {
+                if effect.lid_texture != null {
+                    UI.quad(cell.fit_aspect(effect.lid_texture.get_aspect(), .KEEP_HEIGHT), effect.lid_texture, v4{1.0, 1.0, 1.0, 1.0});
+                }
+                if interact.clicked {
+                    effect.revealed[idx] = true;
+                }
+                UI.pop_id();
+                continue;
+            }
+
+            if effect.tile_kind[idx] == WIRE_TILE_BLOCKER {
+                if effect.blocker_texture != null {
+                    UI.quad(cell.fit_aspect(effect.blocker_texture.get_aspect(), .KEEP_HEIGHT), effect.blocker_texture, v4{1.0, 1.0, 1.0, 1.0});
+                }
+                UI.pop_id();
+                continue;
+            }
+
+            if (interact.clicked || interact.active) && wire_is_piece_kind(effect.tile_kind[idx]) {
+                effect.dragging = true;
+                effect.drag_from = idx;
+                effect.drag_kind = effect.tile_kind[idx];
+                effect.drag_rot = effect.tile_rot[idx];
+                effect.tile_kind[idx] = WIRE_TILE_EMPTY;
+                effect.tile_rot[idx] = 0;
+                effect.drag_offset = cell.center() - interact.mouse_position;
+                effect.drag_pos = interact.mouse_position + effect.drag_offset;
+            }
+
+            if wire_is_piece_kind(effect.tile_kind[idx]) {
+                piece_rect := cell.inset_unscaled(wire_inset, wire_inset, wire_inset, wire_inset);
+                wire_draw_piece(effect, piece_rect, effect.tile_kind[idx], effect.tile_rot[idx], effect.connected_cache[idx]);
+            }
+
+            UI.pop_id();
+        }
+    }
+
+    if effect.dragging && drag_released {
+        dropped := false;
+        found_target := false;
+
+        for row: 0..WIRE_GRID_H - 1 {
+            for col: 0..WIRE_GRID_W - 1 {
+                y1 := 1.0 - ((row.(float) + 1.0) / WIRE_GRID_H.(float));
+                y2 := 1.0 - (row.(float) / WIRE_GRID_H.(float));
+                x1 := col.(float) / WIRE_GRID_W.(float);
+                x2 := (col.(float) + 1.0) / WIRE_GRID_W.(float);
+
+                cell := grid_rect.subrect(x1, y1, x2, y2);
+                cell = cell.inset_unscaled(cell_pad, cell_pad, cell_pad, cell_pad);
+                if !wire_point_in_rect(drag_release_pos, cell) {
+                    continue;
+                }
+
+                found_target = true;
+                idx := wire_tile_index(col, row);
+                if !effect.revealed[idx] || effect.tile_kind[idx] == WIRE_TILE_BLOCKER {
+                    break;
+                }
+
+                if idx == effect.drag_from {
+                    effect.tile_kind[effect.drag_from] = effect.drag_kind;
+                    effect.tile_rot[effect.drag_from] = effect.drag_rot;
+                } else {
+                    target_kind := effect.tile_kind[idx];
+                    target_rot := effect.tile_rot[idx];
+
+                    effect.tile_kind[idx] = effect.drag_kind;
+                    effect.tile_rot[idx] = effect.drag_rot;
+                    effect.tile_kind[effect.drag_from] = target_kind;
+                    effect.tile_rot[effect.drag_from] = target_rot;
+                }
+
+                dropped = true;
+                break;
+            }
+            if dropped || found_target {
+                break;
+            }
+        }
+
+        if !dropped {
+            effect.tile_kind[effect.drag_from] = effect.drag_kind;
+            effect.tile_rot[effect.drag_from] = effect.drag_rot;
+        }
+
+        effect.dragging = false;
+    }
+
+    if effect.dragging {
+        tex_h := cell_size * WIRE_DRAG_PIECE_SCALE;
+        drag_rect := Rect{effect.drag_pos - v2{tex_h * 0.6, tex_h * 0.6}, effect.drag_pos + v2{tex_h * 0.6, tex_h * 0.6}};
+        wire_draw_piece(effect, drag_rect, effect.drag_kind, effect.drag_rot, false);
+    }
+
+    title_rect := panel_rect.top_left_rect().offset(190.0, -65.0).grow(30.0, 250.0, 30.0, 0.0);
+    title_ts := UI.default_text_settings();
+    title_ts.size = 30;
+    title_ts.color = v4{1.0, 1.0, 1.0, 1.0};
+    title_ts.halign = .LEFT;
+    title_ts.valign = .CENTER;
+    title_ts.do_outline = true;
+    title_ts.outline_thickness = 3;
+    title_ts.outline_color = v4{0.0, 0.0, 0.0, 1.0};
+    UI.text(title_rect, title_ts, "Reconnect Wire");
+
+    if success_state {
+        success_rect := panel_rect.cut_top(70.0).offset(0.0, 15.0);
+        success_ts := UI.default_text_settings();
+        success_ts.size = 56;
+        success_ts.color = v4{0.3, 1.0, 0.4, 1.0};
+        success_ts.halign = .CENTER;
+        success_ts.valign = .CENTER;
+        success_ts.do_outline = true;
+        success_ts.outline_thickness = 2;
+        success_ts.outline_color = v4{0.0, 0.0, 0.0, 1.0};
+        UI.text(success_rect, success_ts, "POWER RESTORED!");
+    }
+
+    return false;
+}
+
+draw_wire_puzzle_ui :: proc(player: Player, dt: float) {
+    effect := get_wire_puzzle_effect(player);
+    if effect == null || !#alive(effect.wire) {
+        return;
+    }
+
+    gm := get_game_manager();
+    if !#alive(gm) || (gm.phase != .SURVIVOR_HEAD_START && gm.phase != .ACTIVE) || !player.is_round_survivor() {
+        effect.remove_effect(false);
+        return;
+    }
+
+    if effect.wire.solved {
+        effect.remove_effect(false);
+        return;
+    }
+
+    wire_generate_puzzle(effect);
+
+    UI.push_screen_draw_context();
+    defer UI.pop_draw_context();
+
+    UI.push_layer(WIRE_UI_LAYER);
+    defer UI.pop_layer();
+
+    if effect.success_time > 0.0 {
+        if get_time() - effect.success_time >= WIRE_SUCCESS_DISPLAY_TIME {
+            effect.wire.complete(player);
+            effect.remove_effect(false);
+            return;
+        }
+
+        if draw_wire_puzzle_panel(player, effect, true) {
+            effect.remove_effect(false);
+        }
+        return;
+    }
+
+    if wire_compute_connected_from_left(effect) {
+        effect.success_time = get_time();
+    }
+
+    if draw_wire_puzzle_panel(player, effect, false) {
+        effect.remove_effect(false);
+    }
+}

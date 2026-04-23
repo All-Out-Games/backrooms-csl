@@ -1,0 +1,7 @@
+test_generator_scene_wiring :: proc() {
+    Test.wait_seconds(0.5);
+    Test.assert_entity_exists("generator exists", "Generator");
+    Test.assert_component_bool("generator starts unsolved", "Generator", "Generator.solved", false);
+    Test.assert_entity_exists("wire marker exists", "WireHintMarker");
+    Test.assert_component_bool("wire starts unsolved", "WireHintMarker", "Wire_Puzzle.solved", false);
+}

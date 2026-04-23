@@ -1,0 +1,433 @@
+import "core:ao"
+
+RADIO_WORLD_TEXTURE_PATH  :: "radio/radio.png";
+RADIO_UI_TEXTURE_PATH     :: "radio/UI/radio.png";
+RADIO_DIAL_TEXTURE_PATH   :: "radio/UI/dial.png";
+RADIO_NEEDLE_TEXTURE_PATH :: "radio/UI/needle.png";
+RADIO_STATIC_SFX_PATH     :: "radio/static.wav";
+RADIO_SUCCESS_SFX_PATH    :: "radio/camera.wav";
+
+RADIO_STATIC_REPLAY_SECONDS :: 1.0;
+RADIO_DIGIT_REPLAY_SECONDS  :: 1.25;
+RADIO_SIGNAL_WINDOW_DEGREES :: 35.0;
+RADIO_LOCK_HOLD_SECONDS     :: 0.75;
+RADIO_SIGNAL_LOCK_THRESHOLD :: 0.5;
+RADIO_UI_LAYER              :: 450;
+RADIO_LAYOUT_RIGHT_CUT      :: 1350.0;
+RADIO_LAYOUT_LEFT_INSET     :: 350.0;
+RADIO_DIAL_OFFSET_X         :: -224.0;
+RADIO_DIAL_OFFSET_Y         :: -150.0;
+RADIO_DIAL_HALF_SIZE        :: 88.0;
+RADIO_DRAG_CURSOR_HALF_SIZE :: 25.0;
+RADIO_DRAG_LINE_THICKNESS   :: 30.0;
+RADIO_SCALE_NEEDLE_MIN_X    :: -0.232;
+RADIO_SCALE_NEEDLE_MAX_X    :: 0.232;
+RADIO_SCALE_NEEDLE_Y_OFFSET :: 0.05;
+RADIO_SCALE_NEEDLE_HEIGHT   :: 0.17;
+
+normalize_angle_360 :: proc(angle: float) -> float {
+    result := angle;
+    while result >= 360.0 {
+        result -= 360.0;
+    }
+    while result < 0.0 {
+        result += 360.0;
+    }
+    return result;
+}
+
+compute_radio_signal_strength :: proc(current_angle: float, target_angle: float) -> float {
+    angle_diff := 180.0 - abs(abs(target_angle - current_angle) - 180.0);
+    if angle_diff >= RADIO_SIGNAL_WINDOW_DEGREES {
+        return 0.0;
+    }
+
+    strength := 1.0 - angle_diff / RADIO_SIGNAL_WINDOW_DEGREES;
+    return strength * strength;
+}
+
+play_radio_sfx :: proc(asset_path: string, position: v2, volume: float, speed: float = 1.0, range_multiplier: float = 0.7) {
+    if volume <= 0.0 {
+        return;
+    }
+
+    asset := get_asset(SFX_Asset, asset_path);
+    if asset == null {
+        return;
+    }
+
+    desc := SFX.default_sfx_desc();
+    desc.local_only = false;
+    desc.volume = volume;
+    desc.speed = speed;
+    desc.range_multiplier = range_multiplier;
+    desc.set_position(position);
+    SFX.play(asset, desc);
+}
+
+get_radio_broadcast_digit :: proc(index: s64) -> s64 {
+    return get_keypad_required_digit(index);
+}
+
+get_radio_digit_sfx_path :: proc(digit: s64) -> string {
+    switch digit {
+        case 0: return "radio/pcmnumbers/zero.wav";
+        case 1: return "radio/pcmnumbers/one.wav";
+        case 2: return "radio/pcmnumbers/two.wav";
+        case 3: return "radio/pcmnumbers/three.wav";
+        case 4: return "radio/pcmnumbers/four.wav";
+        case 5: return "radio/pcmnumbers/five.wav";
+        case 6: return "radio/pcmnumbers/six.wav";
+        case 7: return "radio/pcmnumbers/seven.wav";
+        case 8: return "radio/pcmnumbers/eight.wav";
+        case 9: return "radio/pcmnumbers/nine.wav";
+    }
+    return "";
+}
+
+Radio_Tuning_Effect :: class : Effect_Base {
+    radio: Radio_Puzzle;
+    previous_cursor_angle: float;
+    last_first_press_distance: float;
+
+    effect_start :: method() {
+        player_specific.freeze_player = true;
+        player_specific.disable_movement_inputs = true;
+
+        if !#alive(radio) {
+            return;
+        }
+
+        radio.in_use = true;
+        radio.solve_hold_progress = 0.0;
+        previous_cursor_angle = radio.current_dial_angle;
+        last_first_press_distance = 0.0;
+    }
+
+    effect_end :: method(interrupt: bool) {
+        if !#alive(radio) {
+            return;
+        }
+
+        radio.in_use = false;
+        radio.solve_hold_progress = 0.0;
+    }
+}
+
+Radio_Puzzle :: class : Interactable {
+    solved: bool;
+    in_use: bool;
+    target_angle: float;
+    current_dial_angle: float;
+    solve_hold_progress: float;
+    next_static_play_at: float;
+    next_digit_play_at: float;
+    next_digit_index: s64;
+    last_round_seed_key: u64;
+
+    reroll_round_state :: method(round_seed_key: u64) {
+        seed := entity.id * 1103515245 + round_seed_key * 2654435761;
+        solved = false;
+        in_use = false;
+        target_angle = rng_range_float(ref seed, 0.0, 360.0);
+        current_dial_angle = rng_range_float(ref seed, 0.0, 360.0);
+        solve_hold_progress = 0.0;
+        next_static_play_at = 0.0;
+        next_digit_play_at = get_time() + 0.25;
+        next_digit_index = 0;
+        this.set_text("Tune Radio");
+        last_round_seed_key = round_seed_key;
+    }
+
+    ao_start :: method() {
+        this.set_listener(this);
+        this.set_text("Tune Radio");
+        required_hold_time = 0.0;
+
+        reroll_round_state(entity.id);
+    }
+
+    can_use :: method(player: Player) -> bool {
+        if player == null || !#alive(player.entity) {
+            return false;
+        }
+        if solved || in_use {
+            return false;
+        }
+        if player.entity.get_active_effect() != null {
+            return false;
+        }
+        if !player.is_round_survivor() {
+            return false;
+        }
+
+        gm := get_game_manager();
+        if !#alive(gm) {
+            return false;
+        }
+        return gm.phase == .SURVIVOR_HEAD_START || gm.phase == .ACTIVE;
+    }
+
+    on_interact :: method(player: Player) {
+        if !can_use(player) {
+            return;
+        }
+
+        effect := new(Radio_Tuning_Effect);
+        effect.radio = this;
+        player.entity.set_active_effect(effect);
+    }
+
+    ao_update :: method(dt: float) {
+        gm := get_game_manager();
+        if !#alive(gm) || (gm.phase != .SURVIVOR_HEAD_START && gm.phase != .ACTIVE) {
+            return;
+        }
+
+        round_seed_key := (gm.head_start_ends_at * 1000.0).(u64);
+        if round_seed_key != 0 && round_seed_key != last_round_seed_key {
+            reroll_round_state(round_seed_key);
+        }
+
+        signal_strength := compute_radio_signal_strength(current_dial_angle, target_angle);
+        if solved {
+            signal_strength = 1.0;
+        }
+        now := get_time();
+
+        if now >= next_static_play_at {
+            static_volume := 0.16 * (1.0 - signal_strength);
+            play_radio_sfx(RADIO_STATIC_SFX_PATH, entity.world_position, static_volume, speed=0.8, range_multiplier=0.7);
+            next_static_play_at = now + RADIO_STATIC_REPLAY_SECONDS;
+        }
+
+        if now >= next_digit_play_at {
+            digit := get_radio_broadcast_digit(next_digit_index);
+            digit_volume := 0.75 * signal_strength;
+            if digit_volume > 0.02 {
+                play_radio_sfx(get_radio_digit_sfx_path(digit), entity.world_position, digit_volume, speed=0.95, range_multiplier=0.55);
+            }
+            next_digit_index += 1;
+            next_digit_play_at = now + RADIO_DIGIT_REPLAY_SECONDS;
+        }
+    }
+
+    complete :: method(player: Player) {
+        if solved {
+            return;
+        }
+
+        solved = true;
+        in_use = false;
+        solve_hold_progress = RADIO_LOCK_HOLD_SECONDS;
+        this.set_text("Signal Locked");
+
+        play_radio_sfx(RADIO_SUCCESS_SFX_PATH, entity.world_position, 0.45, range_multiplier=0.5);
+        notify_survivors("% tuned the radio. Use the broadcast code on the keypad.", {player.get_username()});
+    }
+}
+
+reset_all_radio_puzzles_for_round :: proc(round_seed_key: u64) {
+    for radio: component_iterator(Radio_Puzzle) {
+        radio.reroll_round_state(round_seed_key);
+    }
+}
+
+get_radio_tuning_effect :: proc(player: Player) -> Radio_Tuning_Effect {
+    if player == null || !#alive(player.entity) {
+        return null;
+    }
+
+    active_effect := player.entity.get_active_effect();
+    if active_effect == null || active_effect.#type != Radio_Tuning_Effect {
+        return null;
+    }
+    return active_effect.(Radio_Tuning_Effect);
+}
+
+draw_radio_hint_arrows :: proc(player: Player) {
+    if player == null || !player.is_local_or_server() {
+        return;
+    }
+    if !player.is_round_survivor() || player.is_round_dead() {
+        return;
+    }
+    if !is_task_completed(player, TASK_ID_TUNE_RADIO) {
+        return;
+    }
+
+    has_solved_radio := false;
+    for radio: component_iterator(Radio_Puzzle) {
+        if radio.solved {
+            has_solved_radio = true;
+            break;
+        }
+    }
+    if !has_solved_radio {
+        return;
+    }
+
+    if !is_task_completed(player, TASK_ID_RESTART_GENERATOR) {
+        gm := get_game_manager();
+        if !#alive(gm) || !#alive(gm.GeneratorEntity) {
+            return;
+        }
+
+        player.DrawArrowToPosition(gm.GeneratorEntity.world_position, "generator icon_be87ae.png");
+        return;
+    }
+
+    if !is_task_completed(player, TASK_ID_RECONNECT_WIRE) {
+        player.DrawArrowToPosition(get_wire_hint_position(), WIRE_HINT_TEXTURE_PATH);
+    }
+}
+
+draw_radio_tuning_ui :: proc(player: Player, dt: float) {
+    effect := get_radio_tuning_effect(player);
+    if effect == null || !#alive(effect.radio) {
+        return;
+    }
+
+    gm := get_game_manager();
+    if !#alive(gm) || (gm.phase != .SURVIVOR_HEAD_START && gm.phase != .ACTIVE) || !player.is_round_survivor() {
+        effect.remove_effect(false);
+        return;
+    }
+
+    radio := effect.radio;
+
+    UI.push_screen_draw_context();
+    defer UI.pop_draw_context();
+
+    UI.push_layer(RADIO_UI_LAYER);
+    defer UI.pop_layer();
+
+    full_screen := UI.get_screen_rect();
+    safe_screen := UI.get_safe_screen_rect();
+    UI.quad(full_screen, core_globals.white_sprite, v4{0.0, 0.0, 0.0, 0.78});
+
+    radio_tex := get_asset(Texture_Asset, RADIO_UI_TEXTURE_PATH);
+    dial_tex := get_asset(Texture_Asset, RADIO_DIAL_TEXTURE_PATH);
+    needle_tex := get_asset(Texture_Asset, RADIO_NEEDLE_TEXTURE_PATH);
+
+    panel_rect := safe_screen.cut_right(RADIO_LAYOUT_RIGHT_CUT).inset(RADIO_LAYOUT_LEFT_INSET, 0.0, 0.0, 0.0);
+    if radio_tex != null {
+        UI.quad(panel_rect, radio_tex, v4{1.0, 1.0, 1.0, 1.0});
+    } else {
+        UI.quad(panel_rect, core_globals.white_sprite, v4{0.14, 0.12, 0.08, 0.96});
+    }
+
+    close_bs := UI.default_button_settings();
+    close_bs.sprite = core_globals.white_sprite;
+    close_bs.press_scaling = 0.35;
+    close_bs.color = v4{0.1, 0.1, 0.1, 0.82};
+    close_bs.hovered_color = v4{0.2, 0.2, 0.2, 0.95};
+    close_bs.pressed_color = v4{0.06, 0.06, 0.06, 1.0};
+
+    close_ts := UI.default_text_settings();
+    close_ts.size = 24;
+    close_ts.color = v4{1.0, 1.0, 1.0, 1.0};
+    close_ts.halign = .CENTER;
+    close_ts.valign = .CENTER;
+    close_ts.do_outline = true;
+    close_ts.outline_thickness = 2;
+    close_ts.outline_color = v4{0.0, 0.0, 0.0, 1.0};
+
+    close_rect := panel_rect.top_right_rect().offset(-24.0, -24.0).grow(20.0);
+    if UI.button(close_rect, close_bs, close_ts, "X").clicked {
+        effect.remove_effect(false);
+        return;
+    }
+
+    signal_strength := compute_radio_signal_strength(radio.current_dial_angle, radio.target_angle);
+    dial_rect := Rect{panel_rect.center(), panel_rect.center()};
+    dial_rect = dial_rect.offset(RADIO_DIAL_OFFSET_X, RADIO_DIAL_OFFSET_Y);
+    dial_rect = dial_rect.grow(RADIO_DIAL_HALF_SIZE, RADIO_DIAL_HALF_SIZE, RADIO_DIAL_HALF_SIZE, RADIO_DIAL_HALF_SIZE);
+
+    if needle_tex != null {
+        needle_t := radio.current_dial_angle / 360.0;
+        needle_x := lerp(
+            panel_rect.center().x + panel_rect.width() * RADIO_SCALE_NEEDLE_MIN_X,
+            panel_rect.center().x + panel_rect.width() * RADIO_SCALE_NEEDLE_MAX_X,
+            needle_t
+        );
+        needle_center := v2{
+            needle_x,
+            panel_rect.center().y + panel_rect.height() * RADIO_SCALE_NEEDLE_Y_OFFSET
+        };
+        needle_rect := Rect{needle_center, needle_center}.grow(panel_rect.height() * RADIO_SCALE_NEEDLE_HEIGHT * 0.5);
+        needle_rect = needle_rect.fit_aspect(needle_tex.get_aspect(), .KEEP_HEIGHT);
+        UI.quad(needle_rect, needle_tex, v4{1.0, 1.0, 1.0, 1.0});
+    }
+
+    dial_bs := UI.default_button_settings();
+    if dial_tex != null {
+        dial_bs.sprite = dial_tex;
+    } else {
+        dial_bs.sprite = core_globals.white_sprite;
+    }
+    dial_bs.press_scaling = 0.2;
+    dial_bs.color = v4{1.0, 1.0, 1.0, 1.0};
+    dial_bs.hovered_color = v4{0.9, 0.9, 0.9, 1.0};
+    dial_bs.pressed_color = v4{1.0, 1.0, 1.0, 1.0};
+    dial_bs.disabled_color = v4{0.5, 0.5, 0.5, 1.0};
+    dial_bs.background_color_multiplier = v4{1.0, 1.0, 1.0, 1.0};
+
+    dial_interact := UI.begin_button(dial_rect, dial_bs, UI.default_text_settings(), "DIAL"); {
+        defer UI.end_button();
+
+        UI.push_matrix(Matrix4.rotate_about_point(dial_interact.rect.center(), radio.current_dial_angle)); {
+            defer UI.pop_matrix();
+
+            if dial_tex != null {
+                UI.quad(dial_interact.rect.fit_aspect(dial_tex.get_aspect()), dial_tex, v4{1.0, 1.0, 1.0, 1.0});
+            } else {
+                UI.quad(dial_interact.rect, core_globals.white_sprite, v4{0.25, 0.25, 0.3, 1.0});
+            }
+        }
+    }
+
+    if dial_interact.active {
+        delta := dial_interact.mouse_position - dial_rect.center();
+        if length_squared(delta) > 0.0001 {
+            cursor_angle := to_degrees(atan2(delta.y, delta.x)) - 90.0;
+            angle_diff := -1.0 * (180.0 - abs(effect.previous_cursor_angle - cursor_angle - 180.0));
+
+            if dial_interact.just_pressed {
+                angle_diff = 0.0;
+                effect.last_first_press_distance = length(delta);
+            }
+
+            angle_radians := (effect.previous_cursor_angle + 90.0) * PI / 180.0;
+            dial_pointer_pos := dial_rect.center() + v2{
+                effect.last_first_press_distance * cos(angle_radians),
+                effect.last_first_press_distance * sin(angle_radians)
+            };
+            if dial_interact.just_pressed {
+                dial_pointer_pos = dial_interact.mouse_position;
+            }
+
+            effect.previous_cursor_angle = cursor_angle;
+            radio.current_dial_angle = normalize_angle_360(radio.current_dial_angle + angle_diff);
+            signal_strength = compute_radio_signal_strength(radio.current_dial_angle, radio.target_angle);
+
+            dial_pointer_rect := Rect{dial_pointer_pos, dial_pointer_pos}.grow(RADIO_DRAG_CURSOR_HALF_SIZE);
+            mouse_pointer_rect := Rect{dial_interact.mouse_position, dial_interact.mouse_position}.grow(RADIO_DRAG_CURSOR_HALF_SIZE);
+            UI.line(dial_pointer_pos, dial_interact.mouse_position, RADIO_DRAG_LINE_THICKNESS, core_globals.white_sprite, v4{1.0, 1.0, 1.0, 0.8}, true);
+            UI.quad(dial_pointer_rect, core_globals.white_sprite, v4{1.0, 1.0, 1.0, 1.0});
+            UI.quad(mouse_pointer_rect, core_globals.white_sprite, v4{1.0, 1.0, 1.0, 1.0});
+        }
+    }
+
+    if signal_strength >= RADIO_SIGNAL_LOCK_THRESHOLD {
+        radio.solve_hold_progress += dt;
+        radio.solve_hold_progress = min(radio.solve_hold_progress, RADIO_LOCK_HOLD_SECONDS);
+        if !radio.solved && radio.solve_hold_progress >= RADIO_LOCK_HOLD_SECONDS {
+            radio.complete(player);
+            effect.remove_effect(false);
+            return;
+        }
+    } else {
+        radio.solve_hold_progress = 0.0;
+    }
+}

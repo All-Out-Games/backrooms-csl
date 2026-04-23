@@ -1,0 +1,531 @@
+TASK_ID_TUNE_RADIO        :: "tune_radio";
+TASK_ID_RESTART_GENERATOR :: "restart_generator";
+TASK_ID_RECONNECT_WIRE    :: "reconnect_wire";
+
+TASK_PANEL_WIDTH         :: 320.0;
+TASK_LIST_WIDTH          :: 300.0;
+TASK_HEADER_HEIGHT       :: 46.0;
+TASK_ENTRY_HEIGHT        :: 32.0;
+TASK_ENTRY_GAP           :: 2.0;
+TASK_LIST_PADDING        :: 10.0;
+TASK_HEADER_TOP_OFFSET   :: 30.0;
+TASK_CHECKBOX_HALF_SIZE  :: 9.0;
+TASK_DROPDOWN_SLICE_PX   :: 16.0;
+
+TASK_TEX_CHECKBOX         :: "UI/task list/checkbox.png";
+TASK_TEX_CHECKBOX_FILLED  :: "UI/task list/checkbox_filled.png";
+TASK_TEX_HEADER           :: "UI/task list/task_backing.png";
+TASK_TEX_DROPDOWN_ARROW   :: "UI/task list/dropdown_arrow.png";
+TASK_TEX_LIST_BG          :: "UI/task list/task_list_dropdown_area.png";
+TASK_TEX_HELP_BG          :: "UI/task list/task_help_backing.png";
+TASK_TEX_INFO_ICON        :: "UI/info_icon_b.png";
+
+Task_Base :: class {
+    id: string;
+    started: bool;
+    completed: bool;
+}
+
+Task_Help_Entry :: struct {
+    icon_path: string;
+    entry_name: string;
+    description: string;
+}
+
+create_task :: proc(task_id: string) -> Task_Base {
+    task := new(Task_Base);
+    task.id = task_id;
+    return task;
+}
+
+find_task :: proc(player: Player, task_id: string) -> Task_Base {
+    if player == null {
+        return null;
+    }
+    if player.active_tasks.elements.count <= 0 {
+        return null;
+    }
+
+    for i: 0..player.active_tasks.elements.count - 1 {
+        task := player.active_tasks.elements[i];
+        if task == null {
+            continue;
+        }
+        if task.id == task_id {
+            return task;
+        }
+    }
+
+    return null;
+}
+
+is_task_completed :: proc(player: Player, task_id: string) -> bool {
+    task := find_task(player, task_id);
+    if task == null {
+        return false;
+    }
+    return task.completed;
+}
+
+set_task_completed :: proc(player: Player, task_id: string, completed: bool) -> bool {
+    task := find_task(player, task_id);
+    if task == null {
+        return false;
+    }
+
+    task.completed = completed;
+    if completed {
+        task.started = true;
+    }
+    return true;
+}
+
+ensure_task_assigned :: proc(player: Player, task_id: string) -> Task_Base {
+    task := find_task(player, task_id);
+    if task != null {
+        return task;
+    }
+
+    task = create_task(task_id);
+    append(ref player.active_tasks, task);
+    return task;
+}
+
+complete_task_for_survivors :: proc(task_id: string) {
+    for player: component_iterator(Player) {
+        if !player.is_round_survivor() {
+            continue;
+        }
+        set_task_completed(player, task_id, true);
+    }
+}
+
+notify_survivors :: proc(fmt: string, args: [^]any = {}) {
+    for player: component_iterator(Player) {
+        if !player.is_round_survivor() || player.is_round_entity() {
+            continue;
+        }
+        Notifier.notify(player, fmt, args);
+    }
+}
+
+get_task_display_name :: proc(task_id: string) -> string {
+    switch task_id {
+        case TASK_ID_TUNE_RADIO:        return "Tune Radio - (Optional)";
+        case TASK_ID_RESTART_GENERATOR: return "Restart Generator";
+        case TASK_ID_RECONNECT_WIRE:    return "Reconnect Wire";
+    }
+    return "Unknown Task";
+}
+
+get_task_description :: proc(task_id: string) -> string {
+    switch task_id {
+        case TASK_ID_TUNE_RADIO: {
+            return "Tune the radio and use the broadcast code on the keypad.";
+        }
+        case TASK_ID_RESTART_GENERATOR: {
+            return "Restore power to the facility.";
+        }
+        case TASK_ID_RECONNECT_WIRE: {
+            return "Repair a severed circuit running power to the exit door.";
+        }
+    }
+    return "";
+}
+
+clear_player_tasks :: proc(player: Player) {
+    if player == null {
+        return;
+    }
+
+    player.active_tasks = List(Task_Base).{};
+    player.task_list_inited = false;
+    player.task_list_open = true;
+}
+
+assign_default_survivor_tasks :: proc(player: Player) {
+    if player == null {
+        return;
+    }
+
+    clear_player_tasks(player);
+    append(ref player.active_tasks, create_task(TASK_ID_TUNE_RADIO));
+    append(ref player.active_tasks, create_task(TASK_ID_RESTART_GENERATOR));
+    append(ref player.active_tasks, create_task(TASK_ID_RECONNECT_WIRE));
+}
+
+draw_task_nine_slice_panel :: proc(rect: Rect, tex: Texture_Asset, slice_px: float) {
+    if tex == null {
+        return;
+    }
+
+    bs := UI.default_button_settings();
+    bs.sprite = tex;
+    bs.press_scaling = 1.0;
+    bs.color = v4.{1, 1, 1, 1};
+    bs.hovered_color = bs.color;
+    bs.pressed_color = bs.color;
+    bs.disabled_color = bs.color;
+    bs.background_color_multiplier = v4.{1, 1, 1, 1};
+    bs.nine_slice_data.slice = v4.{slice_px, slice_px, slice_px, slice_px};
+    bs.nine_slice_data.slice_scale = 1.0;
+
+    UI.push_disabled(true);
+    defer UI.pop_disabled();
+    UI.begin_button(rect, bs, {}, ""); { defer UI.end_button(); }
+}
+
+draw_task_checkbox :: proc(rect: Rect, completed: bool) {
+    checkbox := get_asset(Texture_Asset, TASK_TEX_CHECKBOX);
+    checkbox_filled := get_asset(Texture_Asset, TASK_TEX_CHECKBOX_FILLED);
+
+    if completed && checkbox_filled != null {
+        UI.quad(rect.fit_aspect(checkbox_filled.get_aspect()), checkbox_filled, v4.{1, 1, 1, 1});
+        return;
+    }
+    if checkbox != null {
+        UI.quad(rect.fit_aspect(checkbox.get_aspect()), checkbox, v4.{1, 1, 1, 1});
+        return;
+    }
+
+    UI.quad(rect, core_globals.white_sprite, v4.{0.12, 0.12, 0.12, 0.95});
+}
+
+draw_task_help_entry_list :: proc(area: Rect, scroll_id: string, entries: ref [..]Task_Help_Entry) {
+    scroll_area := area;
+    scroll_bar_area := scroll_area.cut_right(6).inset(2);
+
+    settings: Scroll_View_Settings;
+    settings.vertical = true;
+    settings.horizontal = false;
+    settings.clip_padding = v4.{6, 6, 6, 6};
+
+    sv := UI.push_scroll_view(scroll_area, scroll_id, settings); {
+        defer UI.pop_scroll_view();
+
+        sc := sv.content_rect;
+        row_h := 55.0;
+        icon_size := 32.0;
+        row_gap := 15.0;
+
+        for i: 0..entries.count - 1 {
+            entry := entries[i];
+
+            UI.push_id("task_help_row_%", {i});
+            defer UI.pop_id();
+
+            row := sc.cut_top(row_h);
+            if i < entries.count - 1 {
+                sc.cut_top(row_gap);
+            }
+
+            row_content := row.inset(6, 8, 6, 8);
+            if entry.icon_path.count > 0 {
+                icon_slot := row_content.cut_left(icon_size * 2.0 + 8.0);
+                icon_tex := get_asset(Texture_Asset, entry.icon_path);
+                if icon_tex != null {
+                    icon_rect := icon_slot.center_rect().grow(icon_size);
+                    UI.quad(icon_rect.fit_aspect(icon_tex.get_aspect()), icon_tex, v4.{1, 1, 1, 1});
+                }
+            }
+
+            name_ts := UI.default_text_settings();
+            name_ts.size = 30;
+            name_ts.color = v4.{1, 1, 1, 1};
+            name_ts.halign = .LEFT;
+            name_ts.valign = .TOP;
+            name_ts.do_outline = true;
+            name_ts.outline_thickness = 2;
+            name_ts.outline_color = v4.{0, 0, 0, 1};
+
+            name_row := row_content.cut_top(26.0);
+            UI.text(name_row, name_ts, entry.entry_name);
+
+            desc_ts := UI.default_text_settings();
+            desc_ts.size = 22;
+            desc_ts.color = v4.{0.8, 0.8, 0.85, 0.85};
+            desc_ts.halign = .LEFT;
+            desc_ts.valign = .TOP;
+            desc_ts.word_wrap = true;
+            desc_ts.do_outline = true;
+            desc_ts.outline_thickness = 2;
+            desc_ts.outline_color = v4.{0, 0, 0, 1};
+            UI.text(row_content, desc_ts, entry.description);
+        }
+    }
+
+    scroll_bar_rect := sv.compute_scroll_bar_rect(scroll_bar_area);
+    UI.quad(scroll_bar_area, core_globals.white_sprite, v4.{0.1, 0.1, 0.1, 0.4});
+    UI.quad(scroll_bar_rect, core_globals.white_sprite, v4.{0.4, 0.4, 0.4, 0.6});
+}
+
+draw_task_help_panel :: proc(player: Player) {
+    if player == null return;
+    if !player.task_help_open return;
+
+    UI.push_layer(500);
+    defer UI.pop_layer();
+
+    full_screen := UI.get_screen_rect();
+    UI.quad(full_screen, core_globals.white_sprite, v4.{0, 0, 0, 0.72});
+
+    panel_w := full_screen.width() * 0.6;
+    panel_h := full_screen.height() * 0.75;
+    help_slice_px := 16.0;
+
+    help_bg := get_asset(Texture_Asset, TASK_TEX_HELP_BG);
+    safe := UI.get_safe_screen_rect();
+    panel_rect := safe.center_rect().grow_unscaled(panel_h * 0.5, panel_w * 0.5, panel_h * 0.5, panel_w * 0.5);
+
+    if help_bg != null {
+        draw_task_nine_slice_panel(panel_rect, help_bg, help_slice_px);
+    } else {
+        UI.quad(panel_rect, core_globals.white_sprite, v4.{0.06, 0.06, 0.08, 0.96});
+    }
+
+    UI.push_id("task_help_close_btn");
+    defer UI.pop_id();
+
+    close_half := 22.0;
+    close_pad := 10.0;
+    close_btn_rect := panel_rect.top_right_rect().offset(-close_pad, -close_pad).grow(close_half);
+
+    close_bs := UI.default_button_settings();
+    close_bs.sprite = core_globals.white_sprite;
+    close_bs.press_scaling = 0.35;
+    close_bs.color = v4.{0.15, 0.15, 0.2, 0.75};
+    close_bs.hovered_color = v4.{0.2, 0.2, 0.28, 0.95};
+    close_bs.pressed_color = v4.{0.1, 0.1, 0.14, 1};
+    close_bs.background_color_multiplier = v4.{1, 1, 1, 1};
+
+    close_ts := UI.default_text_settings();
+    close_ts.size = 26;
+    close_ts.color = v4.{1, 1, 1, 1};
+    close_ts.halign = .CENTER;
+    close_ts.valign = .CENTER;
+    close_ts.do_outline = true;
+    close_ts.outline_thickness = 2;
+    close_ts.outline_color = v4.{0, 0, 0, 1};
+
+    if UI.button(close_btn_rect, close_bs, close_ts, "X").clicked {
+        player.task_help_open = false;
+    }
+
+    content := panel_rect.inset(20, 24, 20, 24);
+    header_strip := content.cut_top(70.0);
+    content.cut_top(12.0);
+
+    title_ts := UI.default_text_settings();
+    title_ts.size = 34;
+    title_ts.color = v4.{1, 1, 1, 1};
+    title_ts.halign = .CENTER;
+    title_ts.valign = .CENTER;
+    title_ts.do_outline = true;
+    title_ts.outline_thickness = 3;
+    title_ts.outline_color = v4.{0, 0, 0, 1};
+    UI.text(header_strip, title_ts, "Tasks");
+
+    entries: [..]Task_Help_Entry;
+    if player.active_tasks.elements.count > 0 {
+        for i: 0..player.active_tasks.elements.count - 1 {
+            task := player.active_tasks.elements[i];
+            if task == null {
+                continue;
+            }
+            append(ref entries, Task_Help_Entry.{"", get_task_display_name(task.id), get_task_description(task.id)});
+        }
+    }
+
+    draw_task_help_entry_list(content, "task_help_scroll", ref entries);
+}
+
+draw_task_list_header :: proc(screen: Rect, player: Player) -> Rect {
+    extra_left := 0.0;
+    chat_offset := 0.0;
+    if player != null && player.is_chat_open() {
+        chat_offset = player.get_chat_rect().height();
+    }
+
+    anchor := screen.top_left_rect().offset(0.0, -TASK_HEADER_TOP_OFFSET).offset_unscaled(0.0, -chat_offset);
+    header_bg := get_asset(Texture_Asset, TASK_TEX_HEADER);
+    header_draw_rect := anchor.grow(0.0, TASK_PANEL_WIDTH, TASK_HEADER_HEIGHT, extra_left);
+    if header_bg != null {
+        header_draw_rect = header_draw_rect.fit_aspect(header_bg.get_aspect(), .KEEP_WIDTH);
+        UI.quad(header_draw_rect, header_bg);
+    }
+    header_rect := header_draw_rect;
+    header_rect.cut_left(extra_left);
+
+    header_content := header_rect.inset(4, 4, 4, 4);
+
+    title_ts := UI.default_text_settings();
+    title_ts.size = 24;
+    title_ts.color = v4.{1, 1, 1, 1};
+    title_ts.halign = .LEFT;
+    title_ts.valign = .CENTER;
+    title_ts.do_outline = true;
+    title_ts.outline_thickness = 2;
+    title_ts.outline_color = v4.{0, 0, 0, 1};
+    title_ts.do_autofit = true;
+    title_ts.autofit_min_size = 14;
+    title_ts.autofit_max_size = 24;
+    UI.text(header_content, title_ts, "Tasks");
+
+    arrow_tex := get_asset(Texture_Asset, TASK_TEX_DROPDOWN_ARROW);
+    if arrow_tex != null {
+        arrow_rect := header_rect.right_rect().center_rect().offset(-22.0, 0.0).grow(10.0);
+        arrow_rect = arrow_rect.fit_aspect(arrow_tex.get_aspect());
+        if player.task_list_open {
+            UI.push_matrix(Matrix4.rotate_about_point(arrow_rect.center(), 180.0));
+            defer UI.pop_matrix();
+        }
+        UI.quad(arrow_rect, arrow_tex, v4.{1, 1, 1, 1});
+    }
+
+    UI.push_id("task_list_dropdown");
+    defer UI.pop_id();
+
+    toggle_bs := UI.default_button_settings();
+    toggle_bs.sprite = core_globals.white_sprite;
+    toggle_bs.press_scaling = 1.0;
+    toggle_bs.color = v4.{0, 0, 0, 0};
+    toggle_bs.hovered_color = v4.{0, 0, 0, 0};
+    toggle_bs.pressed_color = v4.{0, 0, 0, 0};
+    toggle_bs.disabled_color = v4.{0, 0, 0, 0};
+    toggle_bs.background_color_multiplier = v4.{0, 0, 0, 0};
+
+    toggle_result := UI.begin_button(header_rect, toggle_bs, {}, ""); {
+        defer UI.end_button();
+    }
+    if toggle_result.clicked {
+        player.task_list_open = !player.task_list_open;
+    }
+
+    help_btn_half := 16.0;
+    help_btn_rect := header_rect.top_right_rect().offset(0, -5.0).grow(help_btn_half);
+
+    UI.push_id("task_help_btn");
+    defer UI.pop_id();
+
+    help_bs := UI.default_button_settings();
+    help_bs.sprite = get_asset(Texture_Asset, TASK_TEX_INFO_ICON);
+    help_bs.press_scaling = 0.35;
+    help_bs.color = v4.{1, 1, 1, 1};
+    help_bs.hovered_color = v4.{0.85, 0.85, 0.85, 1};
+    help_bs.pressed_color = v4.{0.65, 0.65, 0.65, 1};
+
+    if UI.button(help_btn_rect, help_bs, UI.default_text_settings(), "").clicked {
+        player.task_help_open = !player.task_help_open;
+    }
+
+    return header_rect;
+}
+
+draw_task_entry :: proc(entry_rect: Rect, task: Task_Base) {
+    entry_content := entry_rect.inset(0.0, 6.0, 0.0, 6.0);
+    checkbox_slot := entry_content.cut_left(24.0);
+    checkbox_rect := checkbox_slot.center_rect().grow(TASK_CHECKBOX_HALF_SIZE);
+    draw_task_checkbox(checkbox_rect, task.completed);
+
+    text_rect := entry_content;
+    task_ts := UI.default_text_settings();
+    task_ts.size = 24;
+    if task.completed {
+        task_ts.color = v4.{0.6, 0.6, 0.6, 1};
+    } else {
+        task_ts.color = v4.{1, 1, 1, 1};
+    }
+    task_ts.halign = .LEFT;
+    task_ts.valign = .CENTER;
+    task_ts.do_outline = true;
+    task_ts.outline_thickness = 4;
+    task_ts.outline_color = v4.{0.15, 0.15, 0.215, 1};
+    task_ts.do_autofit = true;
+    task_ts.autofit_min_size = 14;
+    task_ts.autofit_max_size = 24;
+    UI.text(text_rect.inset(0, 4, 0, 4), task_ts, get_task_display_name(task.id));
+}
+
+draw_task_list_ui :: proc(player: Player) {
+    if player == null {
+        return;
+    }
+    if !player.is_local_or_server() {
+        return;
+    }
+
+    gm := get_game_manager();
+    if !#alive(gm) {
+        return;
+    }
+    if gm.phase != .SURVIVOR_HEAD_START && gm.phase != .ACTIVE {
+        return;
+    }
+    if !gm.is_survivor_player(player) || player.is_round_entity() || player.is_round_dead() {
+        return;
+    }
+
+    if !player.task_list_inited {
+        player.task_list_inited = true;
+        player.task_list_open = true;
+    }
+
+    UI.push_screen_draw_context();
+    defer UI.pop_draw_context();
+
+    UI.push_layer(100);
+    defer UI.pop_layer();
+
+    screen := UI.get_safe_screen_rect();
+    header_rect := draw_task_list_header(screen, player);
+    draw_task_help_panel(player);
+    if !player.task_list_open {
+        return;
+    }
+
+    task_count := player.active_tasks.elements.count;
+    if task_count <= 0 {
+        task_count = 1;
+    }
+
+    list_height := TASK_LIST_PADDING * 2.0 + task_count.(float) * TASK_ENTRY_HEIGHT;
+    if player.active_tasks.elements.count > 1 {
+        list_height += (player.active_tasks.elements.count - 1).(float) * TASK_ENTRY_GAP;
+    }
+
+    list_rect := header_rect.bottom_left_rect().grow(0.0, TASK_LIST_WIDTH, list_height, 0.0);
+    list_bg := get_asset(Texture_Asset, TASK_TEX_LIST_BG);
+    if list_bg != null {
+        draw_task_nine_slice_panel(list_rect, list_bg, TASK_DROPDOWN_SLICE_PX);
+    } else {
+        UI.quad(list_rect, core_globals.white_sprite, v4.{0.04, 0.04, 0.06, 0.9});
+    }
+
+    list_content := list_rect.inset(TASK_LIST_PADDING, 10.0, TASK_LIST_PADDING, 10.0);
+    if player.active_tasks.elements.count == 0 {
+        empty_ts := UI.default_text_settings();
+        empty_ts.size = 20;
+        empty_ts.color = v4.{0.85, 0.85, 0.9, 0.8};
+        empty_ts.halign = .LEFT;
+        empty_ts.valign = .CENTER;
+        empty_ts.word_wrap = true;
+        empty_ts.do_outline = true;
+        empty_ts.outline_thickness = 2;
+        empty_ts.outline_color = v4.{0, 0, 0, 1};
+        UI.text(list_content, empty_ts, "No tasks assigned.");
+        return;
+    }
+
+    for i: 0..player.active_tasks.elements.count - 1 {
+        task := player.active_tasks.elements[i];
+        if task == null {
+            continue;
+        }
+
+        entry_rect := list_content.cut_top(TASK_ENTRY_HEIGHT);
+        draw_task_entry(entry_rect, task);
+        if i < player.active_tasks.elements.count - 1 {
+            list_content.cut_top(TASK_ENTRY_GAP);
+        }
+    }
+}

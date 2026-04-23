@@ -1,0 +1,495 @@
+import "core:ao"
+
+KEYPAD_WORLD_TEXTURE_PATH       :: "keypadart/keypad.png";
+KEYPAD_UI_TEXTURE_PATH          :: "keypadart/keypad.png";
+KEYPAD_UI_RED_SCREEN_PATH       :: "keypadart/keypadredscreen.png";
+KEYPAD_KEY_TEXTURE_PATH         :: "keypadart/key.png";
+KEYPAD_KEY_PRESSED_TEXTURE_PATH :: "keypadart/key_pressed.png";
+
+KEYPAD_UI_LAYER            :: 451;
+KEYPAD_LAYOUT_RIGHT_CUT    :: 950.0;
+KEYPAD_LAYOUT_INSET_TOP    :: 350.0;
+KEYPAD_LAYOUT_INSET_RIGHT  :: 300.0;
+KEYPAD_LAYOUT_INSET_BOTTOM :: 150.0;
+KEYPAD_LAYOUT_INSET_LEFT   :: 0.0;
+KEYPAD_INNER_INSET_TOP     :: 140.0;
+KEYPAD_INNER_INSET_RIGHT   :: 165.0;
+KEYPAD_INNER_INSET_BOTTOM  :: 180.0;
+KEYPAD_INNER_INSET_LEFT    :: 165.0;
+KEYPAD_INCORRECT_TEXT      :: "INCORRECT, ENTER CODE";
+KEYPAD_DEFAULT_TEXT        :: "ENTER CODE";
+
+keypad_round_code: s64;
+keypad_round_seed_key: u64;
+
+is_banned_keypad_code :: proc(code: s64) -> bool {
+    if code == 1234 || code == 4321 || code == 6969 {
+        return true;
+    }
+
+    thousands := code / 1000;
+    hundreds := (code / 100) % 10;
+    tens := (code / 10) % 10;
+    ones := code % 10;
+
+    if thousands == hundreds && hundreds == tens && tens == ones {
+        return true;
+    }
+
+    if hundreds == 6 && tens == 6 && ones == 6 {
+        return true;
+    }
+
+    if thousands == 6 && hundreds == 6 && tens == 6 {
+        return true;
+    }
+
+    return false;
+}
+
+get_keypad_round_seed_key :: proc() -> u64 {
+    gm := get_game_manager();
+    if !#alive(gm) {
+        return 0;
+    }
+    if gm.phase != .SURVIVOR_HEAD_START && gm.phase != .ACTIVE {
+        return 0;
+    }
+    return (gm.head_start_ends_at * 1000.0).(u64);
+}
+
+roll_keypad_round_code :: proc(round_seed_key: u64) -> s64 {
+    seed := round_seed_key * 1664525 + 1013904223;
+    code := rng_range_int(ref seed, 1000, 9999);
+    attempts: s64 = 0;
+    while is_banned_keypad_code(code) && attempts < 1000 {
+        code = rng_range_int(ref seed, 1000, 9999);
+        attempts += 1;
+    }
+    return code;
+}
+
+ensure_keypad_round_code :: proc() {
+    round_seed_key := get_keypad_round_seed_key();
+    if round_seed_key == 0 {
+        return;
+    }
+    if round_seed_key != keypad_round_seed_key {
+        keypad_round_seed_key = round_seed_key;
+        keypad_round_code = roll_keypad_round_code(round_seed_key);
+    }
+}
+
+get_keypad_required_code :: proc() -> s64 {
+    ensure_keypad_round_code();
+    if keypad_round_code < 1000 {
+        keypad_round_code = 5142;
+    }
+    return keypad_round_code;
+}
+
+get_keypad_required_digit :: proc(index: s64) -> s64 {
+    code := get_keypad_required_code();
+    switch index % 4 {
+        case 0: return code / 1000;
+        case 1: return (code / 100) % 10;
+        case 2: return (code / 10) % 10;
+        case 3: return code % 10;
+    }
+    return 0;
+}
+
+get_keypad_number_texture :: proc(value: s64) -> Texture_Asset {
+    switch value {
+        case 0:  return get_asset(Texture_Asset, "keypadart/numbers/0.png");
+        case 1:  return get_asset(Texture_Asset, "keypadart/numbers/1.png");
+        case 2:  return get_asset(Texture_Asset, "keypadart/numbers/2.png");
+        case 3:  return get_asset(Texture_Asset, "keypadart/numbers/3.png");
+        case 4:  return get_asset(Texture_Asset, "keypadart/numbers/4.png");
+        case 5:  return get_asset(Texture_Asset, "keypadart/numbers/5.png");
+        case 6:  return get_asset(Texture_Asset, "keypadart/numbers/6.png");
+        case 7:  return get_asset(Texture_Asset, "keypadart/numbers/7.png");
+        case 8:  return get_asset(Texture_Asset, "keypadart/numbers/8.png");
+        case 9:  return get_asset(Texture_Asset, "keypadart/numbers/9.png");
+        case 10: return get_asset(Texture_Asset, "keypadart/numbers/X.png");
+    }
+    return null;
+}
+
+is_keypad_solved :: proc() -> bool {
+    for keypad: component_iterator(Keypad_Puzzle) {
+        return keypad.solved;
+    }
+    return false;
+}
+
+reset_all_keypad_puzzles_for_round :: proc(round_seed_key: u64) {
+    for keypad: component_iterator(Keypad_Puzzle) {
+        keypad.reset_for_round(round_seed_key);
+    }
+}
+
+get_keypad_hint_position :: proc() -> v2 {
+    for keypad: component_iterator(Keypad_Puzzle) {
+        return keypad.entity.world_position;
+    }
+    return v2{1.7, 19.9};
+}
+
+Keypad_Entry_Effect :: class : Effect_Base {
+    keypad: Keypad_Puzzle;
+    display_text: string;
+    entered_code: s64;
+    incorrect_display_active: bool;
+    close_requested: bool;
+
+    clear_display :: method() {
+        entered_code = 0;
+        incorrect_display_active = false;
+        display_text = KEYPAD_DEFAULT_TEXT;
+    }
+
+    incorrect_code_submitted :: method() {
+        entered_code = 0;
+        incorrect_display_active = true;
+        display_text = KEYPAD_INCORRECT_TEXT;
+    }
+
+    press_digit :: method(acting_player: Player, digit: s64) {
+        entered_code = entered_code * 10 + digit;
+        incorrect_display_active = false;
+
+        if entered_code >= 1000 {
+            if entered_code == get_keypad_required_code() {
+                keypad.complete(acting_player);
+                close_requested = true;
+                return;
+            }
+            incorrect_code_submitted();
+            return;
+        }
+
+        display_text = format_string("%", {entered_code});
+    }
+
+    effect_start :: method() {
+        player_specific.freeze_player = true;
+        player_specific.disable_movement_inputs = true;
+
+        if !#alive(keypad) {
+            return;
+        }
+
+        keypad.in_use = true;
+        close_requested = false;
+        clear_display();
+    }
+
+    effect_end :: method(interrupt: bool) {
+        if !#alive(keypad) {
+            return;
+        }
+
+        keypad.in_use = false;
+    }
+}
+
+Keypad_Puzzle :: class : Interactable {
+    solved: bool;
+    in_use: bool;
+    last_round_seed_key: u64;
+
+    reset_for_round :: method(round_seed_key: u64) {
+        ensure_keypad_round_code();
+        solved = false;
+        in_use = false;
+        this.set_text("Enter Code");
+        last_round_seed_key = round_seed_key;
+    }
+
+    ao_start :: method() {
+        this.set_listener(this);
+        this.set_text("Enter Code");
+        priority = 10;
+
+        reset_for_round(entity.id);
+    }
+
+    can_use :: method(player: Player) -> bool {
+        if player == null || !#alive(player.entity) {
+            return false;
+        }
+        if solved || in_use {
+            return false;
+        }
+        if player.entity.get_active_effect() != null {
+            return false;
+        }
+        if !player.is_round_survivor() {
+            return false;
+        }
+
+        gm := get_game_manager();
+        if !#alive(gm) {
+            return false;
+        }
+        return gm.phase == .SURVIVOR_HEAD_START || gm.phase == .ACTIVE;
+    }
+
+    on_interact :: method(player: Player) {
+        if !can_use(player) {
+            return;
+        }
+
+        effect := new(Keypad_Entry_Effect);
+        effect.keypad = this;
+        player.entity.set_active_effect(effect);
+    }
+
+    complete :: method(player: Player) {
+        if solved {
+            return;
+        }
+
+        solved = true;
+        in_use = false;
+        this.set_text("Unlocked");
+
+        complete_task_for_survivors(TASK_ID_TUNE_RADIO);
+        refresh_emergency_systems_online_state();
+        notify_survivors("% entered the keypad code.", {player.get_username()});
+    }
+
+    ao_update :: method(dt: float) {
+        gm := get_game_manager();
+        if !#alive(gm) || (gm.phase != .SURVIVOR_HEAD_START && gm.phase != .ACTIVE) {
+            return;
+        }
+
+        round_seed_key := get_keypad_round_seed_key();
+        if round_seed_key != 0 && round_seed_key != last_round_seed_key {
+            reset_for_round(round_seed_key);
+        }
+    }
+}
+
+Exit_Door :: class : Interactable {
+    ao_start :: method() {
+        this.set_listener(this);
+        this.set_text("Power Offline");
+        required_hold_time = 0.0;
+        priority = 0;
+    }
+
+    can_use :: method(player: Player) -> bool {
+        if player == null || !#alive(player.entity) {
+            return false;
+        }
+        if player.entity.get_active_effect() != null {
+            return false;
+        }
+        if !player.is_round_survivor() {
+            return false;
+        }
+
+        gm := get_game_manager();
+        if !#alive(gm) {
+            return false;
+        }
+        if gm.phase != .ACTIVE {
+            return false;
+        }
+        return gm.emergency_systems_online && SURVIVOR_ESCAPE_ENABLED;
+    }
+
+    on_interact :: method(player: Player) {
+        gm := get_game_manager();
+        if !#alive(gm) {
+            return;
+        }
+        gm.survivor_team_escape(player);
+    }
+
+    ao_update :: method(dt: float) {
+        gm := get_game_manager();
+        if #alive(gm) && gm.emergency_systems_online && SURVIVOR_ESCAPE_ENABLED {
+            this.set_text("Escape");
+        } else if #alive(gm) && gm.emergency_systems_online {
+            this.set_text("Escape Disabled");
+        } else {
+            this.set_text("Power Offline");
+        }
+    }
+}
+
+get_keypad_entry_effect :: proc(player: Player) -> Keypad_Entry_Effect {
+    if player == null || !#alive(player.entity) {
+        return null;
+    }
+
+    active_effect := player.entity.get_active_effect();
+    if active_effect == null || active_effect.#type != Keypad_Entry_Effect {
+        return null;
+    }
+    return active_effect.(Keypad_Entry_Effect);
+}
+
+draw_keypad_ui :: proc(player: Player) {
+    effect := get_keypad_entry_effect(player);
+    if effect == null || !#alive(effect.keypad) {
+        return;
+    }
+
+    gm := get_game_manager();
+    if !#alive(gm) || (gm.phase != .SURVIVOR_HEAD_START && gm.phase != .ACTIVE) || !player.is_round_survivor() {
+        effect.remove_effect(false);
+        return;
+    }
+
+    keypad_bg_tex := get_asset(Texture_Asset, KEYPAD_UI_TEXTURE_PATH);
+    keypad_red_tex := get_asset(Texture_Asset, KEYPAD_UI_RED_SCREEN_PATH);
+    key_tex := get_asset(Texture_Asset, KEYPAD_KEY_TEXTURE_PATH);
+    key_pressed_tex := get_asset(Texture_Asset, KEYPAD_KEY_PRESSED_TEXTURE_PATH);
+
+    UI.push_screen_draw_context();
+    defer UI.pop_draw_context();
+
+    UI.push_layer(KEYPAD_UI_LAYER);
+    defer UI.pop_layer();
+
+    safe_rect := UI.get_safe_screen_rect().center_rect();
+    keypad_bg_rect := safe_rect.grow(270, 500, 540, 500);
+
+    //keypad_rect := safe_rect.cut_right(KEYPAD_LAYOUT_RIGHT_CUT).inset(KEYPAD_LAYOUT_INSET_TOP, KEYPAD_LAYOUT_INSET_RIGHT, KEYPAD_LAYOUT_INSET_BOTTOM, KEYPAD_LAYOUT_INSET_LEFT);
+    
+    keypad_rect := keypad_bg_rect.inset(135, 275, 375, 275);//keypad_rect.inset(KEYPAD_INNER_INSET_TOP, KEYPAD_INNER_INSET_RIGHT, KEYPAD_INNER_INSET_BOTTOM, KEYPAD_INNER_INSET_LEFT);
+
+    if keypad_bg_tex != null {
+        UI.quad(keypad_bg_rect, keypad_bg_tex, v4{1.0, 1.0, 1.0, 1.0});
+    } else {
+        UI.quad(keypad_bg_rect, core_globals.white_sprite, v4{0.35, 0.22, 0.18, 1.0});
+    }
+
+    if effect.incorrect_display_active && keypad_red_tex != null {
+        UI.quad(keypad_bg_rect, keypad_red_tex, v4{1.0, 1.0, 1.0, 1.0});
+    }
+
+    display_area := keypad_bg_rect;
+    display_rect := display_area.cut_top(150.0).inset(5.0, 30.0, 5.0, 30.0);
+    display_ts := UI.default_text_settings();
+    display_ts.size = 22;
+    display_ts.color = v4{1.0, 1.0, 0.8, 1.0};
+    display_ts.halign = .CENTER;
+    display_ts.valign = .CENTER;
+    display_ts.do_outline = true;
+    display_ts.outline_thickness = 2;
+    display_ts.outline_color = v4{0.0, 0.0, 0.0, 1.0};
+    UI.text(display_rect, display_ts, effect.display_text);
+
+    close_bs := UI.default_button_settings();
+    close_bs.sprite = core_globals.white_sprite;
+    close_bs.press_scaling = 0.35;
+    close_bs.color = v4{0.1, 0.1, 0.1, 0.82};
+    close_bs.hovered_color = v4{0.2, 0.2, 0.2, 0.95};
+    close_bs.pressed_color = v4{0.06, 0.06, 0.06, 1.0};
+
+    close_ts := UI.default_text_settings();
+    close_ts.size = 24;
+    close_ts.color = v4{1.0, 1.0, 1.0, 1.0};
+    close_ts.halign = .CENTER;
+    close_ts.valign = .CENTER;
+    close_ts.do_outline = true;
+    close_ts.outline_thickness = 2;
+    close_ts.outline_color = v4{0.0, 0.0, 0.0, 1.0};
+
+    close_rect := keypad_bg_rect.top_right_rect().offset(-20.0, -20.0).grow(20.0);
+    if UI.button(close_rect, close_bs, close_ts, "X").clicked {
+        effect.remove_effect(false);
+        return;
+    }
+
+    keypad_button_bs := UI.default_button_settings();
+    keypad_button_bs.sprite = key_tex;
+    keypad_button_bs.sprite_pressed = key_pressed_tex;
+    keypad_button_bs.press_scaling = 0.0;
+    keypad_button_bs.color = v4{1.0, 1.0, 1.0, 1.0};
+    keypad_button_bs.hovered_color = v4{0.9, 0.9, 0.9, 1.0};
+    keypad_button_bs.pressed_color = v4{1.0, 1.0, 1.0, 1.0};
+    keypad_button_bs.disabled_color = v4{0.5, 0.5, 0.5, 1.0};
+    keypad_button_bs.background_color_multiplier = v4{1.0, 1.0, 1.0, 1.0};
+
+    button_text_ts := UI.default_text_settings();
+    button_text_ts.size = 16;
+    button_text_ts.color = v4{1.0, 1.0, 1.0, 1.0};
+    button_text_ts.halign = .CENTER;
+    button_text_ts.valign = .CENTER;
+
+    key_pad_width := keypad_rect.width();
+    key_pad_height := keypad_rect.height();
+
+    for yy: 0..3 {
+        button_row_rect := keypad_rect.cut_top_unscaled(key_pad_height / 4.0).inset(0.0, 10.0, 0.0, 0.0);
+        for xx: 0..2 {
+            button_rect := button_row_rect.cut_left_unscaled(key_pad_width / 3.0).inset(-15.0, -1.0, -15.0, -1.0);
+
+            key_value := xx + yy * 3 + 1;
+            key_label := format_string("%", {key_value});
+            if yy > 2 {
+                if xx == 0 {
+                    key_label = "X";
+                    key_value = 10;
+                }
+                if xx == 1 {
+                    key_label = "0";
+                    key_value = 0;
+                }
+                if xx == 2 {
+                    key_label = "V";
+                    key_value = -1;
+                }
+            }
+
+            if key_value == -1 {
+                continue;
+            }
+
+            UI.push_id("keypad_%_%", {yy, xx});
+            defer UI.pop_id();
+
+            button_rect_pressed := button_rect.inset(30.0, 35.0, 30.0, 35.0);
+            button_rect_idle := button_rect_pressed.offset(0.0, 8.0);
+            keypad_button := UI.begin_button(button_rect, keypad_button_bs, button_text_ts, ""); {
+                defer UI.end_button();
+
+                icon_tex := get_keypad_number_texture(key_value);
+                if keypad_button.pressed {
+                    UI.text(button_rect_pressed, button_text_ts, key_label);
+                    if icon_tex != null {
+                        UI.quad(button_rect_pressed.fit_aspect(icon_tex.get_aspect()), icon_tex, v4{1.0, 1.0, 1.0, 1.0});
+                    }
+                } else {
+                    if icon_tex != null {
+                        UI.quad(button_rect_idle.fit_aspect(icon_tex.get_aspect()), icon_tex, v4{1.0, 1.0, 1.0, 1.0});
+                    }
+                }
+            }
+
+            if keypad_button.clicked {
+                if yy < 3 {
+                    effect.press_digit(player, key_value);
+                } else {
+                    if xx == 0 {
+                        effect.clear_display();
+                    }
+                    if xx == 1 {
+                        effect.press_digit(player, 0);
+                    }
+                }
+            }
+        }
+    }
+
+    if effect.close_requested {
+        effect.remove_effect(false);
+    }
+}

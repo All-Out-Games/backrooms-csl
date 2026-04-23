@@ -1,0 +1,397 @@
+import "core:ao"
+
+GENERATOR_RESET_PROMPT         :: "Restart Generator";
+GENERATOR_COMPLETE_PROMPT      :: "Generator Online";
+
+GENERATOR_UI_BG_TEXTURE_PATH      :: "sprites/tasks/generator/wall_bg.png";
+GENERATOR_UI_GENERATOR_TEXTURE    :: "sprites/tasks/generator/generator.png";
+GENERATOR_UI_HANDLE_TEXTURE       :: "sprites/tasks/generator/Handle.png";
+GENERATOR_UI_CLOCK_TEXTURE        :: "sprites/tasks/generator/Clock.png";
+GENERATOR_UI_POINTER_TEXTURE      :: "sprites/tasks/generator/Ponteiro.png";
+
+GENERATOR_UI_LAYER                :: 452;
+GENERATOR_PULLS_REQUIRED          :: 3;
+GENERATOR_SUCCESS_DISPLAY_TIME    :: 0.6;
+GENERATOR_WINDOW_HALF_HEIGHT      :: 500.0;
+GENERATOR_WINDOW_HALF_WIDTH       :: 500.0;
+GENERATOR_CLOSE_BUTTON_HALF_SIZE  :: 20.0;
+GENERATOR_PULL_MIN_X_FRACTION     :: 0.16;
+GENERATOR_PULL_SUCCESS_FRACTION   :: 0.18;
+
+Generator_Restart_Effect :: class : Effect_Base {
+    generator: Generator;
+    layout_initialized: bool;
+    grab_offset: v2;
+    handle_pos: v2;
+    handle_home: v2;
+    anchor_pos: v2;
+    pulls_done: s64;
+    success_time: float;
+
+    reset_ui_state :: method() {
+        layout_initialized = false;
+        grab_offset = v2{0.0, 0.0};
+        handle_pos = v2{0.0, 0.0};
+        handle_home = v2{0.0, 0.0};
+        anchor_pos = v2{0.0, 0.0};
+        pulls_done = 0;
+        success_time = 0.0;
+    }
+
+    effect_start :: method() {
+        player_specific.freeze_player = true;
+        player_specific.disable_movement_inputs = true;
+
+        reset_ui_state();
+        if !#alive(generator) {
+            return;
+        }
+
+        generator.in_use = true;
+    }
+
+    effect_end :: method(interrupt: bool) {
+        if !#alive(generator) {
+            return;
+        }
+
+        generator.in_use = false;
+    }
+}
+
+Generator :: class : Interactable {
+    solved: bool;
+    in_use: bool;
+    last_round_seed_key: u64;
+
+    reset_for_round :: method(round_seed_key: u64) {
+        solved = false;
+        in_use = false;
+        this.set_text(GENERATOR_RESET_PROMPT);
+        last_round_seed_key = round_seed_key;
+    }
+
+    ao_start :: method() {
+        this.set_listener(this);
+        this.set_text(GENERATOR_RESET_PROMPT);
+        required_hold_time = 0.0;
+        priority = 10;
+
+        solved = false;
+        in_use = false;
+        last_round_seed_key = 0;
+    }
+
+    can_use :: method(player: Player) -> bool {
+        if player == null || !#alive(player.entity) {
+            return false;
+        }
+        if solved || in_use {
+            return false;
+        }
+        if player.entity.get_active_effect() != null {
+            return false;
+        }
+        if !player.is_round_survivor() {
+            return false;
+        }
+
+        gm := get_game_manager();
+        if !#alive(gm) {
+            return false;
+        }
+        return gm.phase == .SURVIVOR_HEAD_START || gm.phase == .ACTIVE;
+    }
+
+    on_interact :: method(player: Player) {
+        if !can_use(player) {
+            return;
+        }
+
+        effect := new(Generator_Restart_Effect);
+        effect.generator = this;
+        player.entity.set_active_effect(effect);
+    }
+
+    complete :: method(player: Player) {
+        if solved {
+            return;
+        }
+
+        solved = true;
+        in_use = false;
+        this.set_text(GENERATOR_COMPLETE_PROMPT);
+
+        complete_task_for_survivors(TASK_ID_RESTART_GENERATOR);
+        refresh_emergency_systems_online_state();
+        notify_survivors("% restarted the generator.", {player.get_username()});
+    }
+
+    ao_update :: method(dt: float) {
+        gm := get_game_manager();
+        if !#alive(gm) || (gm.phase != .SURVIVOR_HEAD_START && gm.phase != .ACTIVE) {
+            return;
+        }
+
+        round_seed_key := (gm.head_start_ends_at * 1000.0).(u64);
+        if round_seed_key != 0 && round_seed_key != last_round_seed_key {
+            reset_for_round(round_seed_key);
+        }
+    }
+}
+
+get_generator_restart_effect :: proc(player: Player) -> Generator_Restart_Effect {
+    if player == null || !#alive(player.entity) {
+        return null;
+    }
+
+    active_effect := player.entity.get_active_effect();
+    if active_effect == null || active_effect.#type != Generator_Restart_Effect {
+        return null;
+    }
+    return active_effect.(Generator_Restart_Effect);
+}
+
+init_generator_restart_layout :: proc(effect: Generator_Restart_Effect, window_rect: Rect) {
+    if effect.layout_initialized {
+        return;
+    }
+
+    effect.layout_initialized = true;
+
+    w := window_rect.width();
+    h := window_rect.height();
+
+    effect.anchor_pos = v2{window_rect.min.x + w * 0.63, window_rect.min.y + h * 0.62};
+    effect.handle_home = v2{effect.anchor_pos.x - w * 0.12, effect.anchor_pos.y + h * 0.02};
+    effect.handle_pos = effect.handle_home;
+}
+
+draw_generator_close_button :: proc(panel_rect: Rect) -> bool {
+    close_bs := UI.default_button_settings();
+    close_bs.sprite = core_globals.white_sprite;
+    close_bs.press_scaling = 0.35;
+    close_bs.color = v4{0.1, 0.1, 0.1, 0.82};
+    close_bs.hovered_color = v4{0.2, 0.2, 0.2, 0.95};
+    close_bs.pressed_color = v4{0.06, 0.06, 0.06, 1.0};
+
+    close_ts := UI.default_text_settings();
+    close_ts.size = 24;
+    close_ts.color = v4{1.0, 1.0, 1.0, 1.0};
+    close_ts.halign = .CENTER;
+    close_ts.valign = .CENTER;
+    close_ts.do_outline = true;
+    close_ts.outline_thickness = 2;
+    close_ts.outline_color = v4{0.0, 0.0, 0.0, 1.0};
+
+    close_rect := panel_rect.top_right_rect().offset(-24.0, -24.0).grow(
+        GENERATOR_CLOSE_BUTTON_HALF_SIZE,
+        GENERATOR_CLOSE_BUTTON_HALF_SIZE,
+        GENERATOR_CLOSE_BUTTON_HALF_SIZE,
+        GENERATOR_CLOSE_BUTTON_HALF_SIZE
+    );
+    return UI.button(close_rect, close_bs, close_ts, "X").clicked;
+}
+
+draw_generator_restart_panel :: proc(player: Player, effect: Generator_Restart_Effect, success_state: bool) -> bool {
+    bg_tex := get_asset(Texture_Asset, GENERATOR_UI_BG_TEXTURE_PATH);
+    generator_tex := get_asset(Texture_Asset, GENERATOR_UI_GENERATOR_TEXTURE);
+    handle_tex := get_asset(Texture_Asset, GENERATOR_UI_HANDLE_TEXTURE);
+    clock_tex := get_asset(Texture_Asset, GENERATOR_UI_CLOCK_TEXTURE);
+    pointer_tex := get_asset(Texture_Asset, GENERATOR_UI_POINTER_TEXTURE);
+
+    full_screen := UI.get_screen_rect();
+    safe_screen := UI.get_safe_screen_rect();
+    UI.quad(full_screen, core_globals.white_sprite, v4{0.0, 0.0, 0.0, 0.82});
+
+    panel_rect := safe_screen.center_rect().grow(
+        GENERATOR_WINDOW_HALF_HEIGHT,
+        GENERATOR_WINDOW_HALF_WIDTH,
+        GENERATOR_WINDOW_HALF_HEIGHT,
+        GENERATOR_WINDOW_HALF_WIDTH
+    );
+    if bg_tex != null {
+        panel_rect = panel_rect.fit_aspect(bg_tex.get_aspect(), .KEEP_HEIGHT);
+        UI.quad(panel_rect, bg_tex, v4{1.0, 1.0, 1.0, 1.0});
+    } else {
+        UI.quad(panel_rect, core_globals.white_sprite, v4{0.18, 0.14, 0.1, 0.98});
+    }
+
+    if draw_generator_close_button(panel_rect) {
+        return true;
+    }
+
+    init_generator_restart_layout(effect, panel_rect);
+
+    w := panel_rect.width();
+    h := panel_rect.height();
+
+    gen_center := v2{panel_rect.min.x + w * 0.80, panel_rect.min.y + h * 0.50};
+    gen_rect := Rect{gen_center, gen_center}.grow(h * 0.24, h * 0.18, h * 0.24, h * 0.18);
+    if generator_tex != null {
+        gen_rect = gen_rect.fit_aspect(generator_tex.get_aspect(), .KEEP_HEIGHT);
+        UI.quad(gen_rect, generator_tex, v4{1.0, 1.0, 1.0, 1.0});
+    } else {
+        UI.quad(gen_rect, core_globals.white_sprite, v4{0.35, 0.35, 0.35, 1.0});
+    }
+
+    clock_center := v2{gen_rect.min.x + gen_rect.width() * 0.58, gen_rect.min.y + gen_rect.height() * 0.6};
+    clock_rect := Rect{clock_center, clock_center}.grow(h * 0.12, h * 0.12, h * 0.12, h * 0.12);
+    if clock_tex != null {
+        clock_rect = clock_rect.fit_aspect(clock_tex.get_aspect(), .KEEP_HEIGHT);
+        UI.quad(clock_rect, clock_tex, v4{1.0, 1.0, 1.0, 1.0});
+    } else {
+        UI.quad(clock_rect, core_globals.white_sprite, v4{0.08, 0.08, 0.08, 1.0});
+    }
+
+    progress01 := clamp(effect.pulls_done.(float) / GENERATOR_PULLS_REQUIRED.(float), 0.0, 1.0);
+    range_max := lerp(0.0, 45.0, progress01);
+    freq := 9.0 + effect.pulls_done.(float) * 4.0;
+    sweep01 := 0.5 + 0.5 * sin(get_time() * freq);
+    needle_angle := sweep01 * range_max;
+    extra_amp := 0.0;
+    if effect.pulls_done >= 1 {
+        extra_amp = 10.0 + effect.pulls_done.(float) * 6.0;
+    }
+    needle_angle += sin(get_time() * (freq * 2.35)) * extra_amp;
+    needle_angle = clamp(needle_angle, 0.0, 45.0);
+
+    needle_pivot := clock_center - v2{0.0, clock_rect.height() * 0.4};
+    needle_rect := Rect{needle_pivot, needle_pivot}.grow(clock_rect.height() * 0.25, h * 0.015, 0.0, h * 0.12);
+    if pointer_tex != null {
+        needle_rect = needle_rect.fit_aspect(pointer_tex.get_aspect(), .KEEP_HEIGHT);
+        UI.push_matrix(Matrix4.rotate_about_point(needle_pivot, -needle_angle));
+        defer UI.pop_matrix();
+        UI.quad(needle_rect, pointer_tex, v4{1.0, 1.0, 1.0, 1.0});
+    }
+
+    handle_h := h * 0.26;
+    handle_rect := Rect{effect.handle_pos, effect.handle_pos}.grow(handle_h * 0.5, handle_h * 0.16, handle_h * 0.5, handle_h * 0.16);
+    if handle_tex != null {
+        handle_rect = handle_rect.fit_aspect(handle_tex.get_aspect(), .KEEP_HEIGHT);
+    }
+
+    UI.line(
+        effect.anchor_pos,
+        effect.handle_pos + v2{handle_rect.width() * 0.32, 0.0},
+        h * 0.025,
+        core_globals.white_sprite,
+        v4{0.12, 0.12, 0.12, 1.0},
+        true
+    );
+
+    UI.push_id("restart_generator_handle");
+    defer UI.pop_id();
+
+    handle_bs := UI.default_button_settings();
+    handle_bs.sprite = core_globals.white_sprite;
+    handle_bs.press_scaling = 0.0;
+    handle_bs.color = v4{0.0, 0.0, 0.0, 0.0};
+    handle_bs.hovered_color = v4{0.0, 0.0, 0.0, 0.0};
+    handle_bs.pressed_color = v4{0.0, 0.0, 0.0, 0.0};
+    handle_bs.disabled_color = v4{0.0, 0.0, 0.0, 0.0};
+    handle_bs.background_color_multiplier = v4{0.0, 0.0, 0.0, 0.0};
+
+    interact := UI.button(handle_rect, handle_bs, UI.default_text_settings(), "");
+    if interact.clicked {
+        effect.grab_offset = effect.handle_pos - interact.mouse_position;
+    }
+
+    if interact.active && !success_state {
+        desired := interact.mouse_position + effect.grab_offset;
+        desired.y = effect.handle_home.y;
+        min_x := panel_rect.min.x + w * GENERATOR_PULL_MIN_X_FRACTION;
+        max_x := effect.handle_home.x;
+        desired.x = clamp(desired.x, min_x, max_x);
+        effect.handle_pos = desired;
+    }
+
+    if handle_tex != null {
+        UI.quad(handle_rect, handle_tex, v4{1.0, 1.0, 1.0, 1.0});
+    } else {
+        UI.quad(handle_rect, core_globals.white_sprite, v4{0.75, 0.2, 0.2, 1.0});
+    }
+
+    if interact.released && !success_state {
+        pulled_x := panel_rect.min.x + w * GENERATOR_PULL_SUCCESS_FRACTION;
+        success_pull := effect.handle_pos.x <= pulled_x;
+        effect.handle_pos = effect.handle_home;
+
+        if success_pull {
+            effect.pulls_done += 1;
+            if effect.pulls_done >= GENERATOR_PULLS_REQUIRED {
+                effect.success_time = get_time();
+            }
+        }
+    }
+
+    title_rect := panel_rect.top_left_rect().offset(180.0, -80.0).grow(40.0, 260.0, 40.0, 0.0);
+    title_ts := UI.default_text_settings();
+    title_ts.size = 32;
+    title_ts.color = v4{1.0, 1.0, 1.0, 1.0};
+    title_ts.halign = .LEFT;
+    title_ts.valign = .CENTER;
+    title_ts.do_outline = true;
+    title_ts.outline_thickness = 3;
+    title_ts.outline_color = v4{0.0, 0.0, 0.0, 1.0};
+    UI.text(title_rect, title_ts, "Restart Generator");
+
+    info_rect := panel_rect.bottom_center_rect().offset(0.0, 80.0).grow(30.0, 280.0, 30.0, 280.0);
+    info_ts := UI.default_text_settings();
+    info_ts.size = 42;
+    info_ts.color = v4{1.0, 1.0, 1.0, 1.0};
+    info_ts.halign = .CENTER;
+    info_ts.valign = .CENTER;
+    info_ts.do_outline = true;
+    info_ts.outline_thickness = 3;
+    info_ts.outline_color = v4{0.0, 0.0, 0.0, 1.0};
+
+    status_text := "GENERATOR STARTED!";
+    if !success_state {
+        status_text = format_string("PULL %/%", {effect.pulls_done, GENERATOR_PULLS_REQUIRED});
+    }
+    UI.text(info_rect, info_ts, status_text);
+
+    return false;
+}
+
+draw_generator_restart_ui :: proc(player: Player, dt: float) {
+    effect := get_generator_restart_effect(player);
+    if effect == null || !#alive(effect.generator) {
+        return;
+    }
+
+    gm := get_game_manager();
+    if !#alive(gm) || (gm.phase != .SURVIVOR_HEAD_START && gm.phase != .ACTIVE) || !player.is_round_survivor() {
+        effect.remove_effect(false);
+        return;
+    }
+
+    if effect.generator.solved {
+        effect.remove_effect(false);
+        return;
+    }
+
+    UI.push_screen_draw_context();
+    defer UI.pop_draw_context();
+
+    UI.push_layer(GENERATOR_UI_LAYER);
+    defer UI.pop_layer();
+
+    if effect.success_time > 0.0 {
+        if get_time() - effect.success_time >= GENERATOR_SUCCESS_DISPLAY_TIME {
+            effect.generator.complete(player);
+            effect.remove_effect(false);
+            return;
+        }
+
+        if draw_generator_restart_panel(player, effect, true) {
+            effect.remove_effect(false);
+        }
+        return;
+    }
+
+    if draw_generator_restart_panel(player, effect, false) {
+        effect.remove_effect(false);
+    }
+}

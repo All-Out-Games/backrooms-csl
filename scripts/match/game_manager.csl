@@ -21,6 +21,8 @@ FREEZE_ENTITY_HEAD_START :: "game_manager_entity_head_start";
 ENTITY_HEARING_VISUAL_BUFFER :: 2.0;
 ENTITY_HEARING_VISUAL_MAX_ALPHA :: 245.0 / 255.0;
 ENTITY_HEARING_VISUAL_FADE_SPEED :: 6.0;
+SURVIVOR_SPAWN_RADIUS :: 1.5;
+SURVIVOR_ESCAPE_ENABLED :: false;
 
 Match_Phase :: enum {
     LOBBY;
@@ -242,10 +244,7 @@ draw_entity_scream_arrow_ui :: proc(player: Player) {
             continue;
         }
 
-        options := Tutorial_Arrow.default_options();
-        options.far = true;
-        options.near = false;
-        Tutorial_Arrow.draw(player, other.entity.world_position, options);
+        player.DrawArrowToPosition(other.entity.world_position, "UI/schleem_hologram.png");
     }
 }
 
@@ -412,6 +411,12 @@ Game_Manager :: class : Component {
     result: Match_Result;
     navmesh_to_lock_to: Navmesh @ao_serialize;
     hearing_radius_entity: Entity @ao_serialize;
+    GeneratorEntity: Entity @ao_serialize;
+    RadioPuzzle: Entity @ao_serialize;
+    SurvivorSpawn: Entity @ao_serialize;
+    GeneratorSpawns: [..]Entity @ao_serialize;
+    RadioSpawns: [..]Entity @ao_serialize;
+    EntitySpawns: [..]Entity @ao_serialize;
 
     // Authoritative identity for the Entity this round (synced with gameplay state).
     entity_user_id: string;
@@ -618,6 +623,110 @@ Game_Manager :: class : Component {
         player.agent.set_navmesh_to_lock_to(navmesh_to_lock_to);
     }
 
+    teleport_survivors_to_spawn :: method(players: []Player) {
+        if !#alive(SurvivorSpawn) {
+            return;
+        }
+
+        spawn_origin := SurvivorSpawn.world_position;
+        for i: 0..players.count - 1 {
+            player := players[i];
+            if player.get_user_id() == entity_user_id {
+                continue;
+            }
+            if !#alive(player.entity) {
+                continue;
+            }
+
+            angle := rng_range_float(ref match_rng, 0.0, 2.0 * PI);
+            radius_t := rng_range_float(ref match_rng, 0.0, 1.0);
+            radius := SURVIVOR_SPAWN_RADIUS * sqrt(radius_t);
+            offset := v2{cos(angle) * radius, sin(angle) * radius};
+            player.entity.set_local_position(spawn_origin + offset);
+            player.entity.mark_teleported();
+        }
+    }
+
+    pick_random_spawn :: method(spawns: []Entity, excluded_spawn: Entity = null) -> Entity {
+        valid_spawns: [..]Entity;
+        for i: 0..spawns.count - 1 {
+            spawn := spawns[i];
+            if #alive(spawn) && spawn != excluded_spawn {
+                valid_spawns.append(spawn);
+            }
+        }
+        if valid_spawns.count == 0 {
+            valid_spawns.clear();
+            return null;
+        }
+
+        spawn_idx := rng_range_int(ref match_rng, 0, valid_spawns.count - 1);
+        chosen_spawn := valid_spawns[spawn_idx];
+        valid_spawns.clear();
+        return chosen_spawn;
+    }
+
+    teleport_entity_to_random_spawn :: method() -> Entity {
+        if entity_player, ok := find_player_by_user_id(entity_user_id); ok {
+            if !#alive(entity_player.entity) {
+                return null;
+            }
+
+            spawn := pick_random_spawn(EntitySpawns);
+            if !#alive(spawn) {
+                return null;
+            }
+
+            entity_player.entity.set_local_position(spawn.world_position);
+            entity_player.entity.mark_teleported();
+            return spawn;
+        }
+
+        return null;
+    }
+
+    teleport_generator_to_random_spawn :: method(excluded_spawn: Entity = null) -> bool {
+        if !#alive(GeneratorEntity) {
+            return false;
+        }
+
+        spawn := pick_random_spawn(GeneratorSpawns, excluded_spawn);
+        if !#alive(spawn) {
+            return false;
+        }
+
+        GeneratorEntity.set_local_position(spawn.world_position);
+        GeneratorEntity.mark_teleported();
+        return true;
+    }
+
+    teleport_radio_puzzle_to_random_spawn :: method() {
+        if !#alive(RadioPuzzle) {
+            return;
+        }
+
+        spawn := pick_random_spawn(RadioSpawns);
+        if !#alive(spawn) {
+            return;
+        }
+
+        RadioPuzzle.set_local_position(spawn.world_position);
+        RadioPuzzle.mark_teleported();
+    }
+
+    reset_generator_for_round :: method(round_seed_key: u64) {
+        if !#alive(GeneratorEntity) {
+            return;
+        }
+
+        generator := GeneratorEntity.get_component(Generator);
+        if generator == null {
+            return;
+        }
+
+        generator.reset_for_round(round_seed_key);
+    }
+
     update_lobby_autostart :: method() {
         n := count_players();
 
@@ -679,18 +788,45 @@ Game_Manager :: class : Component {
         chosen := pool[pick_idx];
         entity_user_id = chosen.get_user_id();
         survivors_alive = players.count - 1;
-        players.clear();
-        pool.clear();
+        entity_spawn := teleport_entity_to_random_spawn();
+        if !#alive(entity_spawn) {
+            entity_user_id = "";
+            survivors_alive = 0;
+            players.clear();
+            pool.clear();
+            return false;
+        }
 
         emergency_systems_online = false;
         result = .NONE;
+
+        now := get_time();
+        next_head_start_ends_at := now + HEAD_START_SECONDS;
+        if !teleport_generator_to_random_spawn(entity_spawn) {
+            entity_user_id = "";
+            survivors_alive = 0;
+            players.clear();
+            pool.clear();
+            return false;
+        }
+        teleport_radio_puzzle_to_random_spawn();
+        reset_generator_for_round((next_head_start_ends_at * 1000.0).(u64));
+
+        teleport_survivors_to_spawn(players);
+        for i: 0..players.count - 1 {
+            clear_player_tasks(players[i]);
+            if players[i].get_user_id() != entity_user_id {
+                assign_default_survivor_tasks(players[i]);
+            }
+        }
+        players.clear();
+        pool.clear();
 
         if entity_player, ok := find_player_by_user_id(entity_user_id); ok {
             entity_player.add_freeze_reason(FREEZE_ENTITY_HEAD_START);
         }
 
-        now := get_time();
-        head_start_ends_at = now + HEAD_START_SECONDS;
+        head_start_ends_at = next_head_start_ends_at;
         hunt_started_at = 0.0;
         // Match clock starts after head start (full hunt window).
         match_ends_at = head_start_ends_at + MATCH_MAX_SECONDS;
@@ -740,6 +876,9 @@ Game_Manager :: class : Component {
 
     // Survivor reaches exit with all emergency systems online — team win.
     survivor_team_escape :: method(exiting_player: Player) {
+        if !SURVIVOR_ESCAPE_ENABLED {
+            return;
+        }
         if phase != .ACTIVE {
             return;
         }
@@ -755,6 +894,13 @@ Game_Manager :: class : Component {
     // --- Internal ---
 
     reset_to_lobby :: method() {
+        for player: component_iterator(Player) {
+            clear_player_tasks(player);
+        }
+        reset_all_keypad_puzzles_for_round(0);
+        reset_all_radio_puzzles_for_round(0);
+        reset_generator_for_round(0);
+        reset_all_wire_puzzles_for_round(0);
         phase = .LOBBY;
         result = .NONE;
         entity_user_id = "";
