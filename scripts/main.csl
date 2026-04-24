@@ -363,6 +363,7 @@ Player :: class : Player_Base {
         entity_local_view_fade_out_seconds = ENTITY_VIEW_PLAYER_REVEAL_FADE_OUT_SECONDS;
         entity_scream_reveal_remaining = 0.0;
         entity_scream_arrow_remaining = 0.0;
+        entity_name_hidden = false;
         silhouette_material_applied = false;
         current_stamina = SPRINT_STAMINA_MAX;
         max_stamina = SPRINT_STAMINA_MAX;
@@ -401,6 +402,11 @@ Player :: class : Player_Base {
             base_movement_speed = agent.movement_speed;
         }
         lock_player_to_game_navmesh(this);
+
+        gm := get_game_manager();
+        if #alive(gm) {
+            gm.handle_round_player_joined(this);
+        }
     }
 
     is_round_entity :: method() -> bool {
@@ -454,7 +460,7 @@ Player :: class : Player_Base {
         }
     }
 
-    mark_round_dead :: method() {
+    mark_round_dead :: method(count_as_survivor_elimination: bool = true) {
         if round_dead {
             return;
         }
@@ -489,7 +495,7 @@ Player :: class : Player_Base {
         }
 
         gm := get_game_manager();
-        if was_round_survivor && #alive(gm) {
+        if count_as_survivor_elimination && was_round_survivor && #alive(gm) {
             gm.register_survivor_eliminated();
         }
     }
@@ -721,6 +727,11 @@ Player :: class : Player_Base {
     }
 
     ao_end :: method() {
+        gm := get_game_manager();
+        if #alive(gm) {
+            gm.handle_round_player_left(this);
+        }
+
         this.remove_name_invisibility_reason(ENTITY_NAME_INVISIBILITY_REASON);
         entity_name_hidden = false;
 
@@ -782,7 +793,6 @@ Player :: class : Player_Base {
         // Called on the client after applying a state sync from the server
         // Use this to override things for the local player only like name colors or lighting for example
         this.sync_entity_local_silhouette_material();
-        this.sync_entity_name_visibility();
     }
 
     get_local_light_radii :: proc(using this: Player) -> v2 {
@@ -947,6 +957,11 @@ Player :: class : Player_Base {
 
     sync_entity_name_visibility :: proc(using this: Player) {
         should_hide_name := this.is_round_entity() || is_hidden_by_round_dead_local_view(this) || (is_hidden_by_entity_local_view(this) && !is_revealed_in_entity_local_view(this));
+        if should_hide_name == entity_name_hidden {
+            return;
+        }
+
+        entity_name_hidden = should_hide_name;
         if should_hide_name {
             this.add_name_invisibility_reason(ENTITY_NAME_INVISIBILITY_REASON);
             return;

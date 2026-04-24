@@ -8,6 +8,8 @@
 FOOTSTEP_STRIDE_DISTANCE :: 2.16; // ~1/3 spawn rate vs 0.72
 FOOTSTEP_FIRST_SPRINT_DISTANCE :: 0.1;
 FOOTSTEP_MIN_SPEED :: 0.12;
+FOOTSTEP_MAX_DT :: 0.25;
+FOOTSTEP_MAX_ECHOES_PER_TICK :: 3;
 ENTITY_HEARING_RADIUS :: 5.0;
 ENTITY_HEARING_MIN_SPEED :: 0.02;
 
@@ -171,6 +173,13 @@ is_player_within_entity_hearing_radius :: proc(player: Player) -> bool {
 tick_footstep_echo_for_player :: proc(player: Player, dt: float) {
     if player == null return;
     if player.entity == null return;
+
+    gm := get_game_manager();
+    if !#alive(gm) || (gm.phase != .SURVIVOR_HEAD_START && gm.phase != .ACTIVE) {
+        player.footstep_stride_accum = 0.0;
+        return;
+    }
+
     if player.is_round_dead() {
         player.footstep_stride_accum = 0.0;
         return;
@@ -206,11 +215,24 @@ tick_footstep_echo_for_player :: proc(player: Player, dt: float) {
         player.footstep_stride_accum = FOOTSTEP_STRIDE_DISTANCE - FOOTSTEP_FIRST_SPRINT_DISTANCE;
     }
 
-    player.footstep_stride_accum += speed * dt;
-    while player.footstep_stride_accum >= FOOTSTEP_STRIDE_DISTANCE {
+    clamped_dt := min(dt, FOOTSTEP_MAX_DT);
+    player.footstep_stride_accum += speed * clamped_dt;
+
+    max_stride_accum := FOOTSTEP_STRIDE_DISTANCE * FOOTSTEP_MAX_ECHOES_PER_TICK.(float);
+    if player.footstep_stride_accum > max_stride_accum {
+        player.footstep_stride_accum = max_stride_accum;
+    }
+
+    emitted: s64 = 0;
+    while player.footstep_stride_accum >= FOOTSTEP_STRIDE_DISTANCE && emitted < FOOTSTEP_MAX_ECHOES_PER_TICK {
         player.footstep_stride_accum -= FOOTSTEP_STRIDE_DISTANCE;
 
         ping_player_with_footstep_echo(player, ENTITY_VIEW_PLAYER_REVEAL_FADE_OUT_SECONDS);
         player.footstep_left_next = !player.footstep_left_next;
+        emitted += 1;
+    }
+
+    if emitted >= FOOTSTEP_MAX_ECHOES_PER_TICK && player.footstep_stride_accum >= FOOTSTEP_STRIDE_DISTANCE {
+        player.footstep_stride_accum = FOOTSTEP_STRIDE_DISTANCE - FOOTSTEP_FIRST_SPRINT_DISTANCE;
     }
 }
