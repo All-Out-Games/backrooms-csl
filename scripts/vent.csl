@@ -1,0 +1,35 @@
+Vent :: class : Interactable {
+    destination_entity: Entity @ao_serialize;
+
+    ao_start :: method() {
+        this.set_listener(this);
+        this.set_text("Vent");
+        required_hold_time = 0.0;
+        priority = 10;
+    }
+
+    can_use :: method(player: Player) -> bool {
+        if player == null || !#alive(player.entity) {
+            return false;
+        }
+        if !#alive(destination_entity) || destination_entity == entity {
+            return false;
+        }
+        if player.entity.get_active_effect() != null {
+            return false;
+        }
+        if !player.is_round_survivor() {
+            return false;
+        }
+        return true;
+    }
+
+    on_interact :: method(player: Player) {
+        if !can_use(player) {
+            return;
+        }
+
+        player.entity.set_local_position(destination_entity.world_position);
+        player.entity.mark_teleported();
+    }
+}

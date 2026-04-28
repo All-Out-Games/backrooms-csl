@@ -1,4 +1,4 @@
-WEAPON_COUNT :: 27;
+WEAPON_COUNT :: 28;
 AMMO_TYPE_COUNT :: 10;
 
 g_weapon_item_defs: [WEAPON_COUNT]Item_Definition;
@@ -13,33 +13,34 @@ g_weapon_equip_sound: SFX_Asset;
 // Map Weapon_Type enum to array index (0-based, skipping NONE)
 weapon_type_to_index :: proc(wt: Weapon_Type) -> s64 {
     switch wt {
-        case .ASSAULT_RIFLE:          return 0;
-        case .SUBMACHINE_GUN:         return 1;
-        case .GATLING_GUN:            return 2;
-        case .BEAM_MACHINE:           return 3;
-        case .WATER_GUN:              return 4;
-        case .MISSILE_BARRAGE:        return 5;
-        case .BLUNDERBUSS:            return 6;
-        case .RAY_GUN:                return 7;
-        case .PLASMA_BURST:           return 8;
-        case .MEGA_BLADE:             return 9;
-        case .BUZZSHOT:               return 10;
-        case .EXPLOSIVE_SHOTGUN:      return 11;
-        case .SUNNY_SIDE_SHOTTY:      return 12;
-        case .GOLDEN_ROCKET_LAUNCHER: return 13;
-        case .WATER_BALLOON_RPG:      return 14;
-        case .POISON_GRENADE:         return 15;
-        case .BOOMWHEEL:              return 16;
-        case .FIRE_RAY:               return 17;
-        case .ICE_LAUNCHER:           return 18;
-        case .GLACIATOR:              return 19;
-        case .SOLAR_SIPHONER:         return 20;
-        case .OCTO_SIPHONER:          return 21;
-        case .VOID_SPLITTER:          return 22;
-        case .AKIMBO_PISTOLS:         return 23;
-        case .WIND_BLASTER:           return 24;
-        case .STORMS_EYE:             return 25;
-        case .HYDRO_CANNON:           return 26;
+        case .SHIP_CANNON:            return 0;
+        case .ASSAULT_RIFLE:          return 1;
+        case .SUBMACHINE_GUN:         return 2;
+        case .GATLING_GUN:            return 3;
+        case .BEAM_MACHINE:           return 4;
+        case .WATER_GUN:              return 5;
+        case .MISSILE_BARRAGE:        return 6;
+        case .BLUNDERBUSS:            return 7;
+        case .RAY_GUN:                return 8;
+        case .PLASMA_BURST:           return 9;
+        case .MEGA_BLADE:             return 10;
+        case .BUZZSHOT:               return 11;
+        case .EXPLOSIVE_SHOTGUN:      return 12;
+        case .SUNNY_SIDE_SHOTTY:      return 13;
+        case .GOLDEN_ROCKET_LAUNCHER: return 14;
+        case .WATER_BALLOON_RPG:      return 15;
+        case .POISON_GRENADE:         return 16;
+        case .BOOMWHEEL:              return 17;
+        case .FIRE_RAY:               return 18;
+        case .ICE_LAUNCHER:           return 19;
+        case .GLACIATOR:              return 20;
+        case .SOLAR_SIPHONER:         return 21;
+        case .OCTO_SIPHONER:          return 22;
+        case .VOID_SPLITTER:          return 23;
+        case .AKIMBO_PISTOLS:         return 24;
+        case .WIND_BLASTER:           return 25;
+        case .STORMS_EYE:             return 26;
+        case .HYDRO_CANNON:           return 27;
     }
     return -1;
 }
@@ -140,6 +141,7 @@ init_weapon_items :: proc() {
     }
 
     // Register all weapons
+    // Ship Cannon is runtime-only and intentionally has no inventory item.
     register_weapon(.ASSAULT_RIFLE);
     register_weapon(.SUBMACHINE_GUN);
     register_weapon(.GATLING_GUN);
@@ -186,6 +188,9 @@ register_weapon :: proc(wt: Weapon_Type) {
 }
 
 load_fire_sounds :: proc() {
+    // Ship Cannon (1 sound)
+    load_single_sound(.SHIP_CANNON, "reusable_weapons/sounds/reusable-weapons/waterballoon_rpg_shoot.wav");
+
     // Assault Rifle (7 sounds)
     load_sound_range(.ASSAULT_RIFLE, "reusable_weapons/sounds/reusable-weapons/assault_rifle_0", 7);
 
@@ -295,33 +300,34 @@ get_weapon_type_for_item :: proc(item_def: Item_Definition) -> Weapon_Type {
         if g_weapon_item_defs[i] != null && g_weapon_item_defs[i] == item_def {
             // Map index back to weapon type
             switch i {
-                case 0:  return .ASSAULT_RIFLE;
-                case 1:  return .SUBMACHINE_GUN;
-                case 2:  return .GATLING_GUN;
-                case 3:  return .BEAM_MACHINE;
-                case 4:  return .WATER_GUN;
-                case 5:  return .MISSILE_BARRAGE;
-                case 6:  return .BLUNDERBUSS;
-                case 7:  return .RAY_GUN;
-                case 8:  return .PLASMA_BURST;
-                case 9:  return .MEGA_BLADE;
-                case 10: return .BUZZSHOT;
-                case 11: return .EXPLOSIVE_SHOTGUN;
-                case 12: return .SUNNY_SIDE_SHOTTY;
-                case 13: return .GOLDEN_ROCKET_LAUNCHER;
-                case 14: return .WATER_BALLOON_RPG;
-                case 15: return .POISON_GRENADE;
-                case 16: return .BOOMWHEEL;
-                case 17: return .FIRE_RAY;
-                case 18: return .ICE_LAUNCHER;
-                case 19: return .GLACIATOR;
-                case 20: return .SOLAR_SIPHONER;
-                case 21: return .OCTO_SIPHONER;
-                case 22: return .VOID_SPLITTER;
-                case 23: return .AKIMBO_PISTOLS;
-                case 24: return .WIND_BLASTER;
-                case 25: return .STORMS_EYE;
-                case 26: return .HYDRO_CANNON;
+                case 0:  return .SHIP_CANNON;
+                case 1:  return .ASSAULT_RIFLE;
+                case 2:  return .SUBMACHINE_GUN;
+                case 3:  return .GATLING_GUN;
+                case 4:  return .BEAM_MACHINE;
+                case 5:  return .WATER_GUN;
+                case 6:  return .MISSILE_BARRAGE;
+                case 7:  return .BLUNDERBUSS;
+                case 8:  return .RAY_GUN;
+                case 9:  return .PLASMA_BURST;
+                case 10: return .MEGA_BLADE;
+                case 11: return .BUZZSHOT;
+                case 12: return .EXPLOSIVE_SHOTGUN;
+                case 13: return .SUNNY_SIDE_SHOTTY;
+                case 14: return .GOLDEN_ROCKET_LAUNCHER;
+                case 15: return .WATER_BALLOON_RPG;
+                case 16: return .POISON_GRENADE;
+                case 17: return .BOOMWHEEL;
+                case 18: return .FIRE_RAY;
+                case 19: return .ICE_LAUNCHER;
+                case 20: return .GLACIATOR;
+                case 21: return .SOLAR_SIPHONER;
+                case 22: return .OCTO_SIPHONER;
+                case 23: return .VOID_SPLITTER;
+                case 24: return .AKIMBO_PISTOLS;
+                case 25: return .WIND_BLASTER;
+                case 26: return .STORMS_EYE;
+                case 27: return .HYDRO_CANNON;
             }
         }
         i += 1;
@@ -339,30 +345,4 @@ get_ammo_def_for_weapon :: proc(wt: Weapon_Type) -> Item_Definition {
     config := get_weapon_config(wt);
     if config.ammo_type_index < 0 return null;
     return g_ammo_item_defs[config.ammo_type_index];
-}
-
-get_registered_item_def_by_id :: proc(item_id: string) -> Item_Definition {
-    if item_id.count == 0 {
-        return null;
-    }
-
-    i := 0;
-    while i < WEAPON_COUNT {
-        item_def := g_weapon_item_defs[i];
-        if item_def != null && item_def.get_id() == item_id {
-            return item_def;
-        }
-        i += 1;
-    }
-
-    i = 0;
-    while i < AMMO_TYPE_COUNT {
-        item_def := g_ammo_item_defs[i];
-        if item_def != null && item_def.get_id() == item_id {
-            return item_def;
-        }
-        i += 1;
-    }
-
-    return null;
 }

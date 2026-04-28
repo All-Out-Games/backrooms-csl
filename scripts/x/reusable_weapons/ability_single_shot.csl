@@ -1,0 +1,75 @@
+Single_Shot_Ability :: class : Ability_Base {
+    on_init :: proc(ability: Ability_Base) {
+        ability.name = "Fire";
+        ability.icon = get_asset(Texture_Asset, "reusable_weapons/sprites/reusable-weapons/weapon_icons/weapon_icons_250x250/blunderbuss.png");
+        ability.disable_keybind = true;
+        ability.is_aimed_ability = true;
+    }
+
+    can_use :: proc(ability: Ability_Base) -> bool {
+        p := ability.player.(Player);
+        if p.equipped_weapon_type == .NONE return false;
+        config := get_weapon_config(p.equipped_weapon_type);
+        if config.fire_mode != .SINGLE_SHOT return false;
+        return weapon_has_ammo(p, p.equipped_weapon_type);
+    }
+
+    on_update :: proc(ability: Ability_Base, params: ref Ability_Update_Params) {
+        p := ability.player.(Player);
+        wt := p.equipped_weapon_type;
+        config := get_weapon_config(wt);
+
+        ability.icon = get_asset(Texture_Asset, config.weapon_icon_path);
+
+        aiming := Ability_Utilities.update_aiming_ability(p, ref params);
+
+        if aiming.aim {
+            p.last_aim_direction = aiming.aim_direction;
+            p.set_mouse_ik_enabled(true);
+            p.set_aim_target(p.entity.world_position + aiming.aim_direction * 5.0);
+            draw_thin_aiming_line(p.entity.world_position, aiming.aim_direction, 1.0);
+        } else {
+            p.set_mouse_ik_enabled(false);
+        }
+
+        should_fire := false;
+        if p.device_kind == .PC {
+            should_fire = aiming.activate;
+        } else {
+            should_fire = aiming.aim;
+        }
+
+        if should_fire && params.can_use && ability.current_cooldown <= 0 {
+            weapon_shoot(p, wt);
+
+            switch wt {
+                case .MEGA_BLADE: {
+                    spawn_bouncing_projectile(p, aiming.aim_direction, wt);
+                }
+                case .BUZZSHOT: {
+                    spawn_bouncing_projectile(p, aiming.aim_direction, wt);
+                }
+                case .PLASMA_BURST: {
+                    spawn_growing_projectile(p, aiming.aim_direction, wt);
+                }
+                case .BLUNDERBUSS: {
+                    spawn_blunderbuss_projectile(p, aiming.aim_direction, wt);
+                }
+                case .RAY_GUN: {
+                    spawn_ray_gun_projectile(p, aiming.aim_direction, wt);
+                }
+                case .HYDRO_CANNON: {
+                    spawn_hydrocannon_projectile(p, aiming.aim_direction, wt);
+                }
+            }
+
+            ability.current_cooldown = config.fire_rate;
+        }
+
+        if should_fire && !weapon_has_ammo(p, wt) {
+            if p.is_local() {
+                Notifier.notify("Out of ammo!");
+            }
+        }
+    }
+}

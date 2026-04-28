@@ -1,0 +1,7 @@
+Ship :: class : Component {
+    PlayerOwner: Player;
+    PilotSpot: Entity @ao_serialize;
+    Spine: Spine_Animator @ao_serialize;
+    Cannon: Entity @ao_serialize;
+    CannonBarrel: Entity @ao_serialize;
+}

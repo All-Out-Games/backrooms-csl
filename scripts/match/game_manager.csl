@@ -417,6 +417,10 @@ Game_Manager :: class : Component {
     GeneratorSpawns: [..]Entity @ao_serialize;
     RadioSpawns: [..]Entity @ao_serialize;
     EntitySpawns: [..]Entity @ao_serialize;
+    ItemSpawns: [..]Entity @ao_serialize;
+    RoundItemIds: [..]string @ao_serialize;
+    MinRoundItemSpawnCount: s64 @ao_serialize;
+    MaxRoundItemSpawnCount: s64 @ao_serialize;
 
     // Authoritative identity for the Entity this round (synced with gameplay state).
     entity_user_id: string;
@@ -435,6 +439,7 @@ Game_Manager :: class : Component {
 
     match_rng: u64;
     hearing_radius_sprite: Sprite_Renderer;
+    spawned_round_items: [..]Dropped_Item;
 
     ao_start :: method() {
         if #alive(game_manager_singleton) {
@@ -460,11 +465,13 @@ Game_Manager :: class : Component {
         match_rng = rng_root_seed();
         cache_hearing_radius_sprite();
         sync_entity_hearing_radius_visual(0.0);
+        clear_spawned_round_items();
 
         reset_all_entity_opt_ins();
     }
 
     ao_end :: method() {
+        clear_spawned_round_items();
         sync_entity_hearing_radius_visual(0.0);
         if game_manager_singleton == this {
             game_manager_singleton = null;
@@ -678,6 +685,133 @@ Game_Manager :: class : Component {
         return chosen_spawn;
     }
 
+    clear_spawned_round_items :: method() {
+        i: s64 = 0;
+        while i < spawned_round_items.count {
+            dropped_item := spawned_round_items[i];
+            if #alive(dropped_item) {
+                // Only destroy the world-owned item instance. Claimed pickups may have
+                // already moved their item into a player's inventory.
+                if #alive(dropped_item.item) && dropped_item.item.inventory == null {
+                    Items.destroy_item_instance(dropped_item.item);
+                }
+                if #alive(dropped_item.entity) {
+                    dropped_item.entity.destroy();
+                }
+            }
+            i += 1;
+        }
+        spawned_round_items.clear();
+    }
+
+    clear_all_player_round_inventories :: method() {
+        for player: component_iterator(Player) {
+            player.clear_round_inventory();
+        }
+    }
+
+    spawn_round_item_at_reference :: method(spawn_ref: Entity) -> Dropped_Item {
+        if !#alive(spawn_ref) || RoundItemIds.count == 0 {
+            return null;
+        }
+
+        init_weapon_items();
+
+        valid_item_defs: [..]Item_Definition;
+        for i: 0..RoundItemIds.count - 1 {
+            item_id := RoundItemIds[i];
+            if item_id.count == 0 {
+                continue;
+            }
+
+            item_def := get_registered_item_def_by_id(item_id);
+            if item_def != null {
+                valid_item_defs.append(item_def);
+            }
+        }
+
+        if valid_item_defs.count == 0 {
+            valid_item_defs.clear();
+            return null;
+        }
+
+        item_def_idx := rng_range_int(ref match_rng, 0, valid_item_defs.count - 1);
+        chosen_item_def := valid_item_defs[item_def_idx];
+        valid_item_defs.clear();
+
+        item := Items.create_item_instance(chosen_item_def, 1);
+        dropped_item := Dropped_Item.spawn(spawn_ref.world_position, item);
+        dropped_item.do_spawn_animation(ref match_rng, navmesh_to_lock_to);
+        return dropped_item;
+    }
+
+    spawn_round_items_for_match :: method() {
+        clear_spawned_round_items();
+
+        if ItemSpawns.count == 0 || RoundItemIds.count == 0 {
+            return;
+        }
+
+        min_count := MinRoundItemSpawnCount;
+        if min_count < 0 {
+            min_count = 0;
+        }
+
+        max_count := MaxRoundItemSpawnCount;
+        if max_count <= min_count + 1 {
+            return;
+        }
+
+        valid_spawns: [..]Entity;
+        for i: 0..ItemSpawns.count - 1 {
+            spawn_ref := ItemSpawns[i];
+            if !#alive(spawn_ref) {
+                continue;
+            }
+
+            already_added := false;
+            for j: 0..valid_spawns.count - 1 {
+                if valid_spawns[j] == spawn_ref {
+                    already_added = true;
+                    break;
+                }
+            }
+
+            if !already_added {
+                valid_spawns.append(spawn_ref);
+            }
+        }
+
+        if valid_spawns.count == 0 {
+            valid_spawns.clear();
+            return;
+        }
+
+        target_min := min_count + 1;
+        target_max := max_count - 1;
+        if target_max > valid_spawns.count {
+            target_max = valid_spawns.count;
+        }
+        if target_min > target_max {
+            valid_spawns.clear();
+            return;
+        }
+
+        target_count := rng_range_int(ref match_rng, target_min, target_max);
+        while spawned_round_items.count < target_count && valid_spawns.count > 0 {
+            spawn_idx := rng_range_int(ref match_rng, 0, valid_spawns.count - 1);
+            spawn_ref := valid_spawns[spawn_idx];
+            valid_spawns.unordered_remove_by_index(spawn_idx);
+
+            dropped_item := spawn_round_item_at_reference(spawn_ref);
+            if #alive(dropped_item) {
+                spawned_round_items.append(dropped_item);
+            }
+        }
+
+        valid_spawns.clear();
+    }
+
     teleport_entity_to_random_spawn :: method() -> Entity {
         if entity_player, ok := find_player_by_user_id(entity_user_id); ok {
             if !#alive(entity_player.entity) {
@@ -831,6 +965,7 @@ Game_Manager :: class : Component {
                 assign_default_survivor_tasks(players[i]);
             }
         }
+        spawn_round_items_for_match();
         players.clear();
         pool.clear();
 
@@ -939,6 +1074,8 @@ Game_Manager :: class : Component {
         for player: component_iterator(Player) {
             clear_player_tasks(player);
         }
+        clear_all_player_round_inventories();
+        clear_spawned_round_items();
         reset_all_keypad_puzzles_for_round(0);
         reset_all_radio_puzzles_for_round(0);
         reset_generator_for_round(0);
@@ -967,6 +1104,8 @@ Game_Manager :: class : Component {
         if phase == .ENDED {
             return;
         }
+        clear_all_player_round_inventories();
+        clear_spawned_round_items();
         phase = .ENDED;
         result = .SURVIVORS_WIN;
         entity_win_delay_ends_at = 0.0;
@@ -980,6 +1119,8 @@ Game_Manager :: class : Component {
         if phase == .ENDED {
             return;
         }
+        clear_all_player_round_inventories();
+        clear_spawned_round_items();
         phase = .ENDED;
         result = .ENTITY_WIN;
         entity_win_delay_ends_at = 0.0;

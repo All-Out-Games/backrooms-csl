@@ -1,0 +1,20 @@
+Enter_Ship_Ability :: class : Ability_Base {
+    on_init :: method() {
+        name = "Enter Ship";
+        icon = get_asset(Texture_Asset, "ship_wheel_c4fa04.png");
+    }
+
+    can_use :: method() -> bool {
+        if player.InShip || player.ShipRef == null return false;
+
+        ship := player.ShipRef.(Ship);
+        return #alive(ship) && #alive(ship.PilotSpot);
+    }
+
+    on_update :: method(params: ref Ability_Update_Params) {
+        if params.clicked && params.can_use {
+            player.start_enter_ship_transition();
+            current_cooldown = 0.25;
+        }
+    }
+}

@@ -1,0 +1,534 @@
+Weapon_Config :: struct {
+    weapon_type: Weapon_Type;
+    fire_mode: Fire_Mode;
+    hand_type: Hand_Type;
+
+    fire_rate: float;
+    base_damage: float;
+    ammo_per_shot: s64;
+
+    projectile_count: s64;
+    spread_angle: float;
+    projectile_speed: float;
+    projectile_lifetime: float;
+    hit_radius: float;
+
+    passes_through: bool;
+    aoe_radius: float;
+    aoe_damage: float;
+
+    homing_find_radius: float;
+    homing_strength: float;
+
+    max_bounces: s64;
+    bounce_target_radius: float;
+
+    beam_range: float;
+    beam_width: float;
+    beam_cone_angle: float;
+
+    heals_self: bool;
+    heal_amount: float;
+
+    weapon_skin: string;
+    weapon_icon_path: string;
+    item_id: string;
+    item_name: string;
+
+    ammo_type_index: s64;
+    ammo_first_pickup: s64;
+
+    equip_sound_path: string;
+
+    shoot_trigger: string;
+    shoot_start_trigger: string;
+    shoot_end_trigger: string;
+    use_ik_var: string;
+}
+
+get_weapon_config :: proc(wt: Weapon_Type) -> Weapon_Config {
+    config: Weapon_Config;
+    config.weapon_type = wt;
+    config.ammo_per_shot = 1;
+    config.projectile_count = 1;
+    config.projectile_lifetime = 3.0;
+    config.hit_radius = 0.8;
+    config.equip_sound_path = "reusable_weapons/sounds/reusable-weapons/equip_gun.wav";
+
+    switch wt {
+        case .SHIP_CANNON: {
+            config.fire_mode = .LOBBED;
+            config.hand_type = .TWO_HAND;
+            config.fire_rate = 5.0;
+            config.base_damage = 100.0;
+            config.projectile_speed = 10.0;
+            config.aoe_radius = 5.0;
+            config.aoe_damage = 100.0;
+            config.ammo_per_shot = 0;
+            config.weapon_skin = "weapons/waterballoon_RPG";
+            config.weapon_icon_path = "reusable_weapons/sprites/reusable-weapons/weapon_icons/weapon_icons_250x250/waterballoonrpg.png";
+            config.item_id = "ship_cannon";
+            config.item_name = "ShipCannon";
+            config.ammo_type_index = -1;
+            config.ammo_first_pickup = -1;
+            config.shoot_trigger = "shoot_2h_weapon";
+            config.use_ik_var = "use_2h_ik";
+        }
+        case .ASSAULT_RIFLE: {
+            config.fire_mode = .CONTINUOUS;
+            config.hand_type = .TWO_HAND;
+            config.fire_rate = 0.2;
+            config.base_damage = 8.0;
+            config.projectile_speed = 17.0;
+            config.weapon_skin = "weapons/assault_rifle";
+            config.weapon_icon_path = "reusable_weapons/sprites/reusable-weapons/weapon_icons/weapon_icons_250x250/assaultrifle.png";
+            config.item_id = "assault_rifle";
+            config.item_name = "Assault Rifle";
+            config.ammo_type_index = 0;
+            config.ammo_first_pickup = 240;
+            config.shoot_start_trigger = "shoot_fast_start";
+            config.shoot_end_trigger = "shoot_fast_end";
+            config.use_ik_var = "use_2h_ik";
+        }
+        case .SUBMACHINE_GUN: {
+            config.fire_mode = .CONTINUOUS;
+            config.hand_type = .TWO_HAND;
+            config.fire_rate = 0.15;
+            config.base_damage = 5.0;
+            config.projectile_speed = 17.0;
+            config.weapon_skin = "weapons/smg";
+            config.weapon_icon_path = "reusable_weapons/sprites/reusable-weapons/weapon_icons/weapon_icons_250x250/smg.png";
+            config.item_id = "smg";
+            config.item_name = "Submachine Gun";
+            config.ammo_type_index = 0;
+            config.ammo_first_pickup = 240;
+            config.shoot_start_trigger = "shoot_fast_start";
+            config.shoot_end_trigger = "shoot_fast_end";
+            config.use_ik_var = "use_2h_ik";
+        }
+        case .GATLING_GUN: {
+            config.fire_mode = .CONTINUOUS;
+            config.hand_type = .TWO_HAND;
+            config.fire_rate = 0.1;
+            config.base_damage = 3.0;
+            config.projectile_speed = 17.0;
+            config.weapon_skin = "weapons/gatling_gun";
+            config.weapon_icon_path = "reusable_weapons/sprites/reusable-weapons/weapon_icons/weapon_icons_250x250/gatlinggun.png";
+            config.item_id = "gatling_gun";
+            config.item_name = "Gatling Gun";
+            config.ammo_type_index = 8;
+            config.ammo_first_pickup = 360;
+            config.shoot_start_trigger = "shoot_gatling_start";
+            config.shoot_end_trigger = "shoot_gatling_end";
+            config.use_ik_var = "use_2h_ik";
+        }
+        case .BEAM_MACHINE: {
+            config.fire_mode = .CONTINUOUS;
+            config.hand_type = .TWO_HAND;
+            config.fire_rate = 0.5;
+            config.base_damage = 12.0;
+            config.projectile_speed = 17.0;
+            config.passes_through = true;
+            config.weapon_skin = "weapons/beam_machine";
+            config.weapon_icon_path = "reusable_weapons/sprites/reusable-weapons/weapon_icons/weapon_icons_250x250/beammachine.png";
+            config.item_id = "beam_machine";
+            config.item_name = "Beam Machine";
+            config.ammo_type_index = 5;
+            config.ammo_first_pickup = 108;
+            config.shoot_start_trigger = "shoot_fast_start";
+            config.shoot_end_trigger = "shoot_fast_end";
+            config.use_ik_var = "use_2h_ik";
+        }
+        case .WATER_GUN: {
+            config.fire_mode = .CONTINUOUS;
+            config.hand_type = .ONE_HAND;
+            config.fire_rate = 0.3;
+            config.base_damage = 10.0;
+            config.projectile_speed = 17.0;
+            config.weapon_skin = "weapons/water_pistol";
+            config.weapon_icon_path = "reusable_weapons/sprites/reusable-weapons/weapon_icons/weapon_icons_250x250/watergun.png";
+            config.item_id = "water_gun";
+            config.item_name = "Water Gun";
+            config.ammo_type_index = 0;
+            config.ammo_first_pickup = 240;
+            config.shoot_start_trigger = "shoot_fast_start";
+            config.shoot_end_trigger = "shoot_fast_end";
+            config.use_ik_var = "use_1h_ik";
+        }
+        case .MISSILE_BARRAGE: {
+            config.fire_mode = .CONTINUOUS;
+            config.hand_type = .TWO_HAND;
+            config.fire_rate = 0.3;
+            config.base_damage = 25.0;
+            config.projectile_speed = 20.0;
+            config.homing_find_radius = 5.0;
+            config.homing_strength = 3.0;
+            config.weapon_skin = "weapons/missile_barrage";
+            config.weapon_icon_path = "reusable_weapons/sprites/reusable-weapons/weapon_icons/weapon_icons_250x250/missile_barrage.png";
+            config.item_id = "missile_barrage";
+            config.item_name = "Missile Barrage";
+            config.ammo_type_index = 0;
+            config.ammo_first_pickup = 240;
+            config.shoot_start_trigger = "shoot_fast_start";
+            config.shoot_end_trigger = "shoot_fast_end";
+            config.use_ik_var = "use_2h_ik";
+        }
+        case .HYDRO_CANNON: {
+            config.fire_mode = .SINGLE_SHOT;
+            config.hand_type = .TWO_HAND;
+            config.fire_rate = 3.0;
+            config.base_damage = 10.0;
+            config.projectile_speed = 17.0;
+            config.projectile_lifetime = 3.0;
+            config.weapon_skin = "weapons/Hydro_Cannon";
+            config.weapon_icon_path = "reusable_weapons/sprites/reusable-weapons/weapon_icons/weapon_icons_250x250/hydro_cannon.png";
+            config.item_id = "hydro_cannon";
+            config.item_name = "Hydro Cannon";
+            config.ammo_type_index = 9;
+            config.ammo_first_pickup = 30;
+            config.shoot_trigger = "shoot_2h_weapon";
+            config.use_ik_var = "use_2h_ik";
+        }
+        case .BLUNDERBUSS: {
+            config.fire_mode = .SINGLE_SHOT;
+            config.hand_type = .ONE_HAND;
+            config.fire_rate = 2.0;
+            config.base_damage = 30.0;
+            config.projectile_speed = 17.0;
+            config.weapon_skin = "weapons/blunderbuss";
+            config.weapon_icon_path = "reusable_weapons/sprites/reusable-weapons/weapon_icons/weapon_icons_250x250/blunderbuss.png";
+            config.item_id = "blunderbuss";
+            config.item_name = "Blunderbuss";
+            config.ammo_type_index = 1;
+            config.ammo_first_pickup = 30;
+            config.shoot_trigger = "shoot_1h_weapon";
+            config.use_ik_var = "use_1h_ik";
+        }
+        case .RAY_GUN: {
+            config.fire_mode = .SINGLE_SHOT;
+            config.hand_type = .ONE_HAND;
+            config.fire_rate = 2.0;
+            config.base_damage = 50.0;
+            config.projectile_speed = 17.0;
+            config.weapon_skin = "weapons/lightning_gun";
+            config.weapon_icon_path = "reusable_weapons/sprites/reusable-weapons/weapon_icons/weapon_icons_250x250/raygun.png";
+            config.item_id = "ray_gun";
+            config.item_name = "Ray Gun";
+            config.ammo_type_index = 5;
+            config.ammo_first_pickup = 108;
+            config.shoot_trigger = "shoot_1h_weapon";
+            config.use_ik_var = "use_1h_ik";
+        }
+        case .PLASMA_BURST: {
+            config.fire_mode = .SINGLE_SHOT;
+            config.hand_type = .ONE_HAND;
+            config.fire_rate = 2.0;
+            config.base_damage = 30.0;
+            config.projectile_speed = 15.0;
+            config.weapon_skin = "weapons/plasma_burst";
+            config.weapon_icon_path = "reusable_weapons/sprites/reusable-weapons/weapon_icons/weapon_icons_250x250/plasma_burst.png";
+            config.item_id = "plasma_burst";
+            config.item_name = "Plasma Burst";
+            config.ammo_type_index = 5;
+            config.ammo_first_pickup = 108;
+            config.shoot_trigger = "shoot_1h_weapon";
+            config.use_ik_var = "use_1h_ik";
+        }
+        case .MEGA_BLADE: {
+            config.fire_mode = .SINGLE_SHOT;
+            config.hand_type = .ONE_HAND;
+            config.fire_rate = 2.0;
+            config.base_damage = 30.0;
+            config.projectile_speed = 20.0;
+            config.max_bounces = 10;
+            config.bounce_target_radius = 20.0;
+            config.weapon_skin = "weapons/megablade";
+            config.weapon_icon_path = "reusable_weapons/sprites/reusable-weapons/weapon_icons/weapon_icons_250x250/megablade.png";
+            config.item_id = "megablade";
+            config.item_name = "Mega Blade";
+            config.ammo_type_index = 7;
+            config.ammo_first_pickup = 30;
+            config.shoot_trigger = "shoot_1h_weapon";
+            config.use_ik_var = "use_1h_ik";
+        }
+        case .BUZZSHOT: {
+            config.fire_mode = .SINGLE_SHOT;
+            config.hand_type = .ONE_HAND;
+            config.fire_rate = 2.0;
+            config.base_damage = 30.0;
+            config.projectile_speed = 20.0;
+            config.max_bounces = 30;
+            config.bounce_target_radius = 20.0;
+            config.weapon_skin = "weapons/buzzshot";
+            config.weapon_icon_path = "reusable_weapons/sprites/reusable-weapons/weapon_icons/weapon_icons_250x250/buzzshot.png";
+            config.item_id = "buzzshot";
+            config.item_name = "Buzzshot";
+            config.ammo_type_index = 7;
+            config.ammo_first_pickup = 30;
+            config.shoot_trigger = "shoot_1h_weapon";
+            config.use_ik_var = "use_1h_ik";
+        }
+        case .EXPLOSIVE_SHOTGUN: {
+            config.fire_mode = .SPREAD;
+            config.hand_type = .TWO_HAND;
+            config.fire_rate = 2.0;
+            config.base_damage = 15.0;
+            config.projectile_count = 3;
+            config.spread_angle = 10.0;
+            config.projectile_speed = 17.0;
+            config.aoe_radius = 1.0;
+            config.aoe_damage = 10.0;
+            config.weapon_skin = "weapons/shotgun";
+            config.weapon_icon_path = "reusable_weapons/sprites/reusable-weapons/weapon_icons/weapon_icons_250x250/shotgun.png";
+            config.item_id = "explosive_shotgun";
+            config.item_name = "Explosive Shotgun";
+            config.ammo_type_index = 2;
+            config.ammo_first_pickup = 18;
+            config.shoot_trigger = "shoot_2h_weapon";
+            config.use_ik_var = "use_2h_ik";
+        }
+        case .SUNNY_SIDE_SHOTTY: {
+            config.fire_mode = .SPREAD;
+            config.hand_type = .TWO_HAND;
+            config.fire_rate = 2.0;
+            config.base_damage = 15.0;
+            config.projectile_count = 5;
+            config.spread_angle = 10.0;
+            config.projectile_speed = 17.0;
+            config.aoe_radius = 1.5;
+            config.aoe_damage = 15.0;
+            config.weapon_skin = "weapons/sunny_side_shotty";
+            config.weapon_icon_path = "reusable_weapons/sprites/reusable-weapons/weapon_icons/weapon_icons_250x250/sunny_side_shotty.png";
+            config.item_id = "sunny_side_shotty";
+            config.item_name = "Sunny Side Shotty";
+            config.ammo_type_index = 2;
+            config.ammo_first_pickup = 18;
+            config.shoot_trigger = "shoot_2h_weapon";
+            config.use_ik_var = "use_2h_ik";
+        }
+        case .GOLDEN_ROCKET_LAUNCHER: {
+            config.fire_mode = .LOBBED;
+            config.hand_type = .ONE_HAND;
+            config.fire_rate = 5.0;
+            config.base_damage = 100.0;
+            config.projectile_speed = 10.0;
+            config.aoe_radius = 5.0;
+            config.aoe_damage = 100.0;
+            config.weapon_skin = "weapons/golden_bazooka";
+            config.weapon_icon_path = "reusable_weapons/sprites/reusable-weapons/weapon_icons/weapon_icons_250x250/goldenrocketlauncher.png";
+            config.item_id = "golden_rocket_launcher";
+            config.item_name = "Golden Rocket Launcher";
+            config.ammo_type_index = 9;
+            config.ammo_first_pickup = 18;
+            config.shoot_trigger = "shoot_1h_weapon";
+            config.use_ik_var = "use_1h_ik";
+        }
+        case .WATER_BALLOON_RPG: {
+            config.fire_mode = .LOBBED;
+            config.hand_type = .TWO_HAND;
+            config.fire_rate = 5.0;
+            config.base_damage = 100.0;
+            config.projectile_speed = 10.0;
+            config.aoe_radius = 5.0;
+            config.aoe_damage = 100.0;
+            config.weapon_skin = "weapons/waterballoon_RPG";
+            config.weapon_icon_path = "reusable_weapons/sprites/reusable-weapons/weapon_icons/weapon_icons_250x250/waterballoonrpg.png";
+            config.item_id = "water_balloon_rpg";
+            config.item_name = "Water Balloon RPG";
+            config.ammo_type_index = 9;
+            config.ammo_first_pickup = 18;
+            config.shoot_trigger = "shoot_2h_weapon";
+            config.use_ik_var = "use_2h_ik";
+        }
+        case .POISON_GRENADE: {
+            config.fire_mode = .LOBBED;
+            config.hand_type = .ONE_HAND;
+            config.fire_rate = 2.5;
+            config.base_damage = 25.0;
+            config.projectile_speed = 10.0;
+            config.aoe_radius = 2.0;
+            config.aoe_damage = 25.0;
+            config.ammo_per_shot = 0;
+            config.weapon_skin = "weapons/grenade";
+            config.weapon_icon_path = "reusable_weapons/sprites/reusable-weapons/weapon_icons/weapon_icons_250x250/grenade.png";
+            config.item_id = "poison_grenade";
+            config.item_name = "Poison Grenade";
+            config.ammo_type_index = -1;
+            config.ammo_first_pickup = -1;
+            config.shoot_trigger = "throw";
+            config.use_ik_var = "use_1h_ik";
+        }
+        case .BOOMWHEEL: {
+            config.fire_mode = .LOBBED;
+            config.hand_type = .CUSTOM;
+            config.fire_rate = 5.0;
+            config.base_damage = 100.0;
+            config.projectile_speed = 10.0;
+            config.aoe_radius = 5.0;
+            config.aoe_damage = 100.0;
+            config.weapon_skin = "";
+            config.weapon_icon_path = "reusable_weapons/sprites/reusable-weapons/weapon_icons/weapon_icons_250x250/boomwheel.png";
+            config.item_id = "boomwheel";
+            config.item_name = "Boomwheel";
+            config.ammo_type_index = 1;
+            config.ammo_first_pickup = 30;
+            config.shoot_trigger = "";
+            config.use_ik_var = "";
+        }
+        case .FIRE_RAY: {
+            config.fire_mode = .BEAM;
+            config.hand_type = .ONE_HAND;
+            config.fire_rate = 0.5;
+            config.base_damage = 8.0;
+            config.beam_range = 6.0;
+            config.beam_width = 0.5;
+            config.weapon_skin = "weapons/fire_ray";
+            config.weapon_icon_path = "reusable_weapons/sprites/reusable-weapons/weapon_icons/weapon_icons_250x250/fireray.png";
+            config.item_id = "fire_ray";
+            config.item_name = "Fire Ray";
+            config.ammo_type_index = 6;
+            config.ammo_first_pickup = 60;
+            config.shoot_start_trigger = "fire_ray_start";
+            config.shoot_end_trigger = "fire_ray_end";
+            config.use_ik_var = "use_1h_ik";
+        }
+        case .ICE_LAUNCHER: {
+            config.fire_mode = .BEAM;
+            config.hand_type = .TWO_HAND;
+            config.fire_rate = 0.5;
+            config.base_damage = 5.0;
+            config.beam_range = 6.0;
+            config.beam_width = 0.5;
+            config.weapon_skin = "weapons/ice_launcher";
+            config.weapon_icon_path = "reusable_weapons/sprites/reusable-weapons/weapon_icons/weapon_icons_250x250/icelauncher.png";
+            config.item_id = "ice_launcher";
+            config.item_name = "Ice Launcher";
+            config.ammo_type_index = 3;
+            config.ammo_first_pickup = 60;
+            config.shoot_start_trigger = "fire_ice_launcher";
+            config.shoot_end_trigger = "fire_ice_launcher_end";
+            config.use_ik_var = "use_2h_ik";
+        }
+        case .GLACIATOR: {
+            config.fire_mode = .BEAM;
+            config.hand_type = .TWO_HAND;
+            config.fire_rate = 0.5;
+            config.base_damage = 5.0;
+            config.beam_range = 6.0;
+            config.beam_width = 0.5;
+            config.weapon_skin = "weapons/glaciator";
+            config.weapon_icon_path = "reusable_weapons/sprites/reusable-weapons/weapon_icons/weapon_icons_250x250/glaciator.png";
+            config.item_id = "glaciator";
+            config.item_name = "Glaciator";
+            config.ammo_type_index = 3;
+            config.ammo_first_pickup = 60;
+            config.shoot_start_trigger = "fire_ice_launcher";
+            config.shoot_end_trigger = "fire_ice_launcher_end";
+            config.use_ik_var = "use_2h_ik";
+        }
+        case .SOLAR_SIPHONER: {
+            config.fire_mode = .BEAM;
+            config.hand_type = .ONE_HAND;
+            config.fire_rate = 1.0;
+            config.base_damage = 10.0;
+            config.beam_range = 6.0;
+            config.beam_cone_angle = 60.0;
+            config.heals_self = true;
+            config.heal_amount = 5.0;
+            config.weapon_skin = "weapons/solar_siphoner";
+            config.weapon_icon_path = "reusable_weapons/sprites/reusable-weapons/weapon_icons/weapon_icons_250x250/solarsiphoner.png";
+            config.item_id = "solar_siphoner";
+            config.item_name = "Solar Siphoner";
+            config.ammo_type_index = 6;
+            config.ammo_first_pickup = 60;
+            config.shoot_start_trigger = "fire_solar_siphoner";
+            config.shoot_end_trigger = "fire_solar_siphoner_end";
+            config.use_ik_var = "use_1h_ik";
+        }
+        case .OCTO_SIPHONER: {
+            config.fire_mode = .BEAM;
+            config.hand_type = .ONE_HAND;
+            config.fire_rate = 1.0;
+            config.base_damage = 5.0;
+            config.beam_range = 6.0;
+            config.beam_width = 0.5;
+            config.heals_self = true;
+            config.heal_amount = 3.0;
+            config.weapon_skin = "weapons/octo_siphoner";
+            config.weapon_icon_path = "reusable_weapons/sprites/reusable-weapons/weapon_icons/weapon_icons_250x250/octo_siphoner.png";
+            config.item_id = "octo_siphoner";
+            config.item_name = "Octo Siphoner";
+            config.ammo_type_index = 6;
+            config.ammo_first_pickup = 60;
+            config.shoot_start_trigger = "fire_octo_siphoner";
+            config.shoot_end_trigger = "fire_octo_siphoner_end";
+            config.use_ik_var = "use_1h_ik";
+        }
+        case .VOID_SPLITTER: {
+            config.fire_mode = .BEAM;
+            config.hand_type = .ONE_HAND;
+            config.fire_rate = 0.5;
+            config.base_damage = 30.0;
+            config.ammo_per_shot = 2;
+            config.beam_range = 8.0;
+            config.beam_width = 0.5;
+            config.weapon_skin = "weapons/void_spitter";
+            config.weapon_icon_path = "reusable_weapons/sprites/reusable-weapons/weapon_icons/weapon_icons_250x250/void_splitter.png";
+            config.item_id = "void_splitter";
+            config.item_name = "Void Splitter";
+            config.ammo_type_index = 8;
+            config.ammo_first_pickup = 360;
+            config.shoot_start_trigger = "void_splitter_start";
+            config.shoot_end_trigger = "void_splitter_end";
+            config.use_ik_var = "use_1h_ik";
+        }
+        case .AKIMBO_PISTOLS: {
+            config.fire_mode = .SPECIAL;
+            config.hand_type = .CUSTOM;
+            config.fire_rate = 0.6;
+            config.base_damage = 20.0;
+            config.projectile_speed = 17.0;
+            config.weapon_skin = "weapons/akimbo_revolvers";
+            config.weapon_icon_path = "reusable_weapons/sprites/reusable-weapons/weapon_icons/weapon_icons_250x250/akimbo_pistols.png";
+            config.item_id = "akimbo_pistols";
+            config.item_name = "Akimbo Pistols";
+            config.ammo_type_index = 1;
+            config.ammo_first_pickup = 30;
+            config.shoot_trigger = "shoot_akimbo_pistols";
+            config.use_ik_var = "use_2h_ik";
+        }
+        case .WIND_BLASTER: {
+            config.fire_mode = .SPECIAL;
+            config.hand_type = .ONE_HAND;
+            config.fire_rate = 5.0;
+            config.base_damage = 3.0;
+            config.projectile_speed = 5.0;
+            config.aoe_radius = 2.0;
+            config.weapon_skin = "weapons/wind_blaster";
+            config.weapon_icon_path = "reusable_weapons/sprites/reusable-weapons/weapon_icons/weapon_icons_250x250/windblaster.png";
+            config.item_id = "wind_blaster";
+            config.item_name = "Wind Blaster";
+            config.ammo_type_index = 4;
+            config.ammo_first_pickup = 24;
+            config.shoot_trigger = "shoot_wind_blaster";
+            config.use_ik_var = "use_1h_ik";
+        }
+        case .STORMS_EYE: {
+            config.fire_mode = .SPECIAL;
+            config.hand_type = .TWO_HAND;
+            config.fire_rate = 3.0;
+            config.base_damage = 10.0;
+            config.aoe_radius = 2.5;
+            config.weapon_skin = "weapons/storms_eye";
+            config.weapon_icon_path = "reusable_weapons/sprites/reusable-weapons/weapon_icons/weapon_icons_250x250/storms_eye.png";
+            config.item_id = "storms_eye";
+            config.item_name = "Storm's Eye";
+            config.ammo_type_index = 4;
+            config.ammo_first_pickup = 24;
+            config.shoot_trigger = "storms_eye_start";
+            config.use_ik_var = "use_2h_ik";
+        }
+    }
+
+    return config;
+}
