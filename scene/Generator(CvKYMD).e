@@ -23,11 +23,7 @@
   "internal_component_type": "Sprite_Renderer",
   "data": {
     "texture": "generator icon_be87ae.png",
-    "depth_offset": -0.1725473403930664,
-    "scale": {
-      "X": 2,
-      "Y": 2
-    }
+    "depth_offset": -0.1725473403930664
   }
 },
 {

@@ -1,8 +1,8 @@
 14
-429496729601
-2951500453
+566935683073
+2942794679
 {
-  "name": "RadioSpawns",
+  "name": "ItemDropsSpawns",
   "local_enabled": true,
   "local_position": {
 
@@ -12,6 +12,5 @@
     "X": 1,
     "Y": 1
   },
-  "previous_sibling": 2951698846,
-  "next_sibling": 2949722784
+  "previous_sibling": 2950502297
 }

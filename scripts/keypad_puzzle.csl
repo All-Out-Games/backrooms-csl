@@ -5,6 +5,8 @@ KEYPAD_UI_TEXTURE_PATH          :: "keypadart/keypad.png";
 KEYPAD_UI_RED_SCREEN_PATH       :: "keypadart/keypadredscreen.png";
 KEYPAD_KEY_TEXTURE_PATH         :: "keypadart/key.png";
 KEYPAD_KEY_PRESSED_TEXTURE_PATH :: "keypadart/key_pressed.png";
+EXIT_DOOR_CLOSED_TEXTURE_PATH   :: "ExitDoor.png";
+EXIT_DOOR_OPEN_TEXTURE_PATH     :: "ExitDoorOpen.png";
 
 KEYPAD_UI_LAYER            :: 451;
 KEYPAD_LAYOUT_RIGHT_CUT    :: 950.0;
@@ -274,11 +276,39 @@ Keypad_Puzzle :: class : Interactable {
 }
 
 Exit_Door :: class : Interactable {
+    door_sprite: Sprite_Renderer;
+    closed_texture: Texture_Asset;
+    open_texture: Texture_Asset;
+
     ao_start :: method() {
         this.set_listener(this);
         this.set_text("Power Offline");
         required_hold_time = 0.0;
         priority = 0;
+
+        door_sprite = entity.get_component(Sprite_Renderer);
+        closed_texture = get_asset(Texture_Asset, EXIT_DOOR_CLOSED_TEXTURE_PATH);
+        open_texture = get_asset(Texture_Asset, EXIT_DOOR_OPEN_TEXTURE_PATH);
+        update_door_visual();
+    }
+
+    is_unlocked_and_usable :: method() -> bool {
+        gm := get_game_manager();
+        return #alive(gm) && gm.phase == .ACTIVE && gm.emergency_systems_online && SURVIVOR_ESCAPE_ENABLED;
+    }
+
+    update_door_visual :: method() {
+        if door_sprite == null {
+            return;
+        }
+
+        door_texture := closed_texture;
+        if is_unlocked_and_usable() && open_texture != null {
+            door_texture = open_texture;
+        }
+        if door_texture != null {
+            door_sprite.set_texture(door_texture);
+        }
     }
 
     can_use :: method(player: Player) -> bool {
@@ -296,10 +326,7 @@ Exit_Door :: class : Interactable {
         if !#alive(gm) {
             return false;
         }
-        if gm.phase != .ACTIVE {
-            return false;
-        }
-        return gm.emergency_systems_online && SURVIVOR_ESCAPE_ENABLED;
+        return is_unlocked_and_usable();
     }
 
     on_interact :: method(player: Player) {
@@ -311,14 +338,18 @@ Exit_Door :: class : Interactable {
     }
 
     ao_update :: method(dt: float) {
-        gm := get_game_manager();
-        if #alive(gm) && gm.emergency_systems_online && SURVIVOR_ESCAPE_ENABLED {
+        if is_unlocked_and_usable() {
             this.set_text("Escape");
-        } else if #alive(gm) && gm.emergency_systems_online {
-            this.set_text("Escape Disabled");
         } else {
-            this.set_text("Power Offline");
+            gm := get_game_manager();
+            if #alive(gm) && gm.emergency_systems_online {
+                this.set_text("Escape Disabled");
+            } else {
+                this.set_text("Power Offline");
+            }
         }
+
+        update_door_visual();
     }
 }
 

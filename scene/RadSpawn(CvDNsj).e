@@ -5,8 +5,8 @@
   "name": "RadSpawn",
   "local_enabled": true,
   "local_position": {
-    "X": -23.0957756042480469,
-    "Y": -1.3857469558715820
+    "X": -3.6905512809753418,
+    "Y": 14.7665786743164062
   },
   "local_rotation": 0,
   "local_scale": {

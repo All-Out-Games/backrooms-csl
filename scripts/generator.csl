@@ -10,7 +10,7 @@ GENERATOR_UI_CLOCK_TEXTURE        :: "sprites/tasks/generator/Clock.png";
 GENERATOR_UI_POINTER_TEXTURE      :: "sprites/tasks/generator/Ponteiro.png";
 
 GENERATOR_UI_LAYER                :: 452;
-GENERATOR_UI_PREVIEW_ENABLED      :: true;
+GENERATOR_UI_PREVIEW_ENABLED      :: false;
 GENERATOR_PULLS_REQUIRED          :: 3;
 GENERATOR_SUCCESS_DISPLAY_TIME    :: 0.6;
 GENERATOR_WINDOW_HALF_HEIGHT      :: 500.0;
@@ -205,7 +205,7 @@ init_generator_restart_layout :: proc(effect: Generator_Restart_Effect, window_r
     w := window_rect.width();
     h := window_rect.height();
 
-    effect.anchor_pos = v2{window_rect.min.x + w * 0.65, window_rect.min.y + h * 0.58};
+    effect.anchor_pos = v2{window_rect.min.x + w * 0.63, window_rect.min.y + h * 0.62};
     effect.handle_home = v2{effect.anchor_pos.x - w * 0.12, effect.anchor_pos.y + h * 0.02};
     effect.handle_pos = effect.handle_home;
 }
@@ -278,7 +278,7 @@ draw_generator_restart_panel :: proc(player: Player, effect: Generator_Restart_E
         UI.quad(gen_rect, core_globals.white_sprite, v4{0.35, 0.35, 0.35, 1.0});
     }
 
-    clock_center := v2{gen_rect.min.x + gen_rect.width() * 0.61, gen_rect.min.y + gen_rect.height() * 0.64};
+    clock_center := v2{gen_rect.min.x + gen_rect.width() * 0.58, gen_rect.min.y + gen_rect.height() * 0.6};
     clock_rect := Rect{clock_center, clock_center}.grow(h * 0.12, h * 0.12, h * 0.12, h * 0.12);
     if clock_tex != null {
         clock_rect = clock_rect.fit_aspect(clock_tex.get_aspect(), .KEEP_HEIGHT);

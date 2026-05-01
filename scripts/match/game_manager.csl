@@ -22,6 +22,8 @@ ENTITY_HEARING_VISUAL_BUFFER :: 2.0;
 ENTITY_HEARING_VISUAL_MAX_ALPHA :: 245.0 / 255.0;
 ENTITY_HEARING_VISUAL_FADE_SPEED :: 6.0;
 SURVIVOR_SPAWN_RADIUS :: 1.5;
+ROUND_ITEM_DESPAWN_TOTAL_SECONDS :: 600.0;
+ROUND_ITEM_ENGINE_DESPAWN_WINDOW_SECONDS :: 40.0; // Dropped_Item warns for 30s and expires over the next 10s.
 SURVIVOR_ESCAPE_ENABLED :: true;
 
 Match_Phase :: enum {
@@ -414,10 +416,11 @@ Game_Manager :: class : Component {
     GeneratorEntity: Entity @ao_serialize;
     RadioPuzzle: Entity @ao_serialize;
     SurvivorSpawn: Entity @ao_serialize;
-    GeneratorSpawns: [..]Entity @ao_serialize;
-    RadioSpawns: [..]Entity @ao_serialize;
-    EntitySpawns: [..]Entity @ao_serialize;
-    ItemSpawns: [..]Entity @ao_serialize;
+    GeneratorSpawns: Entity @ao_serialize;
+    ReconnectWiresSpawns: Entity @ao_serialize;
+    RadioSpawns: Entity @ao_serialize;
+    EntitySpawns: Entity @ao_serialize;
+    ItemSpawns: Entity @ao_serialize;
     RoundItemIds: [..]string @ao_serialize;
     MinRoundItemSpawnCount: s64 @ao_serialize;
     MaxRoundItemSpawnCount: s64 @ao_serialize;
@@ -685,6 +688,28 @@ Game_Manager :: class : Component {
         return chosen_spawn;
     }
 
+    pick_random_spawn_from_parent :: method(parent: Entity, excluded_spawn: Entity = null) -> Entity {
+        child_spawns: [..]Entity;
+        collect_child_entity_references(parent, ref child_spawns);
+
+        chosen_spawn := pick_random_spawn(child_spawns, excluded_spawn);
+        child_spawns.clear();
+        return chosen_spawn;
+    }
+
+    collect_child_entity_references :: method(parent: Entity, spawns: ref [..]Entity) {
+        spawns.clear();
+        if !#alive(parent) {
+            return;
+        }
+
+        current := parent.get_first_child();
+        while #alive(current) {
+            spawns.append(current);
+            current = current.get_next_sibling();
+        }
+    }
+
     clear_spawned_round_items :: method() {
         i: s64 = 0;
         while i < spawned_round_items.count {
@@ -741,14 +766,29 @@ Game_Manager :: class : Component {
 
         item := Items.create_item_instance(chosen_item_def, 1);
         dropped_item := Dropped_Item.spawn(spawn_ref.world_position, item);
-        dropped_item.do_spawn_animation(ref match_rng, navmesh_to_lock_to);
+        if #alive(dropped_item) {
+            if dropped_item.sprite != null {
+                dropped_item.sprite.mask_in_shadow = true;
+            }
+            if dropped_item.starburst != null {
+                dropped_item.starburst.mask_in_shadow = true;
+            }
+            if dropped_item.shadow != null {
+                dropped_item.shadow.mask_in_shadow = true;
+            }
+        }
+        dropped_item.despawn_time_start = get_time() + (ROUND_ITEM_DESPAWN_TOTAL_SECONDS - ROUND_ITEM_ENGINE_DESPAWN_WINDOW_SECONDS);
         return dropped_item;
     }
 
     spawn_round_items_for_match :: method() {
         clear_spawned_round_items();
 
-        if ItemSpawns.count == 0 || RoundItemIds.count == 0 {
+        item_spawns: [..]Entity;
+        collect_child_entity_references(ItemSpawns, ref item_spawns);
+
+        if item_spawns.count == 0 || RoundItemIds.count == 0 {
+            item_spawns.clear();
             return;
         }
 
@@ -759,12 +799,13 @@ Game_Manager :: class : Component {
 
         max_count := MaxRoundItemSpawnCount;
         if max_count <= min_count + 1 {
+            item_spawns.clear();
             return;
         }
 
         valid_spawns: [..]Entity;
-        for i: 0..ItemSpawns.count - 1 {
-            spawn_ref := ItemSpawns[i];
+        for i: 0..item_spawns.count - 1 {
+            spawn_ref := item_spawns[i];
             if !#alive(spawn_ref) {
                 continue;
             }
@@ -783,6 +824,7 @@ Game_Manager :: class : Component {
         }
 
         if valid_spawns.count == 0 {
+            item_spawns.clear();
             valid_spawns.clear();
             return;
         }
@@ -793,6 +835,7 @@ Game_Manager :: class : Component {
             target_max = valid_spawns.count;
         }
         if target_min > target_max {
+            item_spawns.clear();
             valid_spawns.clear();
             return;
         }
@@ -809,6 +852,7 @@ Game_Manager :: class : Component {
             }
         }
 
+        item_spawns.clear();
         valid_spawns.clear();
     }
 
@@ -818,7 +862,7 @@ Game_Manager :: class : Component {
                 return null;
             }
 
-            spawn := pick_random_spawn(EntitySpawns);
+            spawn := pick_random_spawn_from_parent(EntitySpawns);
             if !#alive(spawn) {
                 return null;
             }
@@ -836,7 +880,7 @@ Game_Manager :: class : Component {
             return false;
         }
 
-        spawn := pick_random_spawn(GeneratorSpawns, excluded_spawn);
+        spawn := pick_random_spawn_from_parent(GeneratorSpawns, excluded_spawn);
         if !#alive(spawn) {
             return false;
         }
@@ -846,12 +890,37 @@ Game_Manager :: class : Component {
         return true;
     }
 
+    get_reconnect_wires_entity :: method() -> Entity {
+        for wire: component_iterator(Wire_Puzzle) {
+            if #alive(wire.entity) {
+                return wire.entity;
+            }
+        }
+        return null;
+    }
+
+    teleport_reconnect_wires_to_random_spawn :: method() -> bool {
+        wire_entity := get_reconnect_wires_entity();
+        if !#alive(wire_entity) {
+            return false;
+        }
+
+        spawn := pick_random_spawn_from_parent(ReconnectWiresSpawns);
+        if !#alive(spawn) {
+            return false;
+        }
+
+        wire_entity.set_local_position(spawn.world_position);
+        wire_entity.mark_teleported();
+        return true;
+    }
+
     teleport_radio_puzzle_to_random_spawn :: method() {
         if !#alive(RadioPuzzle) {
             return;
         }
 
-        spawn := pick_random_spawn(RadioSpawns);
+        spawn := pick_random_spawn_from_parent(RadioSpawns);
         if !#alive(spawn) {
             return;
         }
@@ -934,8 +1003,17 @@ Game_Manager :: class : Component {
         chosen := pool[pick_idx];
         entity_user_id = chosen.get_user_id();
         survivors_alive = players.count - 1;
-        entity_spawn := teleport_entity_to_random_spawn();
+        entity_spawn := pick_random_spawn_from_parent(EntitySpawns);
         if !#alive(entity_spawn) {
+            entity_user_id = "";
+            survivors_alive = 0;
+            players.clear();
+            pool.clear();
+            return false;
+        }
+
+        generator_spawn := pick_random_spawn_from_parent(GeneratorSpawns, entity_spawn);
+        if !#alive(generator_spawn) {
             entity_user_id = "";
             survivors_alive = 0;
             players.clear();
@@ -948,19 +1026,21 @@ Game_Manager :: class : Component {
 
         now := get_time();
         next_head_start_ends_at := now + HEAD_START_SECONDS;
-        if !teleport_generator_to_random_spawn(entity_spawn) {
-            entity_user_id = "";
-            survivors_alive = 0;
-            players.clear();
-            pool.clear();
-            return false;
+        if entity_player, ok := find_player_by_user_id(entity_user_id); ok && #alive(entity_player.entity) {
+            entity_player.entity.set_local_position(entity_spawn.world_position);
+            entity_player.entity.mark_teleported();
         }
+        GeneratorEntity.set_local_position(generator_spawn.world_position);
+        GeneratorEntity.mark_teleported();
+        teleport_reconnect_wires_to_random_spawn();
         teleport_radio_puzzle_to_random_spawn();
         reset_generator_for_round((next_head_start_ends_at * 1000.0).(u64));
+        reset_all_wire_puzzles_for_round((next_head_start_ends_at * 1000.0).(u64));
 
         teleport_survivors_to_spawn(players);
         for i: 0..players.count - 1 {
             clear_player_tasks(players[i]);
+            players[i].vent_cooldown_ends_at = 0.0;
             if players[i].get_user_id() != entity_user_id {
                 assign_default_survivor_tasks(players[i]);
             }
@@ -1073,6 +1153,7 @@ Game_Manager :: class : Component {
     reset_to_lobby :: method() {
         for player: component_iterator(Player) {
             clear_player_tasks(player);
+            player.vent_cooldown_ends_at = 0.0;
         }
         clear_all_player_round_inventories();
         clear_spawned_round_items();

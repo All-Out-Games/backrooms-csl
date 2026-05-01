@@ -1,17 +1,16 @@
 14
-429496729601
-2951500453
+562640715777
+2938408630
 {
-  "name": "RadioSpawns",
+  "name": "VentTp",
   "local_enabled": true,
   "local_position": {
-
+    "Y": -1.0556144714355469
   },
   "local_rotation": 0,
   "local_scale": {
     "X": 1,
     "Y": 1
   },
-  "previous_sibling": 2951698846,
-  "next_sibling": 2949722784
+  "parent": 2950502297
 }

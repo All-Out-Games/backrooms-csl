@@ -1,11 +1,57 @@
+VENT_PROMPT_TEXT :: "Vent";
+VENT_USE_COOLDOWN_SECONDS :: 15.0;
+VENT_COOLDOWN_TINT_MULTIPLIER :: 0.45;
+
 Vent :: class : Interactable {
     destination_entity: Entity @ao_serialize;
+    vent_sprite: Sprite_Renderer;
+    base_sprite_tint: v4;
+
+    get_remaining_cooldown :: method(player: Player) -> float {
+        remaining := player.vent_cooldown_ends_at - get_time();
+        if remaining <= 0.0 {
+            return 0.0;
+        }
+        return remaining;
+    }
+
+    sync_local_cooldown_visual :: method() {
+        if vent_sprite == null {
+            return;
+        }
+
+        target_tint := base_sprite_tint;
+        if local_player, ok := Game.get_local_player(); ok &&
+            #alive(local_player.entity) &&
+            #alive(destination_entity) &&
+            destination_entity != entity &&
+            local_player.is_round_survivor() &&
+            this.get_remaining_cooldown(local_player) > 0.0 {
+            target_tint.x *= VENT_COOLDOWN_TINT_MULTIPLIER;
+            target_tint.y *= VENT_COOLDOWN_TINT_MULTIPLIER;
+            target_tint.z *= VENT_COOLDOWN_TINT_MULTIPLIER;
+        }
+
+        vent_sprite.color = target_tint;
+    }
 
     ao_start :: method() {
         this.set_listener(this);
-        this.set_text("Vent");
+        this.set_text(VENT_PROMPT_TEXT);
         required_hold_time = 0.0;
         priority = 10;
+        vent_sprite = entity.get_component(Sprite_Renderer);
+        if vent_sprite != null {
+            base_sprite_tint = vent_sprite.color;
+        }
+    }
+
+    ao_update :: method(dt: float) {
+        this.sync_local_cooldown_visual();
+    }
+
+    ao_on_state_sync :: method() {
+        this.sync_local_cooldown_visual();
     }
 
     can_use :: method(player: Player) -> bool {
@@ -15,10 +61,16 @@ Vent :: class : Interactable {
         if !#alive(destination_entity) || destination_entity == entity {
             return false;
         }
-        if player.entity.get_active_effect() != null {
+        if !player.is_round_survivor() {
             return false;
         }
-        if !player.is_round_survivor() {
+
+        remaining_cooldown := this.get_remaining_cooldown(player);
+        if remaining_cooldown > 0.0 {
+            return false;
+        }
+
+        if player.entity.get_active_effect() != null {
             return false;
         }
         return true;
@@ -31,5 +83,6 @@ Vent :: class : Interactable {
 
         player.entity.set_local_position(destination_entity.world_position);
         player.entity.mark_teleported();
+        player.vent_cooldown_ends_at = get_time() + VENT_USE_COOLDOWN_SECONDS;
     }
 }

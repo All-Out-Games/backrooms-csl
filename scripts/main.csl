@@ -145,6 +145,7 @@ ENTITY_FLASHBANG_DEBUFF_ICON_HALF_SIZE :: 24.0;
 ENTITY_VIEW_PLAYER_REVEAL_FADE_OUT_SECONDS :: 2.0;
 ENTITY_NAME_INVISIBILITY_REASON :: "entity_role_active";
 ROUND_SURVIVOR_NORMAL_MOVEMENT_MULTIPLIER :: 0.75;
+ROUND_ENTITY_NORMAL_MOVEMENT_MULTIPLIER :: 0.70;
 HELD_ITEM_BONE_NAME :: "Finger_R2";
 HELD_ITEM_SCALE := v2.{0.35, 0.35};
 HELD_ITEM_RENDER_LAYER :: 0;
@@ -238,6 +239,7 @@ Player :: class : Player_Base {
     entity_lurch_remaining: float;
     round_dead: bool;
     round_dead_ghost_state_active: bool;
+    vent_cooldown_ends_at: float;
 
     footstep_stride_accum: float;
     footstep_left_next: bool;
@@ -474,6 +476,7 @@ Player :: class : Player_Base {
         entity_lurch_remaining = 0.0;
         round_dead = false;
         round_dead_ghost_state_active = false;
+        vent_cooldown_ends_at = 0.0;
         held_item_weapon_type = .NONE;
 
         wt := entity.add_component(Weapon_Target);
@@ -707,6 +710,8 @@ Player :: class : Player_Base {
                 movement_speed_multiplier = SPRINT_MOVEMENT_MULTIPLIER;
             } else if this.is_round_entity() && entity_lurch_remaining > 0.0 {
                 movement_speed_multiplier = ENTITY_LURCH_MOVEMENT_MULTIPLIER;
+            } else if this.is_round_entity() {
+                movement_speed_multiplier = ROUND_ENTITY_NORMAL_MOVEMENT_MULTIPLIER;
             } else if this.is_round_survivor() {
                 movement_speed_multiplier = ROUND_SURVIVOR_NORMAL_MOVEMENT_MULTIPLIER;
             }
