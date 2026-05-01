@@ -1,3 +1,57 @@
+LOBBED_AIM_SEGMENT_COUNT :: 14;
+LOBBED_AIM_SEGMENT_THICKNESS :: 6.0;
+LOBBED_RETICLE_SIZE :: 20.0;
+
+draw_lobbed_arc_segment :: proc(start_screen: v2, end_screen: v2, thickness: float, color: v4) {
+    offset := end_screen - start_screen;
+    if length_squared(offset) <= 0.01 return;
+
+    line_rect := Rect{start_screen, start_screen}.grow(thickness * 0.5, length(offset), thickness * 0.5, 0);
+
+    UI.push_matrix(Matrix4.rotate_about_point(line_rect.left_center(), to_degrees(atan2(offset.y, offset.x))));
+    defer UI.pop_matrix();
+
+    UI.quad(line_rect, core_globals.white_sprite, color);
+}
+
+draw_lobbed_target_reticle :: proc(target_screen: v2) {
+    #static reticle := get_asset(Texture_Asset, "$AO/new/Aiming Indicator/line_finite/reticle.png");
+
+    pulse := 1.0 + 0.08 * sin(get_time() * 8.0);
+    shadow_rect := Rect{target_screen, target_screen}.grow((LOBBED_RETICLE_SIZE + 8.0) * pulse).fit_aspect(reticle.get_aspect());
+    reticle_rect := Rect{target_screen, target_screen}.grow(LOBBED_RETICLE_SIZE * pulse).fit_aspect(reticle.get_aspect());
+
+    UI.quad(shadow_rect, reticle, {0.08, 0.04, 0.02, 0.25});
+    UI.quad(reticle_rect, reticle, {1.0, 0.96, 0.82, 0.95});
+}
+
+draw_lobbed_aim_preview :: proc(player: Player, direction: v2, aim_distance: float, wt: Weapon_Type) {
+    dir := normalize(direction);
+    start_pos := get_lobbed_projectile_start_pos(player, dir);
+    target_pos := get_lobbed_target_position_from_player(player, dir, aim_distance);
+    travel_distance := length(target_pos - start_pos);
+
+    UI.push_layer(-10);
+    defer UI.pop_layer();
+
+    for i: 0..LOBBED_AIM_SEGMENT_COUNT-1 {
+        start_t := i.(float) / LOBBED_AIM_SEGMENT_COUNT.(float);
+        end_t := (i + 1).(float) / LOBBED_AIM_SEGMENT_COUNT.(float);
+
+        segment_start := get_lobbed_arc_position(start_pos, dir, travel_distance * start_t, travel_distance);
+        segment_end := get_lobbed_arc_position(start_pos, dir, travel_distance * end_t, travel_distance);
+
+        start_screen := world_to_screen(segment_start);
+        end_screen := world_to_screen(segment_end);
+        alpha := lerp(0.35, 0.85, end_t);
+
+        draw_lobbed_arc_segment(start_screen, end_screen, LOBBED_AIM_SEGMENT_THICKNESS + 3.0, {0.1, 0.06, 0.02, alpha * 0.35});
+        draw_lobbed_arc_segment(start_screen, end_screen, LOBBED_AIM_SEGMENT_THICKNESS, {1.0, 0.94, 0.7, alpha});
+    }
+
+    draw_lobbed_target_reticle(world_to_screen(target_pos));
+}
+
 draw_health_bar :: proc(player: Player) {
     UI.push_world_draw_context();
     defer UI.pop_draw_context();

@@ -1,0 +1,83 @@
+import "core:ao"
+
+NOISEMAKER_SPINE_PATH :: "Animations/bomb_clock_spine/bomb_clock.spine";
+NOISEMAKER_SKIN :: "default";
+NOISEMAKER_PROJECTILE_ANIM :: "appear";
+NOISEMAKER_ACTIVE_ANIM :: "ticking_down";
+NOISEMAKER_PROJECTILE_SCALE := v2.{0.75, 0.75};
+NOISEMAKER_TARGET_SCALE := v2.{1.0, 1.0};
+NOISEMAKER_ACTIVE_SECONDS :: 10.0;
+NOISEMAKER_ECHO_INTERVAL_SECONDS :: 0.5;
+NOISEMAKER_ECHO_RADIUS :: 9.0;
+NOISEMAKER_INTERFERENCE_RADIUS :: 15.0;
+
+spawn_noisemaker_echo :: proc(origin: v2, rng: ref u64) {
+    angle := rng_range_float(ref rng, 0.0, 2.0 * PI);
+    radius_t := rng_range_float(ref rng, 0.0, 1.0);
+    radius := NOISEMAKER_ECHO_RADIUS * sqrt(radius_t);
+    offset := v2{cos(angle) * radius, sin(angle) * radius};
+    spawn_footstep_echo(origin + offset, "Echo.prefab");
+}
+
+Noisemaker_Target :: class : Component {
+    elapsed: float;
+    echo_timer: float;
+    rng: u64;
+
+    ao_start :: method() {
+        rng = rng_root_seed();
+    }
+
+    ao_update :: method(dt: float) {
+        elapsed += dt;
+        if elapsed >= NOISEMAKER_ACTIVE_SECONDS {
+            entity.destroy();
+            return;
+        }
+
+        echo_timer += dt;
+        while echo_timer >= NOISEMAKER_ECHO_INTERVAL_SECONDS {
+            echo_timer -= NOISEMAKER_ECHO_INTERVAL_SECONDS;
+            spawn_noisemaker_echo(entity.world_position, ref rng);
+        }
+    }
+}
+
+spawn_noisemaker_target :: proc(pos: v2) -> Entity {
+    target_entity := Scene.create_entity();
+    target_entity.set_local_position(pos);
+    target_entity.set_local_scale(NOISEMAKER_TARGET_SCALE);
+
+    spine := target_entity.add_component(Spine_Animator);
+    spine.awaken();
+    spine.set_skeleton(get_asset(Spine_Asset, NOISEMAKER_SPINE_PATH));
+    spine.enable_skin(NOISEMAKER_SKIN);
+    spine.refresh_skins();
+    spine.set_animation(NOISEMAKER_ACTIVE_ANIM, false, 0);
+
+    target_entity.add_component(Noisemaker_Target);
+    return target_entity;
+}
+
+is_position_within_active_noisemaker :: proc(world_pos: v2) -> bool {
+    radius_sq := NOISEMAKER_INTERFERENCE_RADIUS * NOISEMAKER_INTERFERENCE_RADIUS;
+    for noisemaker: component_iterator(Noisemaker_Target) {
+        if !#alive(noisemaker.entity) continue;
+
+        delta := noisemaker.entity.world_position - world_pos;
+        if length_squared(delta) <= radius_sq {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+is_entity_sound_sight_interfered :: proc() -> bool {
+    entity_player := get_round_entity_player();
+    if !#alive(entity_player) || !#alive(entity_player.entity) {
+        return false;
+    }
+
+    return is_position_within_active_noisemaker(entity_player.entity.world_position);
+}

@@ -1,0 +1,63 @@
+import "core:ao"
+
+ENTITY_FLASHBANG_TRIGGER_RADIUS :: 8.0;
+ENTITY_FLASHBANG_EFFECT_SECONDS :: 2.5;
+ENTITY_FLASHBANG_MOVEMENT_MULTIPLIER :: 0.35;
+ENTITY_FLASHBANG_FADE_IN_SECONDS :: 0.25;
+ENTITY_FLASHBANG_FADE_OUT_SECONDS :: 0.45;
+
+Entity_Flashbang_Effect :: class : Effect_Base {
+    intensity: float;
+
+    effect_start :: method() {
+        set_duration(ENTITY_FLASHBANG_EFFECT_SECONDS);
+    }
+}
+
+is_entity_flashbanged :: proc(player: Player) -> bool {
+    if !#alive(player) || !#alive(player.entity) {
+        return false;
+    }
+    return has_effect(player.entity, Entity_Flashbang_Effect);
+}
+
+get_entity_flashbang_alpha :: proc(player: Player) -> float {
+    if !#alive(player) || !#alive(player.entity) {
+        return 0.0;
+    }
+
+    effect, found := get_effect(player.entity, Entity_Flashbang_Effect);
+    if !found || effect == null {
+        return 0.0;
+    }
+
+    elapsed := effect.get_elapsed_time();
+    remaining := ENTITY_FLASHBANG_EFFECT_SECONDS - elapsed;
+    alpha := clamp(effect.intensity, 0.0, 1.0);
+
+    if ENTITY_FLASHBANG_FADE_IN_SECONDS > 0.0 && elapsed < ENTITY_FLASHBANG_FADE_IN_SECONDS {
+        alpha *= clamp(elapsed / ENTITY_FLASHBANG_FADE_IN_SECONDS, 0.0, 1.0);
+    }
+    if ENTITY_FLASHBANG_FADE_OUT_SECONDS > 0.0 && remaining < ENTITY_FLASHBANG_FADE_OUT_SECONDS {
+        alpha *= clamp(remaining / ENTITY_FLASHBANG_FADE_OUT_SECONDS, 0.0, 1.0);
+    }
+
+    return clamp(alpha, 0.0, 1.0);
+}
+
+apply_flashbang_effect_to_entity_player :: proc(explosion_pos: v2) {
+    entity_player := get_round_entity_player();
+    if !#alive(entity_player) || !#alive(entity_player.entity) {
+        return;
+    }
+    if !entity_player.is_round_entity() {
+        return;
+    }
+    if length(entity_player.entity.world_position - explosion_pos) > ENTITY_FLASHBANG_TRIGGER_RADIUS {
+        return;
+    }
+
+    effect := new(Entity_Flashbang_Effect);
+    effect.intensity = 1.0;
+    entity_player.entity.add_passive_effect(effect);
+}

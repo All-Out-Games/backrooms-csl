@@ -1,0 +1,27 @@
+009SG_Flashbang.png
+	size: 1968, 504
+	filter: Linear, Linear
+Glow/glow_FX
+	bounds: 1503, 82, 309, 307
+	offsets: 62, 52, 433, 440
+	rotate: 90
+Glow/radial_glow_FX
+	bounds: 1128, 3, 388, 372
+	offsets: 23, 34, 433, 440
+	rotate: 90
+Star_01
+	bounds: 1813, 350, 150, 150
+	offsets: 8, 8, 166, 166
+flash
+	bounds: 676, 3, 463, 449
+	offsets: 16, 21, 500, 490
+	rotate: 90
+flashbang_taped
+	bounds: 1813, 209, 82, 138
+	offsets: 1, 1, 84, 140
+particle
+	bounds: 1503, 65, 14, 14
+	offsets: 1, 1, 16, 16
+shadow
+	bounds: 3, 3, 670, 497
+	offsets: 33, 31, 735, 559

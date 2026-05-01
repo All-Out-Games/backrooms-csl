@@ -1,4 +1,4 @@
-WEAPON_COUNT :: 27;
+WEAPON_COUNT :: 29;
 AMMO_TYPE_COUNT :: 10;
 
 g_weapon_item_defs: [WEAPON_COUNT]Item_Definition;
@@ -40,6 +40,8 @@ weapon_type_to_index :: proc(wt: Weapon_Type) -> s64 {
         case .WIND_BLASTER:           return 24;
         case .STORMS_EYE:             return 25;
         case .HYDRO_CANNON:           return 26;
+        case .FLASHBANG:              return 27;
+        case .NOISEMAKER:             return 28;
     }
     return -1;
 }
@@ -167,6 +169,8 @@ init_weapon_items :: proc() {
     register_weapon(.WIND_BLASTER);
     register_weapon(.STORMS_EYE);
     register_weapon(.HYDRO_CANNON);
+    register_weapon(.FLASHBANG);
+    register_weapon(.NOISEMAKER);
 
     // Load fire sounds for each weapon
     load_fire_sounds();
@@ -269,6 +273,12 @@ load_fire_sounds :: proc() {
 
     // Hydro Cannon (1 sound)
     load_single_sound(.HYDRO_CANNON, "reusable_weapons/sounds/reusable-weapons/waterballoon_rpg_shoot.wav");
+
+    // Flashbang (1 sound)
+    load_single_sound(.FLASHBANG, "reusable_weapons/sounds/reusable-weapons/player_throw_grenade.wav");
+
+    // Noisemaker (1 sound)
+    load_single_sound(.NOISEMAKER, "reusable_weapons/sounds/reusable-weapons/player_throw_grenade.wav");
 }
 
 load_sound_range :: proc(wt: Weapon_Type, prefix: string, count: s64) {
@@ -322,6 +332,8 @@ get_weapon_type_for_item :: proc(item_def: Item_Definition) -> Weapon_Type {
                 case 24: return .WIND_BLASTER;
                 case 25: return .STORMS_EYE;
                 case 26: return .HYDRO_CANNON;
+                case 27: return .FLASHBANG;
+                case 28: return .NOISEMAKER;
             }
         }
         i += 1;

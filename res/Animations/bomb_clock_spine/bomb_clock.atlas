@@ -1,0 +1,53 @@
+c74728c617591772.png
+	size: 2006, 787
+	filter: Linear, Linear
+VFX/explosion/ExplosionResidue
+	bounds: 530, 38, 448, 319
+	offsets: 3, 31, 465, 361
+	rotate: 90
+VFX/explosion/UP_SmokeLine
+	bounds: 2, 488, 903, 297
+alarm clock about to explode
+	bounds: 1338, 406, 379, 332
+	offsets: 1, 1, 381, 334
+	rotate: 90
+alarm clock normal
+	bounds: 1672, 406, 379, 332
+	offsets: 1, 1, 381, 334
+	rotate: 90
+dynamite spark 1
+	bounds: 851, 8, 432, 87
+	offsets: 1, 1, 434, 89
+dynamite spark 2
+	bounds: 1338, 283, 476, 121
+	offsets: 1, 1, 478, 123
+dynamite spark 3
+	bounds: 851, 97, 514, 141
+	offsets: 0, 0, 538, 172
+exlposion/explosion 1
+	bounds: 1367, 2, 261, 279
+	offsets: 1, 1, 263, 281
+exlposion/explosion 2
+	bounds: 2, 58, 526, 428
+	offsets: 1, 1, 528, 430
+exlposion/explosion 3
+	bounds: 907, 240, 545, 429
+	offsets: 1, 1, 547, 431
+	rotate: 90
+exlposion/explosion fragment 1
+	bounds: 1816, 177, 227, 159
+	offsets: 1, 1, 229, 161
+	rotate: 90
+exlposion/explosion fragment 2
+	bounds: 1790, 28, 147, 137
+	offsets: 1, 1, 149, 139
+	rotate: 90
+exlposion/explosion smoke
+	bounds: 1630, 34, 100, 108
+	offsets: 1, 1, 102, 110
+exlposion/explosion smoke 2
+	bounds: 1630, 144, 158, 137
+	offsets: 1, 1, 160, 139
+hand
+	bounds: 851, 383, 43, 103
+	offsets: 1, 0, 44, 104

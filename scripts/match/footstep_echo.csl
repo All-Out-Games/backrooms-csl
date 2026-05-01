@@ -134,6 +134,7 @@ spine_bone_to_world :: proc(player: Player, bone_name: string) -> v2 {
 ping_player_with_footstep_echo :: proc(player: Player, fade_out_seconds: float) {
     if player == null || !#alive(player.entity) return;
     if player.is_round_entity() return;
+    if is_entity_sound_sight_interfered() return;
 
     if fade_out_seconds <= 0.0 {
         fade_out_seconds = ENTITY_VIEW_PLAYER_REVEAL_FADE_OUT_SECONDS;
@@ -143,6 +144,17 @@ ping_player_with_footstep_echo :: proc(player: Player, fade_out_seconds: float) 
     wp := spine_bone_to_world(player, bone);
     spawn_footstep_echo(wp, "Echo.prefab");
     player.reveal_for_entity_local_view_with_duration(fade_out_seconds);
+}
+
+clear_entity_local_view_reveal :: proc(player: Player) {
+    if player == null {
+        return;
+    }
+
+    player.entity_local_view_alpha = 0.0;
+    player.entity_local_view_is_active = false;
+    player.entity_local_view_fade_out_seconds = ENTITY_VIEW_PLAYER_REVEAL_FADE_OUT_SECONDS;
+    player.entity_scream_reveal_remaining = 0.0;
 }
 
 is_player_within_entity_hearing_radius :: proc(player: Player) -> bool {
@@ -188,6 +200,13 @@ tick_footstep_echo_for_player :: proc(player: Player, dt: float) {
         player.footstep_stride_accum = 0.0;
         return;
     }
+
+    if is_entity_sound_sight_interfered() {
+        player.footstep_stride_accum = 0.0;
+        clear_entity_local_view_reveal(player);
+        return;
+    }
+
     agent := player.agent;
     if agent == null {
         player.footstep_stride_accum = 0.0;

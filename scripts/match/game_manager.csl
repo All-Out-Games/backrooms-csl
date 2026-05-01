@@ -1150,3 +1150,24 @@ start :: proc(player: Player) {
         log_info("start: unable to start match from current state", {});
     }
 } @chat_command
+
+g :: proc(player: Player, item_id: string) {
+    init_weapon_items();
+
+    item_def := get_registered_item_def_by_id(item_id);
+    if item_def == null {
+        Notifier.notify(player, "Unknown item id: %", {item_id});
+        return;
+    }
+
+    item := Items.create_item_instance(item_def, 1);
+    will_destroy_item: bool;
+    if !Items.can_move_item_to_inventory(item, player.default_inventory, ref will_destroy_item) {
+        Items.destroy_item_instance(item);
+        Notifier.notify(player, "No room for %", {item_def.get_name()});
+        return;
+    }
+
+    Items.move_item_to_inventory(item, player.default_inventory);
+    Notifier.notify(player, "Gave % (%).", {item_def.get_name(), item_def.get_id()});
+} @chat_command

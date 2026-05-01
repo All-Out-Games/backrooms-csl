@@ -10,6 +10,7 @@ GENERATOR_UI_CLOCK_TEXTURE        :: "sprites/tasks/generator/Clock.png";
 GENERATOR_UI_POINTER_TEXTURE      :: "sprites/tasks/generator/Ponteiro.png";
 
 GENERATOR_UI_LAYER                :: 452;
+GENERATOR_UI_PREVIEW_ENABLED      :: true;
 GENERATOR_PULLS_REQUIRED          :: 3;
 GENERATOR_SUCCESS_DISPLAY_TIME    :: 0.6;
 GENERATOR_WINDOW_HALF_HEIGHT      :: 500.0;
@@ -17,6 +18,8 @@ GENERATOR_WINDOW_HALF_WIDTH       :: 500.0;
 GENERATOR_CLOSE_BUTTON_HALF_SIZE  :: 20.0;
 GENERATOR_PULL_MIN_X_FRACTION     :: 0.16;
 GENERATOR_PULL_SUCCESS_FRACTION   :: 0.18;
+
+generator_ui_preview_auto_opened: bool;
 
 Generator_Restart_Effect :: class : Effect_Base {
     generator: Generator;
@@ -152,6 +155,46 @@ get_generator_restart_effect :: proc(player: Player) -> Generator_Restart_Effect
     return active_effect.(Generator_Restart_Effect);
 }
 
+is_generator_ui_preview_enabled :: proc() -> bool {
+    return GENERATOR_UI_PREVIEW_ENABLED;
+}
+
+can_player_use_generator_ui_preview :: proc(player: Player) -> bool {
+    if !is_generator_ui_preview_enabled() {
+        return false;
+    }
+    if player == null || !player.is_local() {
+        return false;
+    }
+
+    gm := get_game_manager();
+    if !#alive(gm) {
+        return false;
+    }
+    if gm.phase != .SURVIVOR_HEAD_START && gm.phase != .ACTIVE {
+        return false;
+    }
+    if !player.is_round_survivor() || player.is_round_entity() || player.is_round_dead() {
+        return false;
+    }
+    return true;
+}
+
+open_generator_ui_preview :: proc(player: Player) {
+    if !can_player_use_generator_ui_preview(player) {
+        return;
+    }
+    if player.entity.get_active_effect() != null {
+        return;
+    }
+
+    generator_ui_preview_auto_opened = true;
+
+    preview_effect := new(Generator_Restart_Effect);
+    preview_effect.reset_ui_state();
+    player.entity.set_active_effect(preview_effect);
+}
+
 init_generator_restart_layout :: proc(effect: Generator_Restart_Effect, window_rect: Rect) {
     if effect.layout_initialized {
         return;
@@ -162,7 +205,7 @@ init_generator_restart_layout :: proc(effect: Generator_Restart_Effect, window_r
     w := window_rect.width();
     h := window_rect.height();
 
-    effect.anchor_pos = v2{window_rect.min.x + w * 0.63, window_rect.min.y + h * 0.62};
+    effect.anchor_pos = v2{window_rect.min.x + w * 0.65, window_rect.min.y + h * 0.58};
     effect.handle_home = v2{effect.anchor_pos.x - w * 0.12, effect.anchor_pos.y + h * 0.02};
     effect.handle_pos = effect.handle_home;
 }
@@ -193,7 +236,7 @@ draw_generator_close_button :: proc(panel_rect: Rect) -> bool {
     return UI.button(close_rect, close_bs, close_ts, "X").clicked;
 }
 
-draw_generator_restart_panel :: proc(player: Player, effect: Generator_Restart_Effect, success_state: bool) -> bool {
+draw_generator_restart_panel :: proc(player: Player, effect: Generator_Restart_Effect, success_state: bool, preview_mode: bool) -> bool {
     bg_tex := get_asset(Texture_Asset, GENERATOR_UI_BG_TEXTURE_PATH);
     generator_tex := get_asset(Texture_Asset, GENERATOR_UI_GENERATOR_TEXTURE);
     handle_tex := get_asset(Texture_Asset, GENERATOR_UI_HANDLE_TEXTURE);
@@ -235,7 +278,7 @@ draw_generator_restart_panel :: proc(player: Player, effect: Generator_Restart_E
         UI.quad(gen_rect, core_globals.white_sprite, v4{0.35, 0.35, 0.35, 1.0});
     }
 
-    clock_center := v2{gen_rect.min.x + gen_rect.width() * 0.58, gen_rect.min.y + gen_rect.height() * 0.6};
+    clock_center := v2{gen_rect.min.x + gen_rect.width() * 0.61, gen_rect.min.y + gen_rect.height() * 0.64};
     clock_rect := Rect{clock_center, clock_center}.grow(h * 0.12, h * 0.12, h * 0.12, h * 0.12);
     if clock_tex != null {
         clock_rect = clock_rect.fit_aspect(clock_tex.get_aspect(), .KEEP_HEIGHT);
@@ -334,7 +377,11 @@ draw_generator_restart_panel :: proc(player: Player, effect: Generator_Restart_E
     title_ts.do_outline = true;
     title_ts.outline_thickness = 3;
     title_ts.outline_color = v4{0.0, 0.0, 0.0, 1.0};
-    UI.text(title_rect, title_ts, "Restart Generator");
+    title_text := "Restart Generator";
+    if preview_mode {
+        title_text = "Restart Generator Preview";
+    }
+    UI.text(title_rect, title_ts, title_text);
 
     info_rect := panel_rect.bottom_center_rect().offset(0.0, 80.0).grow(30.0, 280.0, 30.0, 280.0);
     info_ts := UI.default_text_settings();
@@ -357,7 +404,18 @@ draw_generator_restart_panel :: proc(player: Player, effect: Generator_Restart_E
 
 draw_generator_restart_ui :: proc(player: Player, dt: float) {
     effect := get_generator_restart_effect(player);
-    if effect == null || !#alive(effect.generator) {
+    if effect == null {
+        if !generator_ui_preview_auto_opened && can_player_use_generator_ui_preview(player) {
+            open_generator_ui_preview(player);
+            effect = get_generator_restart_effect(player);
+        }
+    }
+
+    if effect == null {
+        return;
+    }
+    preview_mode := !#alive(effect.generator);
+    if !preview_mode && !#alive(effect.generator) {
         return;
     }
 
@@ -367,7 +425,7 @@ draw_generator_restart_ui :: proc(player: Player, dt: float) {
         return;
     }
 
-    if effect.generator.solved {
+    if !preview_mode && effect.generator.solved {
         effect.remove_effect(false);
         return;
     }
@@ -380,18 +438,22 @@ draw_generator_restart_ui :: proc(player: Player, dt: float) {
 
     if effect.success_time > 0.0 {
         if get_time() - effect.success_time >= GENERATOR_SUCCESS_DISPLAY_TIME {
-            effect.generator.complete(player);
-            effect.remove_effect(false);
-            return;
+            if preview_mode {
+                effect.reset_ui_state();
+            } else {
+                effect.generator.complete(player);
+                effect.remove_effect(false);
+                return;
+            }
         }
 
-        if draw_generator_restart_panel(player, effect, true) {
+        if draw_generator_restart_panel(player, effect, true, preview_mode) {
             effect.remove_effect(false);
         }
         return;
     }
 
-    if draw_generator_restart_panel(player, effect, false) {
+    if draw_generator_restart_panel(player, effect, false, preview_mode) {
         effect.remove_effect(false);
     }
 }

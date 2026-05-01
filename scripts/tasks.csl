@@ -325,6 +325,32 @@ draw_task_help_panel :: proc(player: Player) {
     title_ts.outline_color = v4.{0, 0, 0, 1};
     UI.text(header_strip, title_ts, "Tasks");
 
+    if is_generator_ui_preview_enabled() {
+        preview_row := content.cut_top(42.0);
+        content.cut_top(12.0);
+
+        preview_bs := UI.default_button_settings();
+        preview_bs.sprite = core_globals.white_sprite;
+        preview_bs.press_scaling = 0.35;
+        preview_bs.color = v4.{0.14, 0.16, 0.24, 0.9};
+        preview_bs.hovered_color = v4.{0.2, 0.22, 0.32, 0.96};
+        preview_bs.pressed_color = v4.{0.1, 0.12, 0.18, 1.0};
+        preview_bs.background_color_multiplier = v4.{1, 1, 1, 1};
+
+        preview_ts := UI.default_text_settings();
+        preview_ts.size = 22;
+        preview_ts.color = v4.{1, 1, 1, 1};
+        preview_ts.halign = .CENTER;
+        preview_ts.valign = .CENTER;
+        preview_ts.do_outline = true;
+        preview_ts.outline_thickness = 2;
+        preview_ts.outline_color = v4.{0, 0, 0, 1};
+
+        if UI.button(preview_row, preview_bs, preview_ts, "Open Generator Preview").clicked {
+            open_generator_ui_preview(player);
+        }
+    }
+
     entries: [..]Task_Help_Entry;
     if player.active_tasks.elements.count > 0 {
         for i: 0..player.active_tasks.elements.count - 1 {

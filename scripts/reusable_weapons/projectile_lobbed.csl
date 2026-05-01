@@ -1,4 +1,71 @@
 LOBBED_ARC_HEIGHT :: 2.0;
+LOBBED_MIN_AIM_DISTANCE :: 1.0;
+LOBBED_MAX_AIM_DISTANCE :: 7.0;
+FLASHBANG_PROJ_SPINE_PATH :: "Animations/Flashbang/009SG_Flashbang.spine";
+FLASHBANG_PROJ_TRAVEL_ANIM :: "Spawn";
+FLASHBANG_PROJ_IMPACT_ANIM :: "Explosion";
+FLASHBANG_PROJECTILE_BASE_SCALE :: 1.25;
+FLASHBANG_IMPACT_VFX_LIFETIME :: 0.85;
+FLASHBANG_VFX_SCALE := v2.{2.0, 2.0};
+
+spawn_flashbang_impact_vfx :: proc(pos: v2) {
+    spawn_simple_vfx(
+        FLASHBANG_PROJ_SPINE_PATH,
+        "default",
+        pos,
+        FLASHBANG_VFX_SCALE,
+        FLASHBANG_PROJ_IMPACT_ANIM,
+        FLASHBANG_IMPACT_VFX_LIFETIME
+    );
+}
+
+get_lobbed_projectile_start_pos :: proc(player: Player, direction: v2) -> v2 {
+    return player.entity.world_position;
+}
+
+get_lobbed_arc_height :: proc(travel_distance: float, max_distance: float) -> float {
+    if max_distance <= 0 {
+        return 0;
+    }
+
+    t := travel_distance / max_distance;
+    return -LOBBED_ARC_HEIGHT * (2.0 * t - 1.0) * (2.0 * t - 1.0) + LOBBED_ARC_HEIGHT;
+}
+
+get_lobbed_arc_position :: proc(start_pos: v2, direction: v2, travel_distance: float, max_distance: float) -> v2 {
+    ground_pos := v2{
+        start_pos.x + direction.x * travel_distance,
+        start_pos.y + direction.y * travel_distance
+    };
+    return v2{ground_pos.x, ground_pos.y + get_lobbed_arc_height(travel_distance, max_distance)};
+}
+
+get_lobbed_landing_position :: proc(start_pos: v2, direction: v2, max_distance: float) -> v2 {
+    return v2{
+        start_pos.x + direction.x * max_distance,
+        start_pos.y + direction.y * max_distance
+    };
+}
+
+get_lobbed_target_origin_position :: proc(player: Player, direction: v2) -> v2 {
+    return player.entity.world_position;
+}
+
+get_lobbed_target_position_from_player :: proc(player: Player, direction: v2, aim_distance: float) -> v2 {
+    clamped_aim_distance := clamp(aim_distance, LOBBED_MIN_AIM_DISTANCE, LOBBED_MAX_AIM_DISTANCE);
+    dir := normalize(direction);
+    origin_pos := get_lobbed_target_origin_position(player, dir);
+    return v2{
+        origin_pos.x + dir.x * clamped_aim_distance,
+        origin_pos.y + dir.y * clamped_aim_distance
+    };
+}
+
+get_lobbed_projectile_travel_distance :: proc(player: Player, direction: v2, aim_distance: float) -> float {
+    start_pos := get_lobbed_projectile_start_pos(player, direction);
+    target_pos := get_lobbed_target_position_from_player(player, direction, aim_distance);
+    return length(target_pos - start_pos);
+}
 
 Lobbed_Projectile :: class : Component {
     damage: float;
@@ -11,12 +78,18 @@ Lobbed_Projectile :: class : Component {
     aoe_damage: float;
     weapon_type: Weapon_Type;
     start_pos: v2;
+    base_scale: v2;
     started: bool;
+    scale_x_sign: float = 1.0;
 
     ao_update :: method(dt: float) {
         if !started {
             started = true;
             start_pos = entity.world_position;
+            base_scale = entity.local_scale;
+            if base_scale.x == 0.0 && base_scale.y == 0.0 {
+                base_scale = v2{2.0, 2.0};
+            }
             if max_distance <= 0 {
                 max_distance = 8.0;
             }
@@ -24,21 +97,17 @@ Lobbed_Projectile :: class : Component {
 
         move_dist := speed * dt;
         travel_distance += move_dist;
+        clamped_travel_distance := min(travel_distance, max_distance);
 
-        // Parabolic arc: height = -h * ((x/(0.5*r)) - 1)^2 + h
-        t := travel_distance / max_distance;
-        arc_height := -LOBBED_ARC_HEIGHT * (2.0 * t - 1.0) * (2.0 * t - 1.0) + LOBBED_ARC_HEIGHT;
-
-        ground_pos := v2{start_pos.x + direction.x * travel_distance, start_pos.y + direction.y * travel_distance};
-        entity.set_local_position({ground_pos.x, ground_pos.y + arc_height});
+        entity.set_local_position(get_lobbed_arc_position(start_pos, direction, clamped_travel_distance, max_distance));
 
         // Scale entity to simulate height
-        scale_factor := 1.0 + arc_height * 0.3;
-        entity.set_local_scale({2.0 * scale_factor, 2.0 * scale_factor});
+        scale_factor := 1.0 + get_lobbed_arc_height(clamped_travel_distance, max_distance) * 0.3;
+        entity.set_local_scale({base_scale.x * scale_factor, base_scale.y * scale_factor});
 
         // Landed
         if travel_distance >= max_distance {
-            land_pos := v2{start_pos.x + direction.x * max_distance, start_pos.y + direction.y * max_distance};
+            land_pos := get_lobbed_landing_position(start_pos, direction, max_distance);
             on_lobbed_land(land_pos, owner_id, aoe_radius, aoe_damage, weapon_type);
             entity.destroy();
             return;
@@ -47,8 +116,9 @@ Lobbed_Projectile :: class : Component {
 }
 
 on_lobbed_land :: proc(pos: v2, owner_id: u64, radius: float, damage: float, wt: Weapon_Type) {
-    // AOE damage at landing position
-    apply_aoe_damage(pos, owner_id, radius, damage);
+    if radius > 0.0 && damage > 0.0 {
+        apply_aoe_damage(pos, owner_id, radius, damage);
+    }
 
     // Play explosion sound
     switch wt {
@@ -103,24 +173,51 @@ on_lobbed_land :: proc(pos: v2, owner_id: u64, radius: float, damage: float, wt:
             // Spawn 10 small bombs in a circle
             spawn_cluster_bombs(pos, owner_id);
         }
+        case .FLASHBANG: {
+            spawn_flashbang_impact_vfx(pos);
+            apply_flashbang_effect_to_entity_player(pos);
+        }
+        case .NOISEMAKER: {
+            spawn_noisemaker_target(pos);
+        }
     }
 }
 
-spawn_lobbed_projectile :: proc(player: Player, direction: v2, wt: Weapon_Type) {
+spawn_lobbed_projectile :: proc(player: Player, direction: v2, aim_distance: float, wt: Weapon_Type) {
     config := get_weapon_config(wt);
-    bone_local := player.animator.get_bone_local_position("PROJECTILE");
-    barrel_dist := length(bone_local);
     dir := normalize(direction);
-    spawn_pos := v2{player.animator.entity.world_position.x + dir.x * barrel_dist, player.animator.entity.world_position.y + dir.y * barrel_dist};
+    spawn_pos := get_lobbed_projectile_start_pos(player, dir);
 
     proj_entity := Scene.create_entity();
     proj_entity.set_local_position(spawn_pos);
     proj_entity.set_local_rotation(to_degrees(atan2(direction.y, direction.x)));
 
-    // Golden Rocket uses spine-animated projectile; others use sprite textures
+    // Golden Rocket, Flashbang, and Noisemaker use spine-animated projectiles; others use sprite textures
     if wt == .GOLDEN_ROCKET_LAUNCHER {
         proj_entity.set_local_scale({2, 2});
         setup_projectile_spine(proj_entity, "gold_rocket", TRAVEL_LOOP);
+    } else if wt == .FLASHBANG {
+        proj_entity.set_local_rotation(0);
+        spine := proj_entity.add_component(Spine_Animator);
+        spine.awaken();
+        spine.set_skeleton(get_asset(Spine_Asset, FLASHBANG_PROJ_SPINE_PATH));
+        spine.enable_skin("default");
+        spine.refresh_skins();
+        spine.set_animation(FLASHBANG_PROJ_TRAVEL_ANIM, false, 0);
+        flashbang_scale_x := FLASHBANG_PROJECTILE_BASE_SCALE;
+        if dir.x < 0.0 {
+            flashbang_scale_x = -FLASHBANG_PROJECTILE_BASE_SCALE;
+        }
+        proj_entity.set_local_scale({flashbang_scale_x, FLASHBANG_PROJECTILE_BASE_SCALE});
+    } else if wt == .NOISEMAKER {
+        proj_entity.set_local_rotation(0);
+        spine := proj_entity.add_component(Spine_Animator);
+        spine.awaken();
+        spine.set_skeleton(get_asset(Spine_Asset, NOISEMAKER_SPINE_PATH));
+        spine.enable_skin(NOISEMAKER_SKIN);
+        spine.refresh_skins();
+        spine.set_animation(NOISEMAKER_PROJECTILE_ANIM, false, 0);
+        proj_entity.set_local_scale(NOISEMAKER_PROJECTILE_SCALE);
     } else {
         texture_path := "reusable_weapons/sprites/reusable-weapons/projectiles/grenade.png";
         switch wt {
@@ -135,11 +232,14 @@ spawn_lobbed_projectile :: proc(player: Player, direction: v2, wt: Weapon_Type) 
 
     proj := proj_entity.add_component(Lobbed_Projectile);
     proj.damage = config.base_damage;
-    proj.direction = normalize(direction);
+    proj.direction = dir;
     proj.owner_id = player.entity.id;
     proj.speed = config.projectile_speed;
-    proj.max_distance = 8.0;
+    proj.max_distance = get_lobbed_projectile_travel_distance(player, dir, aim_distance);
     proj.aoe_radius = config.aoe_radius;
     proj.aoe_damage = config.aoe_damage;
     proj.weapon_type = wt;
+    if wt == .FLASHBANG && dir.x < 0.0 {
+        proj.scale_x_sign = -1.0;
+    }
 }

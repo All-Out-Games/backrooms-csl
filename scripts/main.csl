@@ -136,9 +136,18 @@ ENTITY_FILM_GRAIN_NOISE_SCALE :: 1.75;
 ENTITY_COLOR_GRADE_FILTER := v3.{1.0, 1.0, 1.0};
 ENTITY_COLOR_GRADE_SATURATION :: 0.0;
 ENTITY_COLOR_GRADE_CONTRAST :: 2.0;
+ENTITY_FLASHBANG_BLACKOUT_COLOR := v4.{0.0, 0.0, 0.0, 1.0};
+ENTITY_FLASHBANG_DEBUFF_ICON_PATH :: "AbilityIcons/flashbang_taped.png";
+ENTITY_NOISEMAKER_DEBUFF_ICON_PATH :: "AbilityIcons/Noisemaker.png";
+ENTITY_DEBUFF_ICON_WORLD_Y_OFFSET :: 2.9;
+ENTITY_DEBUFF_ICON_SPACING :: 48.0;
+ENTITY_FLASHBANG_DEBUFF_ICON_HALF_SIZE :: 24.0;
 ENTITY_VIEW_PLAYER_REVEAL_FADE_OUT_SECONDS :: 2.0;
 ENTITY_NAME_INVISIBILITY_REASON :: "entity_role_active";
 ROUND_SURVIVOR_NORMAL_MOVEMENT_MULTIPLIER :: 0.75;
+HELD_ITEM_BONE_NAME :: "Finger_R2";
+HELD_ITEM_SCALE := v2.{0.35, 0.35};
+HELD_ITEM_RENDER_LAYER :: 0;
 
 ENTITY_OVERRIDE_RIG_PATH :: "Animations/Bacteria/imposter_monster.spine";
 // `imposter_monster.spine` is authored much larger than the reusable player rig,
@@ -212,6 +221,9 @@ Player :: class : Player_Base {
     equipped_weapon_type: Weapon_Type;
     equipped_item_def: Item_Definition;
     last_selected_index: s64;
+    held_item_entity: Entity;
+    held_item_sprite: Sprite_Renderer;
+    held_item_weapon_type: Weapon_Type;
     boomwheel_cannon: Boomwheel_Cannon; // only needed if using Boomwheel
 
     base_movement_speed: float;
@@ -330,6 +342,91 @@ Player :: class : Player_Base {
         }
     }
 
+    destroy_held_item_visual :: method() {
+        if held_item_entity != null && #alive(held_item_entity) {
+            held_item_entity.destroy();
+        }
+        held_item_entity = null;
+        held_item_sprite = null;
+        held_item_weapon_type = .NONE;
+    }
+
+    ensure_held_item_visual :: method(wt: Weapon_Type) {
+        if wt == held_item_weapon_type && held_item_entity != null && #alive(held_item_entity) && held_item_sprite != null {
+            return;
+        }
+
+        this.destroy_held_item_visual();
+
+        if wt != .FLASHBANG && wt != .NOISEMAKER {
+            return;
+        }
+
+        texture_path := get_weapon_config(wt).weapon_icon_path;
+        if texture_path.count == 0 {
+            return;
+        }
+
+        held_texture := get_asset(Texture_Asset, texture_path);
+        if held_texture == null {
+            return;
+        }
+
+        new_held_item := Scene.create_entity();
+        new_held_item.set_parent(entity, false);
+        new_held_item.set_local_enabled(true);
+        new_held_item.set_local_position(v2.{0.0, 0.0});
+        new_held_item.set_local_rotation(0.0);
+        new_held_item.set_local_scale(HELD_ITEM_SCALE);
+
+        sprite := new_held_item.add_component(Sprite_Renderer);
+        sprite.set_texture(held_texture);
+        sprite.layer = HELD_ITEM_RENDER_LAYER;
+
+        held_item_entity = new_held_item;
+        held_item_sprite = sprite;
+        held_item_weapon_type = wt;
+    }
+
+    update_held_item_visual :: method() {
+        if !this.is_round_survivor() || round_dead {
+            this.destroy_held_item_visual();
+            return;
+        }
+
+        if equipped_weapon_type != .FLASHBANG && equipped_weapon_type != .NOISEMAKER {
+            this.destroy_held_item_visual();
+            return;
+        }
+
+        if animator == null || animator.instance == null {
+            this.destroy_held_item_visual();
+            return;
+        }
+
+        this.ensure_held_item_visual(equipped_weapon_type);
+        if held_item_entity == null || !#alive(held_item_entity) {
+            return;
+        }
+
+        if held_item_sprite != null && animator != null {
+            tint := held_item_sprite.color;
+            tint.w = animator.color_multiplier.w;
+            held_item_sprite.color = tint;
+        }
+
+        hand_local := animator.get_bone_local_position(HELD_ITEM_BONE_NAME);
+        hand_scale := animator.scale;
+
+        held_item_entity.set_local_position(v2{hand_local.x * hand_scale.x, hand_local.y * hand_scale.y});
+
+        held_scale_x := HELD_ITEM_SCALE.x;
+        if hand_scale.x < 0.0 {
+            held_scale_x = -HELD_ITEM_SCALE.x;
+        }
+        held_item_entity.set_local_scale(v2{held_scale_x, HELD_ITEM_SCALE.y});
+    }
+
     sync_local_camera_size :: proc(using this: Player) {
         if !this.is_local() {
             return;
@@ -377,6 +474,7 @@ Player :: class : Player_Base {
         entity_lurch_remaining = 0.0;
         round_dead = false;
         round_dead_ghost_state_active = false;
+        held_item_weapon_type = .NONE;
 
         wt := entity.add_component(Weapon_Target);
         wt.health = 100.0;
@@ -531,6 +629,10 @@ Player :: class : Player_Base {
     ao_update :: method(dt: float) {
         this.sync_local_camera_size();
 
+        if equipped_weapon_type == .NONE {
+            this.set_mouse_ik_enabled(false);
+        }
+
         active_effect := entity.get_active_effect();
         gm := get_game_manager();
         if round_dead &&
@@ -550,6 +652,7 @@ Player :: class : Player_Base {
             equipped_weapon_type = .NONE;
             equipped_item_def = null;
         }
+        this.update_held_item_visual();
 
         is_moving := false;
         if #alive(agent) {
@@ -606,6 +709,9 @@ Player :: class : Player_Base {
                 movement_speed_multiplier = ENTITY_LURCH_MOVEMENT_MULTIPLIER;
             } else if this.is_round_survivor() {
                 movement_speed_multiplier = ROUND_SURVIVOR_NORMAL_MOVEMENT_MULTIPLIER;
+            }
+            if this.is_round_entity() && is_entity_flashbanged(this) {
+                movement_speed_multiplier *= ENTITY_FLASHBANG_MOVEMENT_MULTIPLIER;
             }
 
             current_speed := agent.movement_speed;
@@ -708,7 +814,6 @@ Player :: class : Player_Base {
                         case .BEAM:        { draw_ability_button(this, Beam_Ability, 0); }
                         case .SPECIAL:     { draw_ability_button(this, Special_Ability, 0); }
                     }
-                    draw_ability_button(this, Melee_Ability, 1); // optional melee
                 }
 
                 // Draw hotbar and handle equip/unequip
@@ -723,6 +828,12 @@ Player :: class : Player_Base {
             !is_hidden_by_entity_local_view(this) &&
             (current_stamina < max_stamina || sprint_active || sprint_lockout_remaining > 0.0) {
             draw_stamina_bar(this);
+        }
+
+        this.draw_entity_status_debuff_icons();
+
+        if this.is_local() && this.is_round_entity() && is_entity_flashbanged(this) {
+            this.draw_entity_flashbang_blackout_overlay();
         }
 
     }
@@ -744,6 +855,8 @@ Player :: class : Player_Base {
             silhouette_material = null;
         }
         silhouette_material_applied = false;
+
+        this.destroy_held_item_visual();
 
         // Local-only: destroy LOS light entity.
         if this.is_local_or_server() {
@@ -771,6 +884,9 @@ Player :: class : Player_Base {
         if round_dead {
             return false;
         }
+        if this.is_round_entity() && is_entity_flashbanged(this) {
+            return false;
+        }
         if this.is_round_entity() && ability.#type == Sprint_Ability {
             return false;
         }
@@ -779,7 +895,18 @@ Player :: class : Player_Base {
 
     ao_can_use_interactable :: method(interactable: Interactable) -> bool {
         // Called to determine if the player is allowed to use the given interactable
-        return !round_dead;
+        if round_dead {
+            return false;
+        }
+
+        if this.is_round_entity() {
+            listener := interactable.listener;
+            if #alive(listener) && listener.#type == Dropped_Item {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     ao_on_interactable_used :: method(interactable: Interactable) {
@@ -826,6 +953,112 @@ Player :: class : Player_Base {
             noise_scale = ENTITY_FILM_GRAIN_NOISE_SCALE
         };
         Post_Processing.film_grain(film_grain);
+
+        if has_effect(entity, Entity_Flashbang_Effect) {
+            this.apply_entity_flashbang_local_post_processing(get_entity_flashbang_alpha(this));
+        }
+    }
+
+    apply_entity_flashbang_local_post_processing :: proc(using this: Player, alpha: float) {
+        alpha = clamp(alpha, 0.0, 1.0);
+        flashbang_grade := Post_Processing.Color_Grade_Config{
+            color_filter = v3{
+                lerp(ENTITY_COLOR_GRADE_FILTER.x, 0.0, alpha),
+                lerp(ENTITY_COLOR_GRADE_FILTER.y, 0.0, alpha),
+                lerp(ENTITY_COLOR_GRADE_FILTER.z, 0.0, alpha)
+            },
+            saturation = lerp(ENTITY_COLOR_GRADE_SATURATION, -1.0, alpha),
+            contrast = lerp(ENTITY_COLOR_GRADE_CONTRAST, 0.0, alpha)
+        };
+        Post_Processing.color_grade(flashbang_grade);
+
+        flashbang_grain := Post_Processing.Film_Grain_Config{
+            strength = lerp(ENTITY_FILM_GRAIN_STRENGTH, 0.0, alpha),
+            noise_scale = lerp(ENTITY_FILM_GRAIN_NOISE_SCALE, 1.0, alpha)
+        };
+        Post_Processing.film_grain(flashbang_grain);
+    }
+
+    draw_entity_flashbang_blackout_overlay :: proc(using this: Player) {
+        alpha := get_entity_flashbang_alpha(this);
+        if alpha <= 0.0 {
+            return;
+        }
+
+        UI.push_screen_draw_context();
+        defer UI.pop_draw_context();
+
+        UI.push_layer(2000);
+        defer UI.pop_layer();
+
+        full_screen := UI.get_screen_rect();
+        UI.quad(full_screen, core_globals.white_sprite, v4{
+            ENTITY_FLASHBANG_BLACKOUT_COLOR.x,
+            ENTITY_FLASHBANG_BLACKOUT_COLOR.y,
+            ENTITY_FLASHBANG_BLACKOUT_COLOR.z,
+            alpha
+        });
+    }
+
+    draw_entity_status_debuff_icon :: proc(using this: Player, icon_path: string, alpha: float, slot_index: s64, slot_count: s64) {
+        if !#alive(entity) {
+            return;
+        }
+
+        if alpha <= 0.0 {
+            return;
+        }
+
+        icon := get_asset(Texture_Asset, icon_path);
+        if icon == null {
+            return;
+        }
+
+        UI.push_screen_draw_context();
+        defer UI.pop_draw_context();
+
+        UI.push_layer(900);
+        defer UI.pop_layer();
+
+        screen_pos := world_to_screen(entity.world_position + v2{0.0, ENTITY_DEBUFF_ICON_WORLD_Y_OFFSET});
+        centered_slot := slot_index.(float) - (slot_count - 1).(float) * 0.5;
+        screen_pos += v2{centered_slot * ENTITY_DEBUFF_ICON_SPACING, 0.0};
+        pulse := 1.0 + sin(get_time() * 8.0) * 0.06 * alpha;
+        half_size := ENTITY_FLASHBANG_DEBUFF_ICON_HALF_SIZE * pulse;
+        rect := Rect{min=screen_pos + v2{-half_size, -half_size}, max=screen_pos + v2{half_size, half_size}};
+        glow_rect := Rect{min=rect.min + v2{-6.0, -6.0}, max=rect.max + v2{6.0, 6.0}};
+
+        UI.quad(glow_rect.fit_aspect(icon.get_aspect(), .KEEP_BIGGER), icon, v4{1.0, 1.0, 1.0, alpha * 0.2});
+        UI.quad(rect.fit_aspect(icon.get_aspect(), .KEEP_BIGGER), icon, v4{1.0, 1.0, 1.0, alpha});
+    }
+
+    draw_entity_status_debuff_icons :: proc(using this: Player) {
+        if !this.is_round_entity() {
+            return;
+        }
+
+        icon_paths: [6]string;
+        icon_alphas: [6]float;
+        icon_count: s64 = 0;
+
+        flashbang_alpha := get_entity_flashbang_alpha(this);
+        if flashbang_alpha > 0.0 {
+            icon_paths[icon_count] = ENTITY_FLASHBANG_DEBUFF_ICON_PATH;
+            icon_alphas[icon_count] = flashbang_alpha;
+            icon_count += 1;
+        }
+
+        if is_entity_sound_sight_interfered() {
+            icon_paths[icon_count] = ENTITY_NOISEMAKER_DEBUFF_ICON_PATH;
+            icon_alphas[icon_count] = 1.0;
+            icon_count += 1;
+        }
+
+        i: s64 = 0;
+        while i < icon_count {
+            this.draw_entity_status_debuff_icon(icon_paths[i], icon_alphas[i], i, icon_count);
+            i += 1;
+        }
     }
 
     set_animator_alpha :: proc(using this: Player, alpha: float) {
@@ -834,6 +1067,12 @@ Player :: class : Player_Base {
         tint := animator.color_multiplier;
         tint.w = alpha;
         animator.color_multiplier = tint;
+
+        if held_item_sprite != null {
+            held_tint := held_item_sprite.color;
+            held_tint.w = alpha;
+            held_item_sprite.color = held_tint;
+        }
     }
 
     reveal_for_entity_local_view :: proc(using this: Player) {
@@ -842,6 +1081,7 @@ Player :: class : Player_Base {
 
     reveal_for_entity_local_view_with_duration :: proc(using this: Player, fade_out_seconds: float) {
         if this.is_round_entity() return;
+        if is_entity_sound_sight_interfered() return;
 
         if fade_out_seconds <= 0.0 {
             fade_out_seconds = ENTITY_VIEW_PLAYER_REVEAL_FADE_OUT_SECONDS;
@@ -858,6 +1098,10 @@ Player :: class : Player_Base {
     }
 
     reveal_for_entity_scream_local_view :: proc(using this: Player, fade_out_seconds: float) {
+        if is_entity_sound_sight_interfered() {
+            clear_entity_local_view_reveal(this);
+            return;
+        }
         if fade_out_seconds <= 0.0 {
             fade_out_seconds = ENTITY_VIEW_PLAYER_REVEAL_FADE_OUT_SECONDS;
         }
@@ -876,6 +1120,10 @@ Player :: class : Player_Base {
 
     tick_entity_local_view_reveal_state :: proc(using this: Player, dt: float) {
         if this.is_round_entity() return;
+        if is_entity_sound_sight_interfered() {
+            clear_entity_local_view_reveal(this);
+            return;
+        }
         if !entity_local_view_is_active return;
 
         fade_out_seconds := entity_local_view_fade_out_seconds;
@@ -1069,6 +1317,7 @@ Player :: class : Player_Base {
             weapon_unequip(this, equipped_weapon_type);
             equipped_weapon_type = .NONE;
         }
+        this.set_mouse_ik_enabled(false);
         equipped_item_def = null;
 
         // Equip new weapon if it's a registered weapon
@@ -1080,6 +1329,8 @@ Player :: class : Player_Base {
                 equipped_item_def = new_def;
             }
         }
+
+        this.update_held_item_visual();
     }
 
     draw_round_dead_player_pointers :: proc(using this: Player) {

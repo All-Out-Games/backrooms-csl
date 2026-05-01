@@ -510,6 +510,42 @@ get_weapon_config :: proc(wt: Weapon_Type) -> Weapon_Config {
             config.shoot_trigger = "storms_eye_start";
             config.use_ik_var = "use_2h_ik";
         }
+        case .FLASHBANG: {
+            config.fire_mode = .LOBBED;
+            config.hand_type = .ONE_HAND;
+            config.fire_rate = 5.0;
+            config.base_damage = 0.0;
+            config.projectile_speed = 10.0;
+            config.aoe_radius = 0.0;
+            config.aoe_damage = 0.0;
+            config.ammo_per_shot = 0;
+            config.weapon_skin = "";
+            config.weapon_icon_path = "AbilityIcons/flashbang_taped.png";
+            config.item_id = "flashbang";
+            config.item_name = "Flashbang";
+            config.ammo_type_index = -1;
+            config.ammo_first_pickup = -1;
+            config.shoot_trigger = "throw";
+            config.use_ik_var = "use_1h_ik";
+        }
+        case .NOISEMAKER: {
+            config.fire_mode = .LOBBED;
+            config.hand_type = .ONE_HAND;
+            config.fire_rate = 5.0;
+            config.base_damage = 0.0;
+            config.projectile_speed = 10.0;
+            config.aoe_radius = 0.0;
+            config.aoe_damage = 0.0;
+            config.ammo_per_shot = 0;
+            config.weapon_skin = "";
+            config.weapon_icon_path = "AbilityIcons/Noisemaker.png";
+            config.item_id = "noisemaker";
+            config.item_name = "Noisemaker";
+            config.ammo_type_index = -1;
+            config.ammo_first_pickup = -1;
+            config.shoot_trigger = "throw";
+            config.use_ik_var = "use_1h_ik";
+        }
     }
 
     return config;

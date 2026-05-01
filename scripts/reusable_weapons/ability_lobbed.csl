@@ -1,4 +1,21 @@
 Lobbed_Shot_Ability :: class : Ability_Base {
+    get_lobbed_aim_distance :: proc(ability: Ability_Base, params: ref Ability_Update_Params, aim_direction: v2) -> float {
+        p := ability.player.(Player);
+        if p.device_kind == .PC {
+            aim_origin := get_lobbed_target_origin_position(p, aim_direction);
+            aim_offset := get_mouse_world_position() - aim_origin;
+            return clamp(length(aim_offset), LOBBED_MIN_AIM_DISTANCE, LOBBED_MAX_AIM_DISTANCE);
+        }
+
+        drag_t := clamp(length(params.drag_offset), 0.0, 1.0);
+        return lerp(LOBBED_MIN_AIM_DISTANCE, LOBBED_MAX_AIM_DISTANCE, drag_t);
+    }
+
+    resolve_lobbed_target :: proc(ability: Ability_Base, aim_direction: v2, aim_distance: float) -> v2 {
+        p := ability.player.(Player);
+        return get_lobbed_target_position_from_player(p, aim_direction, aim_distance);
+    }
+
     on_init :: proc(ability: Ability_Base) {
         ability.name = "Launch";
         ability.icon = get_asset(Texture_Asset, "reusable_weapons/sprites/reusable-weapons/weapon_icons/weapon_icons_250x250/goldenrocketlauncher.png");
@@ -24,25 +41,28 @@ Lobbed_Shot_Ability :: class : Ability_Base {
         aiming := Ability_Utilities.update_aiming_ability(p, ref params);
 
         if aiming.aim {
-            p.last_aim_direction = aiming.aim_direction;
+            aim_direction := normalize(aiming.aim_direction);
+            aim_distance := ability.get_lobbed_aim_distance(ref params, aim_direction);
+            lobbed_target := ability.resolve_lobbed_target(aim_direction, aim_distance);
+
+            p.last_aim_direction = aim_direction;
             p.set_mouse_ik_enabled(true);
-            p.set_aim_target(p.entity.world_position + aiming.aim_direction * 5.0);
-            draw_thin_aiming_line(p.entity.world_position, aiming.aim_direction, 1.0);
+            p.set_aim_target(lobbed_target);
+            draw_lobbed_aim_preview(p, aim_direction, aim_distance, wt);
         } else {
             p.set_mouse_ik_enabled(false);
         }
 
         should_fire := false;
-        if p.device_kind == .PC {
-            should_fire = aiming.activate;
-        } else {
-            should_fire = aiming.aim;
-        }
+        should_fire = aiming.activate;
 
         if should_fire && params.can_use && ability.current_cooldown <= 0 {
+            aim_direction := normalize(aiming.aim_direction);
+            aim_distance := ability.get_lobbed_aim_distance(ref params, aim_direction);
+            ability.resolve_lobbed_target(aim_direction, aim_distance);
             weapon_shoot(p, wt);
 
-            spawn_lobbed_projectile(p, aiming.aim_direction, wt);
+            spawn_lobbed_projectile(p, aim_direction, aim_distance, wt);
 
             ability.current_cooldown = config.fire_rate;
         }
