@@ -52,6 +52,7 @@ has_round_entity_assignment :: proc() -> bool {
 
 ao_before_scene_load :: proc() {
     // Called before the scene is loaded
+    register_sprint_keybinds();
 }
 
 ao_start :: proc() {
@@ -860,10 +861,8 @@ Player :: class : Player_Base {
             entity_override_state_machine.set_bool("is_moving", is_moving);
         }
 
-        if this.is_round_entity() || round_dead || round_downed || active_effect != null {
+        if this.is_round_entity() || round_dead || round_downed {
             sprint_input_held = false;
-        } else if this.is_local() && device_kind == .PC {
-            sprint_input_held = get_local_shift_sprint_input_held(this);
         }
 
         if sprint_lockout_remaining > 0.0 {
