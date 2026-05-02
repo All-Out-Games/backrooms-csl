@@ -23,6 +23,7 @@
     "navmesh_to_lock_to": 2941197339,
     "hearing_radius_entity": 2936247284,
     "GeneratorEntity": 2938733315,
+    "ReconnectWiresEntity": 2937949974,
     "RadioPuzzle": 2938296857,
     "SurvivorSpawn": 2950830672,
     "GeneratorSpawns": 2951698846,
@@ -32,7 +33,8 @@
     "ItemSpawns": 2942794679,
     "RoundItemIds": [
       "flashbang",
-      "noisemaker"
+      "noisemaker",
+      "stim"
     ],
     "MinRoundItemSpawnCount": 17,
     "MaxRoundItemSpawnCount": 25

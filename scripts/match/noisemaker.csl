@@ -23,9 +23,15 @@ Noisemaker_Target :: class : Component {
     elapsed: float;
     echo_timer: float;
     rng: u64;
+    ticking_sound_id: u64;
 
     ao_start :: method() {
         rng = rng_root_seed();
+
+        desc := SFX.default_sfx_desc();
+        desc.entity_to_follow = entity.id;
+        desc.loop = true;
+        ticking_sound_id = SFX.play(get_asset(SFX_Asset, "SFX/clockticking_down.wav"), desc);
     }
 
     ao_update :: method(dt: float) {
@@ -39,6 +45,13 @@ Noisemaker_Target :: class : Component {
         while echo_timer >= NOISEMAKER_ECHO_INTERVAL_SECONDS {
             echo_timer -= NOISEMAKER_ECHO_INTERVAL_SECONDS;
             spawn_noisemaker_echo(entity.world_position, ref rng);
+        }
+    }
+
+    ao_end :: method() {
+        if ticking_sound_id != 0 {
+            SFX.stop(ticking_sound_id);
+            ticking_sound_id = 0;
         }
     }
 }

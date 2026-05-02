@@ -29,6 +29,7 @@ Weapon_Type :: enum {
     HYDRO_CANNON;
     FLASHBANG;
     NOISEMAKER;
+    STIM;
 }
 
 Fire_Mode :: enum {

@@ -1,0 +1,96 @@
+import "core:ao"
+
+STIM_REVIVE_RANGE :: 2.4;
+
+find_stim_target :: proc(player: Player) -> Player {
+    if player == null || !#alive(player.entity) {
+        return null;
+    }
+
+    best_target: Player;
+    best_distance_sq := STIM_REVIVE_RANGE * STIM_REVIVE_RANGE;
+    found_target := false;
+    origin := player.entity.world_position;
+
+    for other: component_iterator(Player) {
+        if other == player continue;
+        if !other.is_round_downed() continue;
+        if !#alive(other.entity) continue;
+
+        delta := other.entity.world_position - origin;
+        distance_sq := delta.x * delta.x + delta.y * delta.y;
+        if distance_sq > STIM_REVIVE_RANGE * STIM_REVIVE_RANGE continue;
+
+        if !found_target || distance_sq < best_distance_sq {
+            best_target = other;
+            best_distance_sq = distance_sq;
+            found_target = true;
+        }
+    }
+
+    if !found_target {
+        return null;
+    }
+    return best_target;
+}
+
+Stim_Ability :: class : Ability_Base {
+    on_init :: method() {
+        name = "Stim";
+        icon = get_asset(Texture_Asset, "AbilityIcons/syringe_front.png");
+        disable_keybind = true;
+    }
+
+    can_use :: method() -> bool {
+        if player == null {
+            return false;
+        }
+
+        p := player.(Player);
+        if p == null {
+            return false;
+        }
+        if !p.is_round_survivor() || p.equipped_weapon_type != .STIM {
+            return false;
+        }
+        if p.get_equipped_item_instance() == null {
+            return false;
+        }
+
+        return find_stim_target(p) != null;
+    }
+
+    on_update :: method(params: ref Ability_Update_Params) {
+        if !params.clicked || !params.can_use {
+            return;
+        }
+
+        p := player.(Player);
+        if p == null {
+            return;
+        }
+
+        target := find_stim_target(p);
+        if target == null {
+            return;
+        }
+
+        stim_item := p.get_equipped_item_instance();
+        if stim_item == null {
+            return;
+        }
+
+        if !target.revive_from_downed() {
+            return;
+        }
+
+        weapon_play_fire_sound(p, .STIM);
+        Items.destroy_item_instance(stim_item, 1);
+        p.handle_equipped_item_changing(p.last_selected_index);
+        current_cooldown = get_weapon_config(.STIM).fire_rate;
+    }
+
+    on_draw_button :: proc(instance: Stim_Ability, rect: Rect) {
+        draw_ability_name_label(rect, "Stim");
+    }
+}

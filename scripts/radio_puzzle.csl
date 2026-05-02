@@ -317,24 +317,7 @@ draw_radio_tuning_ui :: proc(player: Player, dt: float) {
         UI.quad(panel_rect, core_globals.white_sprite, v4{0.14, 0.12, 0.08, 0.96});
     }
 
-    close_bs := UI.default_button_settings();
-    close_bs.sprite = core_globals.white_sprite;
-    close_bs.press_scaling = 0.35;
-    close_bs.color = v4{0.1, 0.1, 0.1, 0.82};
-    close_bs.hovered_color = v4{0.2, 0.2, 0.2, 0.95};
-    close_bs.pressed_color = v4{0.06, 0.06, 0.06, 1.0};
-
-    close_ts := UI.default_text_settings();
-    close_ts.size = 24;
-    close_ts.color = v4{1.0, 1.0, 1.0, 1.0};
-    close_ts.halign = .CENTER;
-    close_ts.valign = .CENTER;
-    close_ts.do_outline = true;
-    close_ts.outline_thickness = 2;
-    close_ts.outline_color = v4{0.0, 0.0, 0.0, 1.0};
-
-    close_rect := panel_rect.top_right_rect().offset(-24.0, -24.0).grow(20.0);
-    if UI.button(close_rect, close_bs, close_ts, "X").clicked {
+    if draw_task_overlay_close_button(panel_rect, "radio_close_btn") {
         effect.remove_effect(false);
         return;
     }

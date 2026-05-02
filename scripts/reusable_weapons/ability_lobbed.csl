@@ -56,6 +56,7 @@ Lobbed_Shot_Ability :: class : Ability_Base {
         should_fire := false;
         should_fire = aiming.activate;
 
+        did_fire := false;
         if should_fire && params.can_use && ability.current_cooldown <= 0 {
             aim_direction := normalize(aiming.aim_direction);
             aim_distance := ability.get_lobbed_aim_distance(ref params, aim_direction);
@@ -65,9 +66,10 @@ Lobbed_Shot_Ability :: class : Ability_Base {
             spawn_lobbed_projectile(p, aim_direction, aim_distance, wt);
 
             ability.current_cooldown = config.fire_rate;
+            did_fire = true;
         }
 
-        if should_fire && !weapon_has_ammo(p, wt) {
+        if should_fire && !did_fire && !weapon_has_ammo(p, wt) {
             if p.is_local() {
                 Notifier.notify("Out of ammo!");
             }

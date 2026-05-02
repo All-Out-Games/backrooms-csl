@@ -165,7 +165,13 @@ weapon_has_ammo :: proc(player: Player, wt: Weapon_Type) -> bool {
 
 weapon_get_ammo_count :: proc(player: Player, wt: Weapon_Type) -> s64 {
     ammo_def := get_ammo_def_for_weapon(wt);
-    if ammo_def == null return 999;
+    if ammo_def == null {
+        equipped_item := player.get_equipped_item_instance();
+        if equipped_item == null {
+            return 0;
+        }
+        return equipped_item.quantity;
+    }
 
     count: s64 = 0;
     inventory := player.default_inventory;
@@ -184,7 +190,16 @@ weapon_get_ammo_count :: proc(player: Player, wt: Weapon_Type) -> s64 {
 
 weapon_consume_ammo :: proc(player: Player, wt: Weapon_Type, amount: s64) {
     ammo_def := get_ammo_def_for_weapon(wt);
-    if ammo_def == null return;
+    if ammo_def == null {
+        equipped_item := player.get_equipped_item_instance();
+        if equipped_item == null {
+            return;
+        }
+
+        Items.destroy_item_instance(equipped_item, amount);
+        player.handle_equipped_item_changing(player.last_selected_index);
+        return;
+    }
 
     inventory := player.default_inventory;
     remaining := amount;

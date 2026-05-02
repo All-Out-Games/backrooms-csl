@@ -8,15 +8,11 @@ SPRINT_MOVEMENT_MULTIPLIER :: 1.25;
 SPRINT_ANIMATION_SPEED_MULTIPLIER :: 1.15;
 SPRINT_EXHAUST_LOCKOUT_SECONDS :: 1.0;
 
-sprint_keybind: Keybind;
 sprint_bar_back: Texture_Asset;
 sprint_bar_fill: Texture_Asset;
 sprint_shift_icon: Texture_Asset;
 
 ensure_sprint_resources :: proc() {
-    if sprint_keybind == 0 {
-        sprint_keybind = Keybinds.register("Sprint", .LEFT_SHIFT);
-    }
     if sprint_bar_back == null {
         sprint_bar_back = get_asset(Texture_Asset, "reusable_weapons/sprites/reusable-weapons/hud_elements/health_bar_green/healthbar_back.png");
     }
@@ -28,9 +24,12 @@ ensure_sprint_resources :: proc() {
     }
 }
 
-get_sprint_keybind :: proc() -> Keybind {
-    ensure_sprint_resources();
-    return sprint_keybind;
+get_local_shift_sprint_input_held :: proc(player: Player) -> bool {
+    if player == null || !player.is_local() || player.device_kind != .PC {
+        return false;
+    }
+
+    return get_input_held(.LEFT_SHIFT) || get_input_held(.RIGHT_SHIFT);
 }
 
 Sprint_Ability :: class : Ability_Base {
@@ -48,8 +47,11 @@ Sprint_Ability :: class : Ability_Base {
     }
 
     on_update :: method(params: ref Ability_Update_Params) {
-        hold := Ability_Utilities.update_holding_ability(player, ref params, get_sprint_keybind());
-        player.sprint_input_held = hold.active && params.can_use;
+        if player == null || !player.is_local() || player.device_kind == .PC {
+            return;
+        }
+
+        player.sprint_input_held = params.active && params.can_use;
     }
 
     on_draw_button :: proc(instance: Sprint_Ability, rect: Rect) {

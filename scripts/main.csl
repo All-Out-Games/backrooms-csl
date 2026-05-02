@@ -145,6 +145,9 @@ ENTITY_FLASHBANG_DEBUFF_ICON_HALF_SIZE :: 24.0;
 ENTITY_VIEW_PLAYER_REVEAL_FADE_OUT_SECONDS :: 2.0;
 ENTITY_NAME_INVISIBILITY_REASON :: "entity_role_active";
 ROUND_SURVIVOR_NORMAL_MOVEMENT_MULTIPLIER :: 0.75;
+DOWNED_SURVIVOR_MOVEMENT_MULTIPLIER :: 0.25;
+DOWNED_BLEED_OUT_SECONDS :: 30.0;
+DOWNED_SCREAM_INTERVAL_SECONDS :: 10.0;
 ROUND_ENTITY_NORMAL_MOVEMENT_MULTIPLIER :: 0.70;
 HELD_ITEM_BONE_NAME :: "Finger_R2";
 HELD_ITEM_SCALE := v2.{0.35, 0.35};
@@ -154,7 +157,7 @@ ENTITY_OVERRIDE_RIG_PATH :: "Animations/Bacteria/imposter_monster.spine";
 // `imposter_monster.spine` is authored much larger than the reusable player rig,
 // so start with a reduced scale and a small downward offset.
 ENTITY_OVERRIDE_SCALE := v2.{1, 1};
-ENTITY_OVERRIDE_OFFSET := v2.{0.0, -0.55};
+ENTITY_OVERRIDE_OFFSET := v2.{0.0, -0.30};
 
 // Translucent highlighted silhouette for the player spine (see res/shaders/spine_silhouette_highlight.aosl).
 create_player_spine_silhouette_material :: proc() -> Material {
@@ -237,8 +240,13 @@ Player :: class : Player_Base {
     sprint_input_held: bool;
     sprint_active: bool;
     entity_lurch_remaining: float;
+    round_downed: bool;
     round_dead: bool;
     round_dead_ghost_state_active: bool;
+    local_voice_chat_enabled_range: float;
+    local_voice_chat_muted_for_round_dead: bool;
+    downed_scream_remaining: float;
+    downed_bleed_out_ends_at: float;
     vent_cooldown_ends_at: float;
 
     footstep_stride_accum: float;
@@ -360,7 +368,7 @@ Player :: class : Player_Base {
 
         this.destroy_held_item_visual();
 
-        if wt != .FLASHBANG && wt != .NOISEMAKER {
+        if wt != .FLASHBANG && wt != .NOISEMAKER && wt != .STIM {
             return;
         }
 
@@ -391,12 +399,12 @@ Player :: class : Player_Base {
     }
 
     update_held_item_visual :: method() {
-        if !this.is_round_survivor() || round_dead {
+        if !this.is_round_survivor() || round_dead || round_downed {
             this.destroy_held_item_visual();
             return;
         }
 
-        if equipped_weapon_type != .FLASHBANG && equipped_weapon_type != .NOISEMAKER {
+        if equipped_weapon_type != .FLASHBANG && equipped_weapon_type != .NOISEMAKER && equipped_weapon_type != .STIM {
             this.destroy_held_item_visual();
             return;
         }
@@ -449,6 +457,47 @@ Player :: class : Player_Base {
         camera.size = desired_camera_size;
     }
 
+    update_local_voice_chat_range_cache :: method() {
+        if !this.is_local() || local_voice_chat_muted_for_round_dead {
+            return;
+        }
+
+        current_voice_range := Voice.get_range();
+        if current_voice_range > 0.0 {
+            local_voice_chat_enabled_range = current_voice_range;
+        }
+    }
+
+    set_local_round_dead_voice_chat_muted :: method(muted: bool) {
+        if !this.is_local() {
+            return;
+        }
+
+        if muted {
+            if local_voice_chat_muted_for_round_dead {
+                return;
+            }
+
+            current_voice_range := Voice.get_range();
+            if current_voice_range > 0.0 {
+                local_voice_chat_enabled_range = current_voice_range;
+            }
+
+            Voice.set_range(0.0);
+            local_voice_chat_muted_for_round_dead = true;
+            return;
+        }
+
+        if !local_voice_chat_muted_for_round_dead {
+            return;
+        }
+
+        local_voice_chat_muted_for_round_dead = false;
+        if local_voice_chat_enabled_range > 0.0 {
+            Voice.set_range(local_voice_chat_enabled_range);
+        }
+    }
+
     ao_start :: method() {
         entity_opt_in = false;
         active_tasks = List(Task_Base).{};
@@ -474,10 +523,16 @@ Player :: class : Player_Base {
         sprint_input_held = false;
         sprint_active = false;
         entity_lurch_remaining = 0.0;
+        round_downed = false;
         round_dead = false;
         round_dead_ghost_state_active = false;
+        local_voice_chat_enabled_range = 0.0;
+        local_voice_chat_muted_for_round_dead = false;
+        downed_scream_remaining = 0.0;
+        downed_bleed_out_ends_at = 0.0;
         vent_cooldown_ends_at = 0.0;
         held_item_weapon_type = .NONE;
+        this.update_local_voice_chat_range_cache();
 
         wt := entity.add_component(Weapon_Target);
         wt.health = 100.0;
@@ -540,9 +595,29 @@ Player :: class : Player_Base {
         return round_dead;
     }
 
+    is_round_downed :: method() -> bool {
+        return round_downed && !round_dead;
+    }
+
+    clear_round_downed_state :: method(reset_animation: bool = false) {
+        round_downed = false;
+        downed_scream_remaining = 0.0;
+        downed_bleed_out_ends_at = 0.0;
+
+        if animator != null && animator.instance != null {
+            animator.state_machine.set_bool("downed", false);
+            animator.state_machine.set_bool("downed_hit_reacting", false);
+            if reset_animation {
+                animator.state_machine.set_trigger("RESET");
+            }
+        }
+    }
+
     clear_round_death_state :: method() {
+        this.clear_round_downed_state();
         round_dead = false;
         round_dead_ghost_state_active = false;
+        this.set_local_round_dead_voice_chat_muted(false);
         entity_local_view_alpha = 0.0;
         entity_local_view_is_active = false;
         entity_local_view_fade_out_seconds = ENTITY_VIEW_PLAYER_REVEAL_FADE_OUT_SECONDS;
@@ -558,8 +633,59 @@ Player :: class : Player_Base {
         if animator != null && animator.instance != null {
             animator.state_machine.set_bool("ghost_form", false);
             animator.state_machine.set_bool("sprinting", false);
+        }
+        if animator != null && animator.instance != null {
             animator.state_machine.set_trigger("RESET");
         }
+    }
+
+    mark_round_downed :: method() {
+        if round_dead || round_downed {
+            return;
+        }
+
+        round_downed = true;
+        downed_scream_remaining = DOWNED_SCREAM_INTERVAL_SECONDS;
+        downed_bleed_out_ends_at = get_time() + DOWNED_BLEED_OUT_SECONDS;
+        sprint_input_held = false;
+        sprint_active = false;
+
+        if equipped_weapon_type != .NONE {
+            weapon_unequip(this, equipped_weapon_type);
+            equipped_weapon_type = .NONE;
+            equipped_item_def = null;
+            last_selected_index = -1;
+        }
+
+        if #alive(agent) {
+            agent.velocity = v2{0.0, 0.0};
+        }
+
+        if animator != null && animator.instance != null {
+            animator.state_machine.set_bool("ghost_form", false);
+            animator.state_machine.set_bool("sprinting", false);
+            animator.state_machine.set_bool("downed", true);
+        }
+    }
+
+    start_downed_hit_reaction :: method() {
+        if animator == null || animator.instance == null {
+            return;
+        }
+
+        animator.state_machine.set_bool("ghost_form", false);
+        animator.state_machine.set_bool("sprinting", false);
+        animator.state_machine.set_bool("downed", true);
+        animator.state_machine.set_bool("downed_hit_reacting", true);
+        animator.state_machine.set_trigger("hit_downed");
+    }
+
+    end_downed_hit_reaction :: method() {
+        if animator == null || animator.instance == null {
+            return;
+        }
+
+        animator.state_machine.set_bool("downed_hit_reacting", false);
     }
 
     mark_round_dead :: method(count_as_survivor_elimination: bool = true) {
@@ -569,8 +695,10 @@ Player :: class : Player_Base {
 
         was_round_survivor := this.is_round_survivor();
 
+        this.clear_round_downed_state();
         round_dead = true;
         round_dead_ghost_state_active = false;
+        this.set_local_round_dead_voice_chat_muted(true);
         entity_local_view_alpha = 0.0;
         entity_local_view_is_active = false;
         entity_local_view_fade_out_seconds = ENTITY_VIEW_PLAYER_REVEAL_FADE_OUT_SECONDS;
@@ -608,9 +736,69 @@ Player :: class : Player_Base {
         }
 
         round_dead_ghost_state_active = false;
+        this.clear_round_downed_state();
         animator.state_machine.set_bool("ghost_form", false);
         animator.state_machine.set_bool("sprinting", false);
         animator.state_machine.set_trigger("death");
+    }
+
+    tick_downed_scream_state :: method(dt: float) {
+        if !this.is_round_downed() {
+            downed_scream_remaining = 0.0;
+            return;
+        }
+
+        downed_scream_remaining -= dt;
+        if downed_scream_remaining > 0.0 {
+            return;
+        }
+
+        if entity.get_active_effect() != null {
+            return;
+        }
+
+        effect := new(Downed_Scream_Effect);
+        entity.set_active_effect(effect);
+        while downed_scream_remaining <= 0.0 {
+            downed_scream_remaining += DOWNED_SCREAM_INTERVAL_SECONDS;
+        }
+    }
+
+    get_downed_bleed_out_seconds_remaining :: method() -> s64 {
+        if !this.is_round_downed() {
+            return 0;
+        }
+
+        rem := downed_bleed_out_ends_at - get_time();
+        if rem <= 0.0 {
+            return 0;
+        }
+
+        secs := (rem + 0.999).(s64);
+        one: s64 = 1;
+        if secs < one {
+            secs = one;
+        }
+        return secs;
+    }
+
+    tick_downed_bleed_out_state :: method() {
+        if !this.is_round_downed() {
+            downed_bleed_out_ends_at = 0.0;
+            return;
+        }
+
+        if downed_bleed_out_ends_at <= 0.0 {
+            downed_bleed_out_ends_at = get_time() + DOWNED_BLEED_OUT_SECONDS;
+        }
+        if get_time() < downed_bleed_out_ends_at {
+            return;
+        }
+
+        if animator != null && animator.instance != null {
+            this.start_round_death_animation();
+        }
+        this.mark_round_dead();
     }
 
     enter_round_dead_ghost_state :: method() {
@@ -631,6 +819,7 @@ Player :: class : Player_Base {
 
     ao_update :: method(dt: float) {
         this.sync_local_camera_size();
+        this.update_local_voice_chat_range_cache();
 
         if equipped_weapon_type == .NONE {
             this.set_mouse_ik_enabled(false);
@@ -638,11 +827,13 @@ Player :: class : Player_Base {
 
         active_effect := entity.get_active_effect();
         gm := get_game_manager();
-        if round_dead &&
+        if (round_dead || round_downed) &&
             active_effect == null &&
             (!#alive(gm) || (gm.phase != .SURVIVOR_HEAD_START && gm.phase != .ACTIVE)) {
             this.clear_round_death_state();
         }
+
+        this.tick_downed_bleed_out_state();
 
         should_use_entity_override := false;
         if this.is_round_entity() {
@@ -669,8 +860,10 @@ Player :: class : Player_Base {
             entity_override_state_machine.set_bool("is_moving", is_moving);
         }
 
-        if this.is_round_entity() || round_dead {
+        if this.is_round_entity() || round_dead || round_downed || active_effect != null {
             sprint_input_held = false;
+        } else if this.is_local() && device_kind == .PC {
+            sprint_input_held = get_local_shift_sprint_input_held(this);
         }
 
         if sprint_lockout_remaining > 0.0 {
@@ -683,7 +876,7 @@ Player :: class : Player_Base {
             entity_lurch_remaining = max(entity_lurch_remaining, 0.0);
         }
 
-        wants_sprint := !round_dead && sprint_input_held && sprint_lockout_remaining <= 0.0 && current_stamina > 0.0;
+        wants_sprint := !round_dead && !round_downed && sprint_input_held && sprint_lockout_remaining <= 0.0 && current_stamina > 0.0;
         sprint_active = wants_sprint && is_moving;
 
         if sprint_active {
@@ -704,7 +897,9 @@ Player :: class : Player_Base {
 
         if #alive(agent) {
             movement_speed_multiplier := 1.0;
-            if round_dead {
+            if round_downed {
+                movement_speed_multiplier = DOWNED_SURVIVOR_MOVEMENT_MULTIPLIER;
+            } else if round_dead {
                 movement_speed_multiplier = SPRINT_MOVEMENT_MULTIPLIER;
             } else if sprint_active {
                 movement_speed_multiplier = SPRINT_MOVEMENT_MULTIPLIER;
@@ -730,7 +925,10 @@ Player :: class : Player_Base {
             sprint_has_applied_speed = true;
         }
 
+        this.tick_downed_scream_state(dt);
+
         if animator != null && animator.instance != null {
+            animator.state_machine.set_bool("downed", round_downed);
             animator.state_machine.set_bool("round_dead", round_dead);
             animator.state_machine.set_bool("sprinting", sprint_active);
             animator.instance.speed_multiplier = 1.0;
@@ -770,6 +968,7 @@ Player :: class : Player_Base {
             draw_match_lobby_ui(this);
             draw_head_start_ui(this);
             draw_hunt_begin_banner_ui(this);
+            draw_exit_unlocked_banner_ui(this);
             draw_match_timer_ui(this);
             draw_match_end_ui(this);
             draw_task_list_ui(this);
@@ -779,6 +978,7 @@ Player :: class : Player_Base {
             draw_wire_puzzle_ui(this, dt);
             draw_keypad_ui(this);
             this.draw_round_dead_player_pointers();
+            this.draw_downed_bleed_out_ui();
             gm := get_game_manager();
             if #alive(gm) && gm.phase == .LOBBY {
                 if entity_opt_in {
@@ -806,7 +1006,7 @@ Player :: class : Player_Base {
                     equipped_item_def = null;
                     last_selected_index = -1;
                 }
-            } else if !round_dead && active_effect == null {
+            } else if !round_dead && !round_downed && active_effect == null {
                 draw_ability_button(this, Sprint_Ability, 2);
                 // Draw fire ability button based on equipped weapon
                 if equipped_weapon_type != .NONE {
@@ -817,7 +1017,13 @@ Player :: class : Player_Base {
                         case .SPREAD:      { draw_ability_button(this, Spread_Shot_Ability, 0); }
                         case .LOBBED:      { draw_ability_button(this, Lobbed_Shot_Ability, 0); }
                         case .BEAM:        { draw_ability_button(this, Beam_Ability, 0); }
-                        case .SPECIAL:     { draw_ability_button(this, Special_Ability, 0); }
+                        case .SPECIAL: {
+                            if equipped_weapon_type == .STIM {
+                                draw_ability_button(this, Stim_Ability, 0);
+                            } else {
+                                draw_ability_button(this, Special_Ability, 0);
+                            }
+                        }
                     }
                 }
 
@@ -829,6 +1035,7 @@ Player :: class : Player_Base {
         }
 
         if !this.is_round_entity() &&
+            !round_downed &&
             !round_dead &&
             !is_hidden_by_entity_local_view(this) &&
             (current_stamina < max_stamina || sprint_active || sprint_lockout_remaining > 0.0) {
@@ -886,7 +1093,7 @@ Player :: class : Player_Base {
 
     ao_can_use_ability :: method(ability: Ability_Base) -> bool {
         // Called to determine if the player is allowed to use the given ability
-        if round_dead {
+        if round_dead || round_downed {
             return false;
         }
         if this.is_round_entity() && is_entity_flashbanged(this) {
@@ -900,7 +1107,7 @@ Player :: class : Player_Base {
 
     ao_can_use_interactable :: method(interactable: Interactable) -> bool {
         // Called to determine if the player is allowed to use the given interactable
-        if round_dead {
+        if round_dead || round_downed {
             return false;
         }
 
@@ -1298,6 +1505,36 @@ Player :: class : Player_Base {
         }
     }
 
+    get_equipped_item_instance :: method() -> Item_Instance {
+        if last_selected_index < 0 || last_selected_index >= default_inventory.capacity {
+            return null;
+        }
+
+        item := default_inventory.get_item(last_selected_index);
+        if item == null {
+            return null;
+        }
+        if item.get_definition() != equipped_item_def {
+            return null;
+        }
+        return item;
+    }
+
+    revive_from_downed :: method() -> bool {
+        if !this.is_round_downed() {
+            return false;
+        }
+
+        remove_all_effects(entity);
+        this.clear_round_downed_state(true);
+        sprint_input_held = false;
+        sprint_active = false;
+        if #alive(agent) {
+            agent.velocity = v2{0.0, 0.0};
+        }
+        return true;
+    }
+
     handle_equipped_item_changing :: method(selected_index: s64) {
         // Resolve item from hotbar index
         selected_item: Item_Instance;
@@ -1366,6 +1603,33 @@ Player :: class : Player_Base {
 
             this.DrawArrowToPosition(other.entity.world_position, "UI/schleem_hologram.png");
         }
+    }
+
+    draw_downed_bleed_out_ui :: proc(using this: Player) {
+        if !this.is_local() || !this.is_round_downed() {
+            return;
+        }
+
+        seconds_remaining := this.get_downed_bleed_out_seconds_remaining();
+        if seconds_remaining <= 0 {
+            return;
+        }
+
+        UIK.begin(UIK.window(UIK.rect_window_small()));
+
+        shell := UIK.panel_modal(.TRANSP_BLACK);
+        shell.cross_align = .CENTER;
+        shell.main_align = .CENTER;
+        shell.gap = 4;
+        shell.padding = v4{16, 12, 16, 12};
+        UIK.panel_begin(shell);
+
+        UIK.text("Bleeding Out", UIK.text_body());
+        UIK.text(format_string("%", {seconds_remaining}), UIK.text_title());
+        UIK.text("seconds until death", UIK.text_body());
+
+        UIK.panel_end();
+        UIK.end();
     }
 
     // Port of the provided C# DrawArrowToPosition.

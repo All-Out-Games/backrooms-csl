@@ -4,6 +4,7 @@ ENTITY_BITE_RANGE :: 2.25;
 ENTITY_BITE_EFFECT_SECONDS :: 0.567;
 ENTITY_BITE_COOLDOWN_SECONDS :: 5.0;
 ENTITY_BITE_DEATH_FREEZE_SECONDS :: 2.0;
+DOWNED_SCREAM_EFFECT_SECONDS :: 0.9;
 
 play_entity_bite_sfx :: proc(player: Player) {
     if player == null || !#alive(player.entity) return;
@@ -13,6 +14,25 @@ play_entity_bite_sfx :: proc(player: Player) {
     desc.local_only = false;
     desc.volume = 1.15;
     SFX.play(get_asset(SFX_Asset, "SFX/entitybite.wav"), desc);
+}
+
+reveal_downed_player_with_echo :: proc(player: Player, fade_out_seconds: float = ENTITY_VIEW_PLAYER_REVEAL_FADE_OUT_SECONDS) {
+    if player == null || !#alive(player.entity) {
+        return;
+    }
+    if player.is_round_entity() || player.is_round_dead() {
+        return;
+    }
+    if is_entity_sound_sight_interfered() {
+        return;
+    }
+
+    if fade_out_seconds <= 0.0 {
+        fade_out_seconds = ENTITY_VIEW_PLAYER_REVEAL_FADE_OUT_SECONDS;
+    }
+
+    spawn_footstep_echo(player.entity.world_position, "Echo.prefab");
+    player.reveal_for_entity_local_view_with_duration(fade_out_seconds);
 }
 
 find_entity_bite_target :: proc(entity_player: Player) -> Player {
@@ -29,7 +49,7 @@ find_entity_bite_target :: proc(entity_player: Player) -> Player {
         if other == entity_player continue;
         if !other.is_round_survivor() continue;
         if !#alive(other.entity) continue;
-        if other.entity_local_view_alpha <= 0.0 continue;
+        if !other.is_round_downed() && other.entity_local_view_alpha <= 0.0 continue;
 
         delta := other.entity.world_position - origin;
         distance_sq := delta.x * delta.x + delta.y * delta.y;
@@ -73,6 +93,53 @@ Entity_Death_Effect :: class : Effect_Base {
     }
 }
 
+Entity_Downed_Effect :: class : Effect_Base {
+    effect_start :: method() {
+        if player == null || !#alive(player.entity) {
+            return;
+        }
+
+        player_specific.freeze_player = true;
+        set_duration(ENTITY_BITE_EFFECT_SECONDS);
+        player.mark_round_downed();
+        player.start_downed_hit_reaction();
+    }
+
+    effect_end :: method(interrupt: bool) {
+        if player == null || !#alive(player.entity) {
+            return;
+        }
+
+        player.end_downed_hit_reaction();
+    }
+}
+
+Downed_Scream_Effect :: class : Effect_Base {
+    effect_start :: method() {
+        if player == null || !#alive(player.entity) {
+            return;
+        }
+
+        player_specific.freeze_player = true;
+        set_duration(DOWNED_SCREAM_EFFECT_SECONDS);
+
+        if #alive(player.agent) {
+            player.agent.velocity = v2{0.0, 0.0};
+        }
+
+        player.start_downed_hit_reaction();
+        reveal_downed_player_with_echo(player);
+    }
+
+    effect_end :: method(interrupt: bool) {
+        if player == null || !#alive(player.entity) {
+            return;
+        }
+
+        player.end_downed_hit_reaction();
+    }
+}
+
 Entity_Bite_Effect :: class : Effect_Base {
     effect_start :: method() {
         player_specific.freeze_player = true;
@@ -95,8 +162,14 @@ Entity_Bite_Effect :: class : Effect_Base {
             return;
         }
 
-        death_effect := new(Entity_Death_Effect);
-        target.entity.set_active_effect(death_effect);
+        if target.is_round_downed() {
+            death_effect := new(Entity_Death_Effect);
+            target.entity.set_active_effect(death_effect);
+            return;
+        }
+
+        downed_effect := new(Entity_Downed_Effect);
+        target.entity.set_active_effect(downed_effect);
     }
 }
 

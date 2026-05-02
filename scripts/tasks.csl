@@ -19,6 +19,9 @@ TASK_TEX_DROPDOWN_ARROW   :: "UI/task list/dropdown_arrow.png";
 TASK_TEX_LIST_BG          :: "UI/task list/task_list_dropdown_area.png";
 TASK_TEX_HELP_BG          :: "UI/task list/task_help_backing.png";
 TASK_TEX_INFO_ICON        :: "UI/info_icon_b.png";
+TASK_CLOSE_BUTTON_HALF_WIDTH   :: 120.0;
+TASK_CLOSE_BUTTON_HALF_HEIGHT  :: 24.0;
+TASK_CLOSE_BUTTON_BOTTOM_PAD   :: 10.0;
 
 Task_Base :: class {
     id: string;
@@ -191,6 +194,36 @@ draw_task_checkbox :: proc(rect: Rect, completed: bool) {
     UI.quad(rect, core_globals.white_sprite, v4.{0.12, 0.12, 0.12, 0.95});
 }
 
+draw_task_overlay_close_button :: proc(panel_rect: Rect, id: string) -> bool {
+    UI.push_id(id);
+    defer UI.pop_id();
+
+    close_bs := UI.default_button_settings();
+    close_bs.sprite = core_globals.white_sprite;
+    close_bs.press_scaling = 0.35;
+    close_bs.color = v4.{0.72, 0.12, 0.14, 0.96};
+    close_bs.hovered_color = v4.{0.84, 0.18, 0.2, 1.0};
+    close_bs.pressed_color = v4.{0.56, 0.08, 0.1, 1.0};
+    close_bs.background_color_multiplier = v4.{1, 1, 1, 1};
+
+    close_ts := UI.default_text_settings();
+    close_ts.size = 24;
+    close_ts.color = v4.{1, 1, 1, 1};
+    close_ts.halign = .CENTER;
+    close_ts.valign = .CENTER;
+    close_ts.do_outline = true;
+    close_ts.outline_thickness = 2;
+    close_ts.outline_color = v4.{0, 0, 0, 1};
+
+    close_rect := panel_rect.bottom_center_rect().offset(0.0, TASK_CLOSE_BUTTON_BOTTOM_PAD + TASK_CLOSE_BUTTON_HALF_HEIGHT).grow(
+        TASK_CLOSE_BUTTON_HALF_HEIGHT,
+        TASK_CLOSE_BUTTON_HALF_WIDTH,
+        TASK_CLOSE_BUTTON_HALF_HEIGHT,
+        TASK_CLOSE_BUTTON_HALF_WIDTH
+    );
+    return UI.button(close_rect, close_bs, close_ts, "Close").clicked;
+}
+
 draw_task_help_entry_list :: proc(area: Rect, scroll_id: string, entries: ref [..]Task_Help_Entry) {
     scroll_area := area;
     scroll_bar_area := scroll_area.cut_right(6).inset(2);
@@ -283,35 +316,11 @@ draw_task_help_panel :: proc(player: Player) {
         UI.quad(panel_rect, core_globals.white_sprite, v4.{0.06, 0.06, 0.08, 0.96});
     }
 
-    UI.push_id("task_help_close_btn");
-    defer UI.pop_id();
-
-    close_half := 22.0;
-    close_pad := 10.0;
-    close_btn_rect := panel_rect.top_right_rect().offset(-close_pad, -close_pad).grow(close_half);
-
-    close_bs := UI.default_button_settings();
-    close_bs.sprite = core_globals.white_sprite;
-    close_bs.press_scaling = 0.35;
-    close_bs.color = v4.{0.15, 0.15, 0.2, 0.75};
-    close_bs.hovered_color = v4.{0.2, 0.2, 0.28, 0.95};
-    close_bs.pressed_color = v4.{0.1, 0.1, 0.14, 1};
-    close_bs.background_color_multiplier = v4.{1, 1, 1, 1};
-
-    close_ts := UI.default_text_settings();
-    close_ts.size = 26;
-    close_ts.color = v4.{1, 1, 1, 1};
-    close_ts.halign = .CENTER;
-    close_ts.valign = .CENTER;
-    close_ts.do_outline = true;
-    close_ts.outline_thickness = 2;
-    close_ts.outline_color = v4.{0, 0, 0, 1};
-
-    if UI.button(close_btn_rect, close_bs, close_ts, "X").clicked {
+    if draw_task_overlay_close_button(panel_rect, "task_help_close_btn") {
         player.task_help_open = false;
     }
 
-    content := panel_rect.inset(20, 24, 20, 24);
+    content := panel_rect.inset(20, 24, 72, 24);
     header_strip := content.cut_top(70.0);
     content.cut_top(12.0);
 

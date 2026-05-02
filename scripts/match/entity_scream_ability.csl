@@ -12,7 +12,7 @@ play_entity_scream_sfx :: proc(player: Player) {
     desc.local_only = false;
     desc.positional = false;
     desc.entity_to_follow = 0;
-    desc.volume = 1.25;
+    desc.volume = 1;
     SFX.play(get_asset(SFX_Asset, "SFX/entityscream.wav"), desc);
 }
 

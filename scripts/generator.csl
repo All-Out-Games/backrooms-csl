@@ -15,7 +15,6 @@ GENERATOR_PULLS_REQUIRED          :: 3;
 GENERATOR_SUCCESS_DISPLAY_TIME    :: 0.6;
 GENERATOR_WINDOW_HALF_HEIGHT      :: 500.0;
 GENERATOR_WINDOW_HALF_WIDTH       :: 500.0;
-GENERATOR_CLOSE_BUTTON_HALF_SIZE  :: 20.0;
 GENERATOR_PULL_MIN_X_FRACTION     :: 0.16;
 GENERATOR_PULL_SUCCESS_FRACTION   :: 0.18;
 
@@ -211,29 +210,7 @@ init_generator_restart_layout :: proc(effect: Generator_Restart_Effect, window_r
 }
 
 draw_generator_close_button :: proc(panel_rect: Rect) -> bool {
-    close_bs := UI.default_button_settings();
-    close_bs.sprite = core_globals.white_sprite;
-    close_bs.press_scaling = 0.35;
-    close_bs.color = v4{0.1, 0.1, 0.1, 0.82};
-    close_bs.hovered_color = v4{0.2, 0.2, 0.2, 0.95};
-    close_bs.pressed_color = v4{0.06, 0.06, 0.06, 1.0};
-
-    close_ts := UI.default_text_settings();
-    close_ts.size = 24;
-    close_ts.color = v4{1.0, 1.0, 1.0, 1.0};
-    close_ts.halign = .CENTER;
-    close_ts.valign = .CENTER;
-    close_ts.do_outline = true;
-    close_ts.outline_thickness = 2;
-    close_ts.outline_color = v4{0.0, 0.0, 0.0, 1.0};
-
-    close_rect := panel_rect.top_right_rect().offset(-24.0, -24.0).grow(
-        GENERATOR_CLOSE_BUTTON_HALF_SIZE,
-        GENERATOR_CLOSE_BUTTON_HALF_SIZE,
-        GENERATOR_CLOSE_BUTTON_HALF_SIZE,
-        GENERATOR_CLOSE_BUTTON_HALF_SIZE
-    );
-    return UI.button(close_rect, close_bs, close_ts, "X").clicked;
+    return draw_task_overlay_close_button(panel_rect, "generator_close_btn");
 }
 
 draw_generator_restart_panel :: proc(player: Player, effect: Generator_Restart_Effect, success_state: bool, preview_mode: bool) -> bool {

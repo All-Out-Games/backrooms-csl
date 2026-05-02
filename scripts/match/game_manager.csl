@@ -5,6 +5,7 @@ import "core:ao"
 HEAD_START_SECONDS :: 15.0;
 MATCH_MAX_SECONDS :: 600.0; // ~10 minutes after survivors' head start ends
 HUNT_BEGIN_BANNER_SECONDS :: 2.0;
+EXIT_UNLOCK_BANNER_SECONDS :: 2.0;
 LAST_SURVIVOR_ENTITY_WIN_DELAY_SECONDS :: 5.0;
 ENDED_TO_LOBBY_SECONDS :: 10.0;
 
@@ -83,6 +84,26 @@ find_player_by_user_id :: proc(user_id: string) -> Player, bool {
         }
     }
     return null, false;
+}
+
+put_entity_abilities_on_standard_cooldown :: proc(player: Player) {
+    if player == null {
+        return;
+    }
+
+    for ability: player.abilities {
+        if ability.#type == Entity_Bite_Ability {
+            ability.current_cooldown = ENTITY_BITE_COOLDOWN_SECONDS;
+        } else if ability.#type == Entity_Scream_Ability {
+            ability.current_cooldown = ENTITY_SCREAM_COOLDOWN_SECONDS;
+        } else if ability.#type == Entity_Lurch_Ability {
+            ability.current_cooldown = ENTITY_LURCH_COOLDOWN_SECONDS;
+        }
+    }
+
+    if player.active_ability != null {
+        player.active_ability = null;
+    }
 }
 
 count_players :: proc() -> s64 {
@@ -373,6 +394,52 @@ draw_hunt_begin_banner_ui :: proc(player: Player) {
     UI.text(box, ts, text);
 }
 
+draw_exit_unlocked_banner_ui :: proc(player: Player) {
+    gm := get_game_manager();
+    if !#alive(gm) {
+        return;
+    }
+    if gm.phase != .ACTIVE {
+        return;
+    }
+    if !player.is_round_survivor() || player.is_round_entity() {
+        return;
+    }
+    if gm.exit_unlocked_at <= 0.0 {
+        return;
+    }
+
+    elapsed := get_time() - gm.exit_unlocked_at;
+    if elapsed < 0.0 || elapsed >= EXIT_UNLOCK_BANNER_SECONDS {
+        return;
+    }
+
+    t := clamp(elapsed / EXIT_UNLOCK_BANNER_SECONDS, 0.0, 1.0);
+    fade_t := pow(t, 2.0);
+    alpha := lerp(1.0, 0.0, fade_t);
+    slide_y := lerp(0.0, 24.0, t);
+
+    UI.push_screen_draw_context();
+    defer UI.pop_draw_context();
+
+    bg := get_asset(Texture_Asset, "$AO/white.png");
+    box := UI.get_safe_screen_rect().center_rect().grow(70.0, 360.0, 70.0, 360.0).offset(0.0, slide_y);
+    glow := box.grow(8, 8, 8, 8);
+
+    UI.quad(glow, bg, v4{0.08, 0.08, 0.08, alpha * 0.22});
+    UI.quad(box, bg, v4{0.0, 0.0, 0.0, alpha * 0.82});
+
+    ts := UI.default_text_settings();
+    ts.size = 42;
+    ts.color = v4{1.0, 1.0, 1.0, alpha};
+    ts.halign = .CENTER;
+    ts.valign = .CENTER;
+    ts.do_outline = true;
+    ts.outline_thickness = 2;
+    ts.outline_color = v4{0.0, 0.0, 0.0, alpha};
+    UI.text(box, ts, "Exit Unlocked! Escape!");
+}
+
 draw_match_end_ui :: proc(player: Player) {
     gm := get_game_manager();
     if !#alive(gm) {
@@ -414,6 +481,7 @@ Game_Manager :: class : Component {
     navmesh_to_lock_to: Navmesh @ao_serialize;
     hearing_radius_entity: Entity @ao_serialize;
     GeneratorEntity: Entity @ao_serialize;
+    ReconnectWiresEntity: Entity @ao_serialize;
     RadioPuzzle: Entity @ao_serialize;
     SurvivorSpawn: Entity @ao_serialize;
     GeneratorSpawns: Entity @ao_serialize;
@@ -433,6 +501,7 @@ Game_Manager :: class : Component {
 
     head_start_ends_at: float;
     hunt_started_at: float;
+    exit_unlocked_at: float;
     match_ends_at: float;
     entity_win_delay_ends_at: float;
     ended_at: float;
@@ -461,6 +530,7 @@ Game_Manager :: class : Component {
         emergency_systems_online = false;
         head_start_ends_at = 0.0;
         hunt_started_at = 0.0;
+        exit_unlocked_at = 0.0;
         match_ends_at = 0.0;
         entity_win_delay_ends_at = 0.0;
         ended_at = 0.0;
@@ -499,6 +569,15 @@ Game_Manager :: class : Component {
 
         if phase == .LOBBY {
             update_lobby_autostart();
+        }
+
+        exit_unlocked_now := phase == .ACTIVE && emergency_systems_online && SURVIVOR_ESCAPE_ENABLED;
+        if exit_unlocked_now {
+            if exit_unlocked_at <= 0.0 {
+                exit_unlocked_at = get_time();
+            }
+        } else {
+            exit_unlocked_at = 0.0;
         }
 
         if entity_win_delay_ends_at > 0.0 &&
@@ -891,6 +970,10 @@ Game_Manager :: class : Component {
     }
 
     get_reconnect_wires_entity :: method() -> Entity {
+        if #alive(ReconnectWiresEntity) {
+            return ReconnectWiresEntity;
+        }
+
         for wire: component_iterator(Wire_Puzzle) {
             if #alive(wire.entity) {
                 return wire.entity;
@@ -1055,6 +1138,7 @@ Game_Manager :: class : Component {
 
         head_start_ends_at = next_head_start_ends_at;
         hunt_started_at = 0.0;
+        exit_unlocked_at = 0.0;
         // Match clock starts after head start (full hunt window).
         match_ends_at = head_start_ends_at + MATCH_MAX_SECONDS;
         entity_win_delay_ends_at = 0.0;
@@ -1070,6 +1154,7 @@ Game_Manager :: class : Component {
         }
 
         if entity_player, ok := find_player_by_user_id(entity_user_id); ok {
+            put_entity_abilities_on_standard_cooldown(entity_player);
             entity_player.remove_freeze_reason(FREEZE_ENTITY_HEAD_START);
         }
 
@@ -1168,6 +1253,7 @@ Game_Manager :: class : Component {
         emergency_systems_online = false;
         head_start_ends_at = 0.0;
         hunt_started_at = 0.0;
+        exit_unlocked_at = 0.0;
         match_ends_at = 0.0;
         entity_win_delay_ends_at = 0.0;
         ended_at = 0.0;

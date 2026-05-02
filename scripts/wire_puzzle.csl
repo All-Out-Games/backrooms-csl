@@ -2,12 +2,11 @@ import "core:ao"
 
 WIRE_RESET_PROMPT      :: "Reconnect Wire";
 WIRE_COMPLETE_PROMPT   :: "Wire Connected";
-WIRE_HINT_TEXTURE_PATH :: "wire coil_8d2d25.png";
+WIRE_HINT_TEXTURE_PATH :: "reconnectWires.png";
 
 WIRE_UI_LAYER                   :: 453;
 WIRE_WINDOW_SIZE                :: 1000.0;
 WIRE_SUCCESS_DISPLAY_TIME       :: 0.6;
-WIRE_CLOSE_BUTTON_HALF_SIZE     :: 20.0;
 WIRE_GRID_W                     :: 4;
 WIRE_GRID_H                     :: 4;
 WIRE_GRID_CELLS                 :: WIRE_GRID_W * WIRE_GRID_H;
@@ -37,6 +36,14 @@ is_generator_solved :: proc() -> bool {
 }
 
 is_wire_connected :: proc() -> bool {
+    gm := get_game_manager();
+    if #alive(gm) && #alive(gm.get_reconnect_wires_entity()) {
+        wire := gm.get_reconnect_wires_entity().get_component(Wire_Puzzle);
+        if wire != null {
+            return wire.solved;
+        }
+    }
+
     for wire: component_iterator(Wire_Puzzle) {
         return wire.solved;
     }
@@ -62,6 +69,11 @@ refresh_emergency_systems_online_state :: proc() {
 }
 
 get_wire_hint_position :: proc() -> v2 {
+    gm := get_game_manager();
+    if #alive(gm) && #alive(gm.get_reconnect_wires_entity()) {
+        return gm.get_reconnect_wires_entity().world_position;
+    }
+
     for wire: component_iterator(Wire_Puzzle) {
         return wire.entity.world_position;
     }
@@ -194,7 +206,6 @@ Wire_Puzzle :: class : Interactable {
     solved: bool;
     in_use: bool;
     last_round_seed_key: u64;
-    marker_sprite: Sprite_Renderer;
 
     reset_for_round :: method(round_seed_key: u64) {
         solved = false;
@@ -215,10 +226,6 @@ Wire_Puzzle :: class : Interactable {
         solved = false;
         in_use = false;
         last_round_seed_key = 0;
-        marker_sprite = entity.get_component(Sprite_Renderer);
-        if marker_sprite != null {
-            marker_sprite.set_enabled(false);
-        }
     }
 
     can_use :: method(player: Player) -> bool {
@@ -273,11 +280,6 @@ Wire_Puzzle :: class : Interactable {
         gm := get_game_manager();
         if !#alive(gm) {
             return;
-        }
-
-        show_marker := (gm.phase == .SURVIVOR_HEAD_START || gm.phase == .ACTIVE) && is_generator_solved() && !solved;
-        if marker_sprite != null {
-            marker_sprite.set_enabled(show_marker);
         }
 
         if gm.phase != .SURVIVOR_HEAD_START && gm.phase != .ACTIVE {
@@ -571,29 +573,7 @@ wire_draw_piece :: proc(effect: Wire_Puzzle_Effect, rect: Rect, kind: s64, rot: 
 }
 
 draw_wire_close_button :: proc(panel_rect: Rect) -> bool {
-    close_bs := UI.default_button_settings();
-    close_bs.sprite = core_globals.white_sprite;
-    close_bs.press_scaling = 0.35;
-    close_bs.color = v4{0.1, 0.1, 0.1, 0.82};
-    close_bs.hovered_color = v4{0.2, 0.2, 0.2, 0.95};
-    close_bs.pressed_color = v4{0.06, 0.06, 0.06, 1.0};
-
-    close_ts := UI.default_text_settings();
-    close_ts.size = 24;
-    close_ts.color = v4{1.0, 1.0, 1.0, 1.0};
-    close_ts.halign = .CENTER;
-    close_ts.valign = .CENTER;
-    close_ts.do_outline = true;
-    close_ts.outline_thickness = 2;
-    close_ts.outline_color = v4{0.0, 0.0, 0.0, 1.0};
-
-    close_rect := panel_rect.top_right_rect().offset(-20.0, -20.0).grow(
-        WIRE_CLOSE_BUTTON_HALF_SIZE,
-        WIRE_CLOSE_BUTTON_HALF_SIZE,
-        WIRE_CLOSE_BUTTON_HALF_SIZE,
-        WIRE_CLOSE_BUTTON_HALF_SIZE
-    );
-    return UI.button(close_rect, close_bs, close_ts, "X").clicked;
+    return draw_task_overlay_close_button(panel_rect, "wire_close_btn");
 }
 
 draw_wire_puzzle_panel :: proc(player: Player, effect: Wire_Puzzle_Effect, success_state: bool) -> bool {

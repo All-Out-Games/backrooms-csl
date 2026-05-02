@@ -196,6 +196,10 @@ tick_footstep_echo_for_player :: proc(player: Player, dt: float) {
         player.footstep_stride_accum = 0.0;
         return;
     }
+    if player.is_round_downed() {
+        player.footstep_stride_accum = 0.0;
+        return;
+    }
     if player.is_round_entity() {
         player.footstep_stride_accum = 0.0;
         return;

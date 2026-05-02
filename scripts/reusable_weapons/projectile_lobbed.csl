@@ -7,6 +7,7 @@ FLASHBANG_PROJ_IMPACT_ANIM :: "Explosion";
 FLASHBANG_PROJECTILE_BASE_SCALE :: 1.25;
 FLASHBANG_IMPACT_VFX_LIFETIME :: 0.85;
 FLASHBANG_VFX_SCALE := v2.{2.0, 2.0};
+FLASHBANG_IMPACT_SFX_PATH :: "SFX/flashbang_explode.wav";
 
 spawn_flashbang_impact_vfx :: proc(pos: v2) {
     spawn_simple_vfx(
@@ -17,6 +18,13 @@ spawn_flashbang_impact_vfx :: proc(pos: v2) {
         FLASHBANG_PROJ_IMPACT_ANIM,
         FLASHBANG_IMPACT_VFX_LIFETIME
     );
+}
+
+play_flashbang_impact_sfx :: proc(pos: v2) {
+    sfx := get_asset(SFX_Asset, FLASHBANG_IMPACT_SFX_PATH);
+    desc := SFX.default_sfx_desc();
+    desc.set_position(pos);
+    SFX.play(sfx, desc);
 }
 
 get_lobbed_projectile_start_pos :: proc(player: Player, direction: v2) -> v2 {
@@ -175,6 +183,7 @@ on_lobbed_land :: proc(pos: v2, owner_id: u64, radius: float, damage: float, wt:
         }
         case .FLASHBANG: {
             spawn_flashbang_impact_vfx(pos);
+            play_flashbang_impact_sfx(pos);
             apply_flashbang_effect_to_entity_player(pos);
         }
         case .NOISEMAKER: {

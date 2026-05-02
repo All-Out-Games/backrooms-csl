@@ -3,12 +3,13 @@ import "core:ao"
 ENTITY_LURCH_DURATION_SECONDS :: 4.0;
 ENTITY_LURCH_MOVEMENT_MULTIPLIER :: 2.0;
 ENTITY_LURCH_ANIMATION_SPEED_MULTIPLIER :: 2.0;
+ENTITY_LURCH_COOLDOWN_SECONDS :: 30.0;
 
 play_entity_lurch_sfx :: proc(player: Player) {
     if player == null || !#alive(player.entity) return;
 
     desc := SFX.default_sfx_desc();
-    desc.volume = 1.2;
+    desc.volume = 0.9;
     SFX.play(get_asset(SFX_Asset, "SFX/entityrun.wav"), desc);
 }
 
@@ -45,7 +46,7 @@ Entity_Lurch_Ability :: class : Ability_Base {
 
         player.entity_lurch_remaining = ENTITY_LURCH_DURATION_SECONDS;
         play_entity_lurch_sfx(player);
-        current_cooldown = 30;
+        current_cooldown = ENTITY_LURCH_COOLDOWN_SECONDS;
     }
 
     on_draw_button :: proc(instance: Entity_Lurch_Ability, rect: Rect) {
