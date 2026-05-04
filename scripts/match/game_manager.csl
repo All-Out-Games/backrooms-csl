@@ -1271,6 +1271,7 @@ Game_Manager :: class : Component {
         if phase == .ENDED {
             return;
         }
+        stop_entity_ambience_sound();
         clear_all_player_round_inventories();
         clear_spawned_round_items();
         phase = .ENDED;
@@ -1286,6 +1287,7 @@ Game_Manager :: class : Component {
         if phase == .ENDED {
             return;
         }
+        stop_entity_ambience_sound();
         clear_all_player_round_inventories();
         clear_spawned_round_items();
         phase = .ENDED;

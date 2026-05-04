@@ -5,6 +5,7 @@ import "reusable_weapons"
 
 ambient_light_loop_sound_id: u64;
 round_atmosphere_loop_sound_id: u64;
+entity_ambience_sound_id: u64;
 entity_ambience_next_play_at: float;
 braam2_next_play_at: float;
 
@@ -39,6 +40,13 @@ stop_round_atmosphere_loop :: proc() {
     if round_atmosphere_loop_sound_id != 0 {
         SFX.stop(round_atmosphere_loop_sound_id);
         round_atmosphere_loop_sound_id = 0;
+    }
+}
+
+stop_entity_ambience_sound :: proc() {
+    if entity_ambience_sound_id != 0 {
+        SFX.stop(entity_ambience_sound_id);
+        entity_ambience_sound_id = 0;
     }
 }
 
@@ -82,6 +90,7 @@ ao_update :: proc(dt: float) {
 
     entity_assigned := has_round_entity_assignment();
     if !round_audio_active || !entity_assigned {
+        stop_entity_ambience_sound();
         entity_ambience_next_play_at = 0.0;
         braam2_next_play_at = 0.0;
         return;
@@ -96,6 +105,8 @@ ao_update :: proc(dt: float) {
 
     entity_player := get_round_entity_player();
     if !#alive(entity_player) {
+        stop_entity_ambience_sound();
+        entity_ambience_next_play_at = 0.0;
         return;
     }
 
@@ -105,7 +116,8 @@ ao_update :: proc(dt: float) {
         entity_ambience_desc.volume = 1;
         entity_ambience_desc.range_multiplier = 2.0;
         entity_ambience_desc.set_position(entity_player.entity.world_position);
-        SFX.play(get_asset(SFX_Asset, "SFX/entityambience.wav"), entity_ambience_desc);
+        stop_entity_ambience_sound();
+        entity_ambience_sound_id = SFX.play(get_asset(SFX_Asset, "SFX/entityambience.wav"), entity_ambience_desc);
         entity_ambience_next_play_at = get_time() + ENTITY_AMBIENCE_REPLAY_SECONDS;
     }
 }
@@ -120,6 +132,7 @@ ao_end :: proc() {
         ambient_light_loop_sound_id = 0;
     }
     stop_round_atmosphere_loop();
+    stop_entity_ambience_sound();
     entity_ambience_next_play_at = 0.0;
     braam2_next_play_at = 0.0;
 }
