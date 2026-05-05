@@ -22,11 +22,11 @@
   "component_type": "Internal_Component",
   "internal_component_type": "Sprite_Renderer",
   "data": {
-    "texture": "reconnectWires.png",
+    "texture": "wiresTaskNew.png",
     "depth_offset": -0.0244708061218262,
     "scale": {
-      "X": 1.5000000000000000,
-      "Y": 1.5000000000000000
+      "X": 2,
+      "Y": 2
     }
   }
 },

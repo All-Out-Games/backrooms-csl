@@ -61,7 +61,7 @@ Stim_Ability :: class : Ability_Base {
     }
 
     on_update :: method(params: ref Ability_Update_Params) {
-        if !params.clicked || !params.can_use {
+        if !params.clicked {
             return;
         }
 
@@ -69,9 +69,20 @@ Stim_Ability :: class : Ability_Base {
         if p == null {
             return;
         }
+        if !p.is_round_survivor() || p.equipped_weapon_type != .STIM {
+            return;
+        }
+        if p.get_equipped_item_instance() == null {
+            return;
+        }
 
         target := find_stim_target(p);
         if target == null {
+            Notifier.notify(p, "Use Stims to Revive a downed player!");
+            return;
+        }
+
+        if !params.can_use {
             return;
         }
 

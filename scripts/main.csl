@@ -6,10 +6,9 @@ import "reusable_weapons"
 ambient_light_loop_sound_id: u64;
 round_atmosphere_loop_sound_id: u64;
 entity_ambience_sound_id: u64;
-entity_ambience_next_play_at: float;
+entity_ambience_user_id: string;
 braam2_next_play_at: float;
 
-ENTITY_AMBIENCE_REPLAY_SECONDS :: 10.0;
 BRAAM2_REPLAY_SECONDS :: 45.0;
 ENTITY_CAMERA_SIZE_DELTA :: 1.5;
 ROUND_DEAD_CAMERA_SIZE_DELTA :: 2.5;
@@ -48,6 +47,7 @@ stop_entity_ambience_sound :: proc() {
         SFX.stop(entity_ambience_sound_id);
         entity_ambience_sound_id = 0;
     }
+    entity_ambience_user_id = "";
 }
 
 has_round_entity_assignment :: proc() -> bool {
@@ -91,7 +91,6 @@ ao_update :: proc(dt: float) {
     entity_assigned := has_round_entity_assignment();
     if !round_audio_active || !entity_assigned {
         stop_entity_ambience_sound();
-        entity_ambience_next_play_at = 0.0;
         braam2_next_play_at = 0.0;
         return;
     }
@@ -106,19 +105,22 @@ ao_update :: proc(dt: float) {
     entity_player := get_round_entity_player();
     if !#alive(entity_player) {
         stop_entity_ambience_sound();
-        entity_ambience_next_play_at = 0.0;
         return;
     }
 
-    if entity_ambience_next_play_at <= 0.0 || get_time() >= entity_ambience_next_play_at {
+    if entity_ambience_sound_id != 0 && entity_ambience_user_id != entity_player.get_user_id() {
+        stop_entity_ambience_sound();
+    }
+
+    if entity_ambience_sound_id == 0 {
         entity_ambience_desc := SFX.default_sfx_desc();
         entity_ambience_desc.local_only = false;
+        entity_ambience_desc.loop = true;
         entity_ambience_desc.volume = 1;
         entity_ambience_desc.range_multiplier = 2.0;
-        entity_ambience_desc.set_position(entity_player.entity.world_position);
-        stop_entity_ambience_sound();
+        entity_ambience_desc.entity_to_follow = entity_player.entity.id;
         entity_ambience_sound_id = SFX.play(get_asset(SFX_Asset, "SFX/entityambience.wav"), entity_ambience_desc);
-        entity_ambience_next_play_at = get_time() + ENTITY_AMBIENCE_REPLAY_SECONDS;
+        entity_ambience_user_id = entity_player.get_user_id();
     }
 }
 
@@ -133,7 +135,6 @@ ao_end :: proc() {
     }
     stop_round_atmosphere_loop();
     stop_entity_ambience_sound();
-    entity_ambience_next_play_at = 0.0;
     braam2_next_play_at = 0.0;
 }
 
@@ -158,11 +159,14 @@ ENTITY_DEBUFF_ICON_SPACING :: 48.0;
 ENTITY_FLASHBANG_DEBUFF_ICON_HALF_SIZE :: 24.0;
 ENTITY_VIEW_PLAYER_REVEAL_FADE_OUT_SECONDS :: 2.0;
 ENTITY_NAME_INVISIBILITY_REASON :: "entity_role_active";
-ROUND_SURVIVOR_NORMAL_MOVEMENT_MULTIPLIER :: 0.75;
-DOWNED_SURVIVOR_MOVEMENT_MULTIPLIER :: 0.25;
+ROUND_SURVIVOR_NORMAL_MOVEMENT_MULTIPLIER :: 0.90;
+DOWNED_SURVIVOR_MOVEMENT_MULTIPLIER :: 0.30;
 DOWNED_BLEED_OUT_SECONDS :: 30.0;
 DOWNED_SCREAM_INTERVAL_SECONDS :: 10.0;
-ROUND_ENTITY_NORMAL_MOVEMENT_MULTIPLIER :: 0.70;
+ROUND_ENTITY_NORMAL_MOVEMENT_MULTIPLIER :: 0.84;
+ENTITY_AFK_TIMEOUT_SECONDS :: 120.0;
+ENTITY_AFK_MOVED_DISTANCE :: 0.25;
+ENTITY_AFK_MOVED_DISTANCE_SQ :: ENTITY_AFK_MOVED_DISTANCE * ENTITY_AFK_MOVED_DISTANCE;
 HELD_ITEM_BONE_NAME :: "Finger_R2";
 HELD_ITEM_SCALE := v2.{0.35, 0.35};
 HELD_ITEM_RENDER_LAYER :: 0;
@@ -262,6 +266,10 @@ Player :: class : Player_Base {
     downed_scream_remaining: float;
     downed_bleed_out_ends_at: float;
     vent_cooldown_ends_at: float;
+    entity_afk_last_position: v2;
+    entity_afk_last_move_at: float;
+    entity_afk_has_position: bool;
+    entity_afk_kick_issued: bool;
 
     footstep_stride_accum: float;
     footstep_left_next: bool;
@@ -545,6 +553,9 @@ Player :: class : Player_Base {
         downed_scream_remaining = 0.0;
         downed_bleed_out_ends_at = 0.0;
         vent_cooldown_ends_at = 0.0;
+        entity_afk_has_position = false;
+        entity_afk_last_move_at = get_time();
+        entity_afk_kick_issued = false;
         held_item_weapon_type = .NONE;
         this.update_local_voice_chat_range_cache();
 
@@ -831,6 +842,51 @@ Player :: class : Player_Base {
         animator.state_machine.set_trigger("RESET");
     }
 
+    reset_entity_afk_state :: method() {
+        if #alive(entity) {
+            entity_afk_last_position = entity.world_position;
+            entity_afk_has_position = true;
+        } else {
+            entity_afk_last_position = v2{0.0, 0.0};
+            entity_afk_has_position = false;
+        }
+        entity_afk_last_move_at = get_time();
+        entity_afk_kick_issued = false;
+    }
+
+    tick_entity_afk_round_state :: method() {
+        gm := get_game_manager();
+        if !#alive(gm) || gm.phase != .ACTIVE || !this.is_round_entity() || !#alive(entity) {
+            entity_afk_has_position = false;
+            entity_afk_kick_issued = false;
+            return;
+        }
+
+        if !entity_afk_has_position {
+            this.reset_entity_afk_state();
+            return;
+        }
+
+        delta := entity.world_position - entity_afk_last_position;
+        if length_squared(delta) >= ENTITY_AFK_MOVED_DISTANCE_SQ {
+            this.reset_entity_afk_state();
+            return;
+        }
+
+        if entity_afk_kick_issued {
+            return;
+        }
+
+        if get_time() < entity_afk_last_move_at + ENTITY_AFK_TIMEOUT_SECONDS {
+            return;
+        }
+
+        entity_afk_kick_issued = true;
+        log_info("Player: Entity % timed out after % seconds without moving", {this.get_user_id(), ENTITY_AFK_TIMEOUT_SECONDS});
+        gm.end_match_survivors_win();
+        Server.kick_player(this, "Disconnected for inactivity.");
+    }
+
     ao_update :: method(dt: float) {
         this.sync_local_camera_size();
         this.update_local_voice_chat_range_cache();
@@ -938,6 +994,7 @@ Player :: class : Player_Base {
         }
 
         this.tick_downed_scream_state(dt);
+        this.tick_entity_afk_round_state();
 
         if animator != null && animator.instance != null {
             animator.state_machine.set_bool("downed", round_downed);
@@ -1644,9 +1701,49 @@ Player :: class : Player_Base {
         UIK.end();
     }
 
+    draw_arrow_distance_label :: proc(anchor: v2, label: string, screen: Rect) {
+        if label.count <= 0 return;
+
+        label_width :: 92.0;
+        label_height :: 30.0;
+        label_gap :: 52.0;
+
+        center := anchor + v2{0.0, label_gap};
+        half := v2{label_width * 0.5, label_height * 0.5};
+        rect := Rect{min=center - half, max=center + half};
+
+        if rect.min.x < screen.min.x {
+            rect = rect.offset(screen.min.x - rect.min.x, 0.0);
+        }
+        if rect.max.x > screen.max.x {
+            rect = rect.offset(screen.max.x - rect.max.x, 0.0);
+        }
+        if rect.max.y > screen.max.y {
+            rect = rect.offset(0.0, screen.max.y - rect.max.y);
+        }
+        if rect.min.y < screen.min.y {
+            rect = rect.offset(0.0, screen.min.y - rect.min.y);
+        }
+
+        bg := core_globals.white_sprite;
+        UI.quad(rect, bg, v4{0.0, 0.0, 0.0, 0.62});
+
+        ts := UI.default_text_settings();
+        ts.size = 21;
+        ts.color = v4{1.0, 1.0, 1.0, 1.0};
+        ts.outline_thickness = 1.7;
+        ts.outline_color = v4{0.0, 0.0, 0.0, 0.9};
+        ts.do_drop_shadow = true;
+        ts.drop_shadow_offset = v2{1.0, -1.5};
+        ts.drop_shadow_color = v4{0.0, 0.0, 0.0, 0.55};
+        ts.weight = 0.68;
+
+        UI.text(rect, ts, label);
+    }
+
     // Port of the provided C# DrawArrowToPosition.
     // Draws a screen-space arrow pointing toward a world-space `position`.
-    DrawArrowToPosition :: proc(using this: Player, position: v2, texture_path: string = "") {
+    DrawArrowToPosition :: proc(using this: Player, position: v2, texture_path: string = "", label: string = "", icon_upright: bool = false) {
         if this == null return;
         if entity == null || entity.self == null return;
         if this.is_local() {
@@ -1712,29 +1809,41 @@ Player :: class : Player_Base {
             rect := Rect{arrow_screen, arrow_screen}.grow(arrow_size_px);
             rotation := to_degrees(atan2(dir.y, dir.x));
 
-            // Rotate around rect center via UI matrix.
-            c := rect.center();
-            UI.push_matrix(Matrix4.translate(v3{c.x, c.y, 0}));
-            defer UI.pop_matrix();
-            UI.push_matrix(Matrix4.rotate(rotation, v3{0, 0, 1}));
-            defer UI.pop_matrix();
-            UI.push_matrix(Matrix4.translate(v3{-c.x, -c.y, 0}));
-            defer UI.pop_matrix();
-            UI.quad(rect, arrow_tex, {1, 1, 1, 1});
+            if icon_upright {
+                UI.quad(rect, arrow_tex, {1, 1, 1, 1});
+            } else {
+                // Rotate around rect center via UI matrix.
+                c := rect.center();
+                UI.push_matrix(Matrix4.translate(v3{c.x, c.y, 0}));
+                UI.push_matrix(Matrix4.rotate(rotation, v3{0, 0, 1}));
+                UI.push_matrix(Matrix4.translate(v3{-c.x, -c.y, 0}));
+                UI.quad(rect, arrow_tex, {1, 1, 1, 1});
+                UI.pop_matrix();
+                UI.pop_matrix();
+                UI.pop_matrix();
+            }
+
+            draw_arrow_distance_label(rect.center(), label, screen);
         }
         else {
             rect := Rect{target_screen, target_screen}.grow(arrow_size_px);
             rect = rect.offset(0, anim * 50.0);
 
-            // Near target: fixed "down" arrow (270 degrees).
-            c := rect.center();
-            UI.push_matrix(Matrix4.translate(v3{c.x, c.y, 0}));
-            defer UI.pop_matrix();
-            UI.push_matrix(Matrix4.rotate(270, v3{0, 0, 1}));
-            defer UI.pop_matrix();
-            UI.push_matrix(Matrix4.translate(v3{-c.x, -c.y, 0}));
-            defer UI.pop_matrix();
-            UI.quad(rect, arrow_tex, {1, 1, 1, 1});
+            if icon_upright {
+                UI.quad(rect, arrow_tex, {1, 1, 1, 1});
+            } else {
+                // Near target: fixed "down" arrow (270 degrees).
+                c := rect.center();
+                UI.push_matrix(Matrix4.translate(v3{c.x, c.y, 0}));
+                UI.push_matrix(Matrix4.rotate(270, v3{0, 0, 1}));
+                UI.push_matrix(Matrix4.translate(v3{-c.x, -c.y, 0}));
+                UI.quad(rect, arrow_tex, {1, 1, 1, 1});
+                UI.pop_matrix();
+                UI.pop_matrix();
+                UI.pop_matrix();
+            }
+
+            draw_arrow_distance_label(rect.center(), label, screen);
         }
         }
     }

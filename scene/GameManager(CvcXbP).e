@@ -36,6 +36,11 @@
       "noisemaker",
       "stim"
     ],
+    "RoundItemWeights": [
+      2,
+      1,
+      2
+    ],
     "MinRoundItemSpawnCount": 17,
     "MaxRoundItemSpawnCount": 25
   }

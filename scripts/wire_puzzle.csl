@@ -2,7 +2,7 @@ import "core:ao"
 
 WIRE_RESET_PROMPT      :: "Reconnect Wire";
 WIRE_COMPLETE_PROMPT   :: "Wire Connected";
-WIRE_HINT_TEXTURE_PATH :: "reconnectWires.png";
+WIRE_HINT_TEXTURE_PATH :: "wiresTaskNew.png";
 
 WIRE_UI_LAYER                   :: 453;
 WIRE_WINDOW_SIZE                :: 1000.0;

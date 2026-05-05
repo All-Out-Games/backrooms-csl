@@ -14,6 +14,8 @@ MAX_TOTAL_PLAYERS :: 7; // 1 entity + 6 survivors
 
 LOBBY_COUNTDOWN_SECONDS :: 10.0;
 ENTITY_SCREAM_ARROW_MIN_DISTANCE :: 20.0;
+ENTITY_SCREAM_PATH_LINE_THICKNESS :: 5.0;
+ENTITY_SCREAM_PATH_LINE_ALPHA :: 0.86;
 
 // Matchmaking queue name for players who prefer Entity (Server.queue_add_player)
 ENTITY_QUEUE_NAME :: "entity";
@@ -263,11 +265,57 @@ draw_entity_scream_arrow_ui :: proc(player: Player) {
         if !#alive(other.entity) continue;
 
         to_survivor := other.entity.world_position - player.entity.world_position;
-        if length(to_survivor) <= ENTITY_SCREAM_ARROW_MIN_DISTANCE {
+        distance := length(to_survivor);
+        if distance <= ENTITY_SCREAM_ARROW_MIN_DISTANCE {
             continue;
         }
 
-        player.DrawArrowToPosition(other.entity.world_position, "UI/schleem_hologram.png");
+        distance_units := (distance + 0.5).(s64);
+        player.DrawArrowToPosition(other.entity.world_position, "UI/schleem_hologram.png", format_string("%m", {distance_units}));
+    }
+}
+
+draw_entity_scream_nav_path_segment :: proc(a: v2, b: v2, alpha: float) {
+    sa := world_to_screen(a);
+    sb := world_to_screen(b);
+    UI.line(sa, sb, ENTITY_SCREAM_PATH_LINE_THICKNESS, core_globals.white_sprite, v4{0.15, 0.9, 1.0, alpha}, true);
+    UI.line(sa, sb, ENTITY_SCREAM_PATH_LINE_THICKNESS * 0.35, core_globals.white_sprite, v4{1.0, 1.0, 1.0, alpha}, true);
+}
+
+draw_entity_scream_nav_paths_ui :: proc(player: Player) {
+    if !player.is_local() || !player.is_round_entity() {
+        return;
+    }
+
+    now := get_time();
+    UI.push_screen_draw_context();
+    defer UI.pop_draw_context();
+
+    UI.push_layer(850);
+    defer UI.pop_layer();
+
+    for probe: component_iterator(Entity_Scream_Nav_Path_Probe) {
+        if probe.owner_user_id != player.get_user_id() {
+            continue;
+        }
+        if now >= probe.expires_at {
+            continue;
+        }
+        if probe.points.count < 2 {
+            continue;
+        }
+
+        alpha := ENTITY_SCREAM_PATH_LINE_ALPHA;
+        remaining := probe.expires_at - now;
+        if remaining < 0.45 {
+            alpha *= clamp(remaining / 0.45, 0.0, 1.0);
+        }
+
+        i: s64 = 0;
+        while i < probe.points.count - 1 {
+            draw_entity_scream_nav_path_segment(probe.points[i], probe.points[i + 1], alpha);
+            i += 1;
+        }
     }
 }
 
@@ -343,6 +391,7 @@ draw_match_timer_ui :: proc(player: Player) {
 
     UIK.panel_end();
     UIK.end();
+    draw_entity_scream_nav_paths_ui(player);
     draw_entity_scream_arrow_ui(player);
 }
 
@@ -490,6 +539,7 @@ Game_Manager :: class : Component {
     EntitySpawns: Entity @ao_serialize;
     ItemSpawns: Entity @ao_serialize;
     RoundItemIds: [..]string @ao_serialize;
+    RoundItemWeights: [..]s64 @ao_serialize;
     MinRoundItemSpawnCount: s64 @ao_serialize;
     MaxRoundItemSpawnCount: s64 @ao_serialize;
 
@@ -656,6 +706,13 @@ Game_Manager :: class : Component {
         return null;
     }
 
+    get_navmesh_to_lock_to :: method() -> Navmesh {
+        if !#alive(navmesh_to_lock_to) {
+            navmesh_to_lock_to = find_scene_navmesh();
+        }
+        return navmesh_to_lock_to;
+    }
+
     sync_entity_hearing_radius_visual :: method(dt: float) {
         cache_hearing_radius_sprite();
         if !#alive(hearing_radius_entity) || hearing_radius_sprite == null {
@@ -814,14 +871,25 @@ Game_Manager :: class : Component {
         }
     }
 
-    spawn_round_item_at_reference :: method(spawn_ref: Entity) -> Dropped_Item {
-        if !#alive(spawn_ref) || RoundItemIds.count == 0 {
+    get_round_item_weight :: method(index: s64) -> s64 {
+        weight: s64 = 1;
+        if index >= 0 && index < RoundItemWeights.count {
+            weight = RoundItemWeights[index];
+        }
+        if weight < 0 {
+            weight = 0;
+        }
+        return weight;
+    }
+
+    choose_round_item_def :: method() -> Item_Definition {
+        if RoundItemIds.count == 0 {
             return null;
         }
 
         init_weapon_items();
 
-        valid_item_defs: [..]Item_Definition;
+        total_weight: s64 = 0;
         for i: 0..RoundItemIds.count - 1 {
             item_id := RoundItemIds[i];
             if item_id.count == 0 {
@@ -829,19 +897,58 @@ Game_Manager :: class : Component {
             }
 
             item_def := get_registered_item_def_by_id(item_id);
-            if item_def != null {
-                valid_item_defs.append(item_def);
+            if item_def == null {
+                continue;
             }
+
+            weight := get_round_item_weight(i);
+            if weight <= 0 {
+                continue;
+            }
+
+            total_weight += weight;
         }
 
-        if valid_item_defs.count == 0 {
-            valid_item_defs.clear();
+        if total_weight <= 0 {
             return null;
         }
 
-        item_def_idx := rng_range_int(ref match_rng, 0, valid_item_defs.count - 1);
-        chosen_item_def := valid_item_defs[item_def_idx];
-        valid_item_defs.clear();
+        roll := rng_range_int(ref match_rng, 1, total_weight);
+        cumulative: s64 = 0;
+        for i: 0..RoundItemIds.count - 1 {
+            item_id := RoundItemIds[i];
+            if item_id.count == 0 {
+                continue;
+            }
+
+            item_def := get_registered_item_def_by_id(item_id);
+            if item_def == null {
+                continue;
+            }
+
+            weight := get_round_item_weight(i);
+            if weight <= 0 {
+                continue;
+            }
+
+            cumulative += weight;
+            if roll <= cumulative {
+                return item_def;
+            }
+        }
+
+        return null;
+    }
+
+    spawn_round_item_at_reference :: method(spawn_ref: Entity) -> Dropped_Item {
+        if !#alive(spawn_ref) {
+            return null;
+        }
+
+        chosen_item_def := choose_round_item_def();
+        if chosen_item_def == null {
+            return null;
+        }
 
         item := Items.create_item_instance(chosen_item_def, 1);
         dropped_item := Dropped_Item.spawn(spawn_ref.world_position, item);

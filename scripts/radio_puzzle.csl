@@ -273,12 +273,12 @@ draw_radio_hint_arrows :: proc(player: Player) {
             return;
         }
 
-        player.DrawArrowToPosition(gm.GeneratorEntity.world_position, "generator icon_be87ae.png");
+        player.DrawArrowToPosition(gm.GeneratorEntity.world_position, "generator icon_be87ae.png", "", true);
         return;
     }
 
     if !is_task_completed(player, TASK_ID_RECONNECT_WIRE) {
-        player.DrawArrowToPosition(get_wire_hint_position(), WIRE_HINT_TEXTURE_PATH);
+        player.DrawArrowToPosition(get_wire_hint_position(), WIRE_HINT_TEXTURE_PATH, "", true);
     }
 }
 

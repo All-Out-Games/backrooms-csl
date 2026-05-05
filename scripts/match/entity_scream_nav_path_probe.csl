@@ -1,0 +1,134 @@
+ENTITY_SCREAM_PATH_SECONDS :: 3.0;
+ENTITY_SCREAM_PATH_MAX_POINTS :: 32;
+ENTITY_SCREAM_PATH_MIN_ADVANCE :: 0.08;
+ENTITY_SCREAM_PATH_REACHED_DISTANCE :: 0.35;
+ENTITY_SCREAM_PATH_PROBE_SPEED :: 900.0;
+
+Entity_Scream_Nav_Path_Probe :: class : Component {
+    owner_user_id: string;
+    target_user_id: string;
+    target_position: v2;
+    expires_at: float;
+    path_complete: bool;
+    points: [..]v2;
+
+    navmesh: Navmesh;
+    agent: Movement_Agent;
+
+    setup :: method(owner: Player, target: Player, path_navmesh: Navmesh, duration_seconds: float) {
+        if owner == null || target == null || !#alive(owner.entity) || !#alive(target.entity) {
+            expires_at = get_time();
+            return;
+        }
+
+        owner_user_id = owner.get_user_id();
+        target_user_id = target.get_user_id();
+        navmesh = path_navmesh;
+        expires_at = get_time() + duration_seconds;
+        path_complete = false;
+
+        start_position := owner.entity.world_position;
+        target_position = target.entity.world_position;
+        if #alive(navmesh) {
+            start_hint: s64 = 0;
+            target_hint: s64 = 0;
+            snapped_start: v2;
+            snapped_target: v2;
+            if navmesh.try_find_closest_point_on_navmesh(start_position, ref snapped_start, ref start_hint) {
+                start_position = snapped_start;
+            }
+            if navmesh.try_find_closest_point_on_navmesh(target_position, ref snapped_target, ref target_hint) {
+                target_position = snapped_target;
+            }
+        }
+
+        points.clear();
+        points.append(start_position);
+
+        entity.set_local_position(start_position);
+        entity.mark_teleported();
+
+        agent = entity.get_component(Movement_Agent);
+        if agent != null && #alive(navmesh) {
+            agent.set_navmesh_to_lock_to(navmesh);
+        }
+    }
+
+    ao_start :: method() {
+        agent = entity.get_component(Movement_Agent);
+        if agent != null && #alive(navmesh) {
+            agent.set_navmesh_to_lock_to(navmesh);
+        }
+    }
+
+    ao_update :: method(dt: float) {
+        if get_time() >= expires_at {
+            entity.destroy();
+            return;
+        }
+        if path_complete {
+            return;
+        }
+        if points.count <= 0 {
+            points.append(entity.world_position);
+        }
+        if points.count >= ENTITY_SCREAM_PATH_MAX_POINTS {
+            path_complete = true;
+            return;
+        }
+        if agent == null {
+            agent = entity.get_component(Movement_Agent);
+        }
+        if agent == null {
+            path_complete = true;
+            return;
+        }
+        if #alive(navmesh) {
+            agent.set_navmesh_to_lock_to(navmesh);
+        }
+
+        current := entity.world_position;
+        to_target := target_position - current;
+        if length(to_target) <= ENTITY_SCREAM_PATH_REACHED_DISTANCE {
+            points.append(target_position);
+            path_complete = true;
+            return;
+        }
+
+        result := agent.set_path_target(target_position, ENTITY_SCREAM_PATH_PROBE_SPEED);
+        if !result.success {
+            return;
+        }
+
+        next_point := result.next_point;
+        if length(next_point - current) < ENTITY_SCREAM_PATH_MIN_ADVANCE {
+            next_point = current + result.move_direction * ENTITY_SCREAM_PATH_REACHED_DISTANCE;
+        }
+
+        if length(next_point - current) < ENTITY_SCREAM_PATH_MIN_ADVANCE {
+            path_complete = true;
+            return;
+        }
+
+        points.append(next_point);
+        entity.set_local_position(next_point);
+        entity.mark_teleported();
+    }
+}
+
+spawn_entity_scream_nav_path_probe :: proc(owner: Player, target: Player, navmesh: Navmesh, duration_seconds: float) {
+    if owner == null || target == null || !#alive(owner.entity) || !#alive(target.entity) {
+        return;
+    }
+    if !#alive(navmesh) {
+        return;
+    }
+
+    e := Scene.create_entity();
+    e.set_local_position(owner.entity.world_position);
+    e.mark_teleported();
+
+    e.add_component(Movement_Agent);
+    probe := e.add_component(Entity_Scream_Nav_Path_Probe);
+    probe.setup(owner, target, navmesh, duration_seconds);
+}
