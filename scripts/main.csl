@@ -266,10 +266,12 @@ Player :: class : Player_Base {
     downed_scream_remaining: float;
     downed_bleed_out_ends_at: float;
     vent_cooldown_ends_at: float;
+    end_game_cutscene_dance_triggered: bool;
     entity_afk_last_position: v2;
     entity_afk_last_move_at: float;
     entity_afk_has_position: bool;
     entity_afk_kick_issued: bool;
+    entity_cached_facing_right: bool;
 
     footstep_stride_accum: float;
     footstep_left_next: bool;
@@ -278,6 +280,8 @@ Player :: class : Player_Base {
     entity_local_view_fade_out_seconds: float;
     entity_scream_reveal_remaining: float;
     entity_scream_arrow_remaining: float;
+    entity_target_ping_remaining: float;
+    entity_target_ping_user_id: string;
     entity_name_hidden: bool;
     silhouette_material: Material;
     silhouette_material_applied: bool;
@@ -414,6 +418,7 @@ Player :: class : Player_Base {
         sprite := new_held_item.add_component(Sprite_Renderer);
         sprite.set_texture(held_texture);
         sprite.layer = HELD_ITEM_RENDER_LAYER;
+        sprite.mask_in_shadow = true;
 
         held_item_entity = new_held_item;
         held_item_sprite = sprite;
@@ -463,6 +468,16 @@ Player :: class : Player_Base {
         if !this.is_local() {
             return;
         }
+
+        gm := get_game_manager();
+        if #alive(gm) && gm.is_end_game_cutscene_active() {
+            camera.follow_player = false;
+            camera.position = gm.get_end_game_cutscene_position();
+            camera.size = END_GAME_CUTSCENE_CAMERA_SIZE;
+            return;
+        }
+
+        camera.follow_player = true;
 
         desired_camera_size := default_camera_size;
         if desired_camera_size <= 0.0 {
@@ -534,6 +549,8 @@ Player :: class : Player_Base {
         entity_local_view_fade_out_seconds = ENTITY_VIEW_PLAYER_REVEAL_FADE_OUT_SECONDS;
         entity_scream_reveal_remaining = 0.0;
         entity_scream_arrow_remaining = 0.0;
+        entity_target_ping_remaining = 0.0;
+        entity_target_ping_user_id = "";
         entity_name_hidden = false;
         silhouette_material_applied = false;
         current_stamina = SPRINT_STAMINA_MAX;
@@ -553,9 +570,11 @@ Player :: class : Player_Base {
         downed_scream_remaining = 0.0;
         downed_bleed_out_ends_at = 0.0;
         vent_cooldown_ends_at = 0.0;
+        end_game_cutscene_dance_triggered = false;
         entity_afk_has_position = false;
         entity_afk_last_move_at = get_time();
         entity_afk_kick_issued = false;
+        entity_cached_facing_right = true;
         held_item_weapon_type = .NONE;
         this.update_local_voice_chat_range_cache();
 
@@ -648,6 +667,8 @@ Player :: class : Player_Base {
         entity_local_view_fade_out_seconds = ENTITY_VIEW_PLAYER_REVEAL_FADE_OUT_SECONDS;
         entity_scream_reveal_remaining = 0.0;
         entity_scream_arrow_remaining = 0.0;
+        entity_target_ping_remaining = 0.0;
+        entity_target_ping_user_id = "";
 
         if #alive(agent) {
             agent.velocity = v2{0.0, 0.0};
@@ -719,6 +740,7 @@ Player :: class : Player_Base {
         }
 
         was_round_survivor := this.is_round_survivor();
+        death_position := entity.world_position;
 
         this.clear_round_downed_state();
         round_dead = true;
@@ -729,6 +751,8 @@ Player :: class : Player_Base {
         entity_local_view_fade_out_seconds = ENTITY_VIEW_PLAYER_REVEAL_FADE_OUT_SECONDS;
         entity_scream_reveal_remaining = 0.0;
         entity_scream_arrow_remaining = 0.0;
+        entity_target_ping_remaining = 0.0;
+        entity_target_ping_user_id = "";
         sprint_input_held = false;
         sprint_active = false;
 
@@ -750,6 +774,10 @@ Player :: class : Player_Base {
         }
 
         gm := get_game_manager();
+        if count_as_survivor_elimination && was_round_survivor && #alive(gm) && (gm.phase == .SURVIVOR_HEAD_START || gm.phase == .ACTIVE) {
+            entity_player := find_round_entity_for_mold_vomit("");
+            spawn_mold_vomit_at_position(death_position, entity_player);
+        }
         if count_as_survivor_elimination && was_round_survivor && #alive(gm) {
             gm.register_survivor_eliminated();
         }
@@ -887,6 +915,30 @@ Player :: class : Player_Base {
         Server.kick_player(this, "Disconnected for inactivity.");
     }
 
+    tick_end_game_cutscene_dance_state :: method() {
+        gm := get_game_manager();
+        if !#alive(gm) || !gm.is_end_game_cutscene_active() {
+            end_game_cutscene_dance_triggered = false;
+            return;
+        }
+
+        if animator == null || animator.state_machine == null {
+            return;
+        }
+
+        base_layer := animator.state_machine.try_get_layer("main");
+        if base_layer != null {
+            current_state := base_layer.get_current_state();
+            if current_state != null && current_state.get_name() == "Emote/Dance" {
+                end_game_cutscene_dance_triggered = true;
+                return;
+            }
+        }
+
+        this.trigger_end_game_cutscene_dance();
+        end_game_cutscene_dance_triggered = true;
+    }
+
     ao_update :: method(dt: float) {
         this.sync_local_camera_size();
         this.update_local_voice_chat_range_cache();
@@ -964,6 +1016,16 @@ Player :: class : Player_Base {
         }
 
         if #alive(agent) {
+            if agent.input_this_frame.x > 0.05 {
+                entity_cached_facing_right = true;
+            } else if agent.input_this_frame.x < -0.05 {
+                entity_cached_facing_right = false;
+            } else if agent.velocity.x > 0.05 {
+                entity_cached_facing_right = true;
+            } else if agent.velocity.x < -0.05 {
+                entity_cached_facing_right = false;
+            }
+
             movement_speed_multiplier := 1.0;
             if round_downed {
                 movement_speed_multiplier = DOWNED_SURVIVOR_MOVEMENT_MULTIPLIER;
@@ -1005,6 +1067,7 @@ Player :: class : Player_Base {
                 animator.state_machine.set_bool("ghost_form", true);
             }
         }
+        this.tick_end_game_cutscene_dance_state();
         if #alive(override_rig) && override_rig.instance != null {
             override_rig.instance.speed_multiplier = 1.0;
             if this.is_round_entity() && entity_lurch_remaining > 0.0 && is_moving {
@@ -1022,6 +1085,7 @@ Player :: class : Player_Base {
         this.tick_entity_local_view_reveal_state(dt);
         this.tick_entity_scream_reveal_state(dt);
         this.tick_entity_scream_arrow_state(dt);
+        this.tick_entity_target_ping_arrow_state(dt);
         this.update_entity_local_player_visibility(dt);
         this.sync_entity_local_silhouette_material();
         this.update_entity_local_nameplate_visibility();
@@ -1067,6 +1131,7 @@ Player :: class : Player_Base {
                     gm := get_game_manager();
                     if #alive(gm) && gm.phase == .ACTIVE {
                         draw_ability_button(this, Entity_Lurch_Ability, 2);
+                        draw_ability_button(this, Entity_Vomit_Ability, 3);
                     }
                 }
                 if equipped_weapon_type != .NONE {
@@ -1399,6 +1464,15 @@ Player :: class : Player_Base {
         entity_scream_arrow_remaining = max(entity_scream_arrow_remaining, duration_seconds);
     }
 
+    show_entity_target_ping_arrow :: proc(using this: Player, target: Player, duration_seconds: float) {
+        if target == null || duration_seconds <= 0.0 {
+            return;
+        }
+
+        entity_target_ping_user_id = target.get_user_id();
+        entity_target_ping_remaining = max(entity_target_ping_remaining, duration_seconds);
+    }
+
     tick_entity_local_view_reveal_state :: proc(using this: Player, dt: float) {
         if this.is_round_entity() return;
         if is_entity_sound_sight_interfered() {
@@ -1435,6 +1509,25 @@ Player :: class : Player_Base {
 
         entity_scream_arrow_remaining -= dt;
         entity_scream_arrow_remaining = max(entity_scream_arrow_remaining, 0.0);
+    }
+
+    tick_entity_target_ping_arrow_state :: proc(using this: Player, dt: float) {
+        if !this.is_round_entity() {
+            entity_target_ping_remaining = 0.0;
+            entity_target_ping_user_id = "";
+            return;
+        }
+        if entity_target_ping_remaining <= 0.0 return;
+
+        entity_target_ping_remaining -= dt;
+        entity_target_ping_remaining = max(entity_target_ping_remaining, 0.0);
+        if entity_target_ping_remaining <= 0.0 {
+            entity_target_ping_user_id = "";
+        }
+    }
+
+    is_facing_right_for_vomit :: method() -> bool {
+        return entity_cached_facing_right;
     }
 
     update_entity_local_player_visibility :: proc(using this: Player, dt: float) {
@@ -1602,6 +1695,57 @@ Player :: class : Player_Base {
             agent.velocity = v2{0.0, 0.0};
         }
         return true;
+    }
+
+    trigger_end_game_cutscene_dance :: method() {
+        if animator == null || animator.state_machine == null {
+            return;
+        }
+
+        animator.state_machine.set_trigger("dance1");
+        animator.set_animation("Emote/Dance", true, 0);
+    }
+
+    prepare_for_end_game_cutscene :: method(position: v2, look_at: v2, dance_index: s64) {
+        if !#alive(entity) {
+            return;
+        }
+
+        remove_all_effects(entity);
+        this.clear_round_death_state();
+        sprint_input_held = false;
+        sprint_active = false;
+        entity_lurch_remaining = 0.0;
+
+        if equipped_weapon_type != .NONE {
+            weapon_unequip(this, equipped_weapon_type);
+            equipped_weapon_type = .NONE;
+        }
+        equipped_item_def = null;
+        this.destroy_held_item_visual();
+
+        entity.set_local_position(position);
+        entity.mark_teleported();
+        if #alive(agent) {
+            agent.velocity = v2{0.0, 0.0};
+        }
+
+        this.set_facing_right(position.x < look_at.x);
+        entity_cached_facing_right = position.x < look_at.x;
+        this.add_disable_movement_input_reason(END_GAME_CUTSCENE_REASON);
+        end_game_cutscene_dance_triggered = false;
+    }
+
+    cleanup_end_game_cutscene :: method() {
+        this.remove_disable_movement_input_reason(END_GAME_CUTSCENE_REASON);
+        if #alive(agent) {
+            agent.velocity = v2{0.0, 0.0};
+        }
+
+        if animator != null && animator.state_machine != null {
+            animator.state_machine.set_trigger("RESET");
+        }
+        end_game_cutscene_dance_triggered = false;
     }
 
     handle_equipped_item_changing :: method(selected_index: s64) {

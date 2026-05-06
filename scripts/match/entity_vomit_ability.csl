@@ -1,0 +1,251 @@
+import "core:ao"
+
+ENTITY_VOMIT_COOLDOWN_SECONDS :: 45.0;
+ENTITY_VOMIT_EFFECT_SECONDS :: 1.2;
+ENTITY_VOMIT_SPAWN_DELAY_SECONDS :: 0.667;
+ENTITY_VOMIT_SPAWN_X_OFFSET :: 1.5;
+ENTITY_VOMIT_SPAWN_Y_OFFSET :: -0.5;
+ENTITY_VOMIT_TRIP_RADIUS :: 1.0;
+ENTITY_VOMIT_TRIP_RADIUS_SQ :: ENTITY_VOMIT_TRIP_RADIUS * ENTITY_VOMIT_TRIP_RADIUS;
+ENTITY_VOMIT_TRIP_PING_INTERVAL_SECONDS :: 0.5;
+ENTITY_VOMIT_PREFAB_PATH :: "MoldVomit.prefab";
+ENTITY_VOMIT_ICON_PATH :: "AbilityIcons/Vomit.png";
+ENTITY_VOMIT_SFX_PATH :: "SFX/vomit.wav";
+
+Mold_Vomit_Trip_Record :: struct {
+    user_id: string;
+    next_ping_at: float;
+}
+
+play_entity_vomit_sfx :: proc(player: Player) {
+    if player == null || !#alive(player.entity) {
+        return;
+    }
+
+    desc := SFX.default_sfx_desc();
+    desc.local_only = false;
+    desc.entity_to_follow = player.entity.id;
+    desc.volume = 1.0;
+    desc.range_multiplier = 5.0;
+    SFX.play(get_asset(SFX_Asset, ENTITY_VOMIT_SFX_PATH), desc);
+}
+
+find_round_entity_for_mold_vomit :: proc(owner_user_id: string) -> Player {
+    if owner_user_id.count > 0 {
+        owner, found := find_player_by_user_id(owner_user_id);
+        if found && owner.is_round_entity() {
+            return owner;
+        }
+    }
+
+    gm := get_game_manager();
+    if #alive(gm) && gm.entity_user_id.count > 0 {
+        owner, found := find_player_by_user_id(gm.entity_user_id);
+        if found && owner.is_round_entity() {
+            return owner;
+        }
+    }
+
+    return null;
+}
+
+ping_survivor_from_mold_vomit :: proc(entity_player: Player, survivor: Player) {
+    if survivor == null || !#alive(survivor.entity) {
+        return;
+    }
+    if !survivor.is_round_survivor() || survivor.is_round_dead() {
+        return;
+    }
+
+    sound_sight_interfered := is_entity_sound_sight_interfered();
+    ping_player_with_footstep_echo(survivor, ENTITY_SCREAM_REVEAL_FADE_OUT_SECONDS);
+    survivor.reveal_for_entity_scream_local_view(ENTITY_SCREAM_REVEAL_FADE_OUT_SECONDS);
+
+    if entity_player == null || !#alive(entity_player.entity) {
+        return;
+    }
+
+    entity_player.show_entity_target_ping_arrow(survivor, ENTITY_SCREAM_ARROW_SECONDS);
+
+    if !sound_sight_interfered {
+        gm := get_game_manager();
+        navmesh: Navmesh;
+        if #alive(gm) {
+            navmesh = gm.get_navmesh_to_lock_to();
+        }
+        spawn_entity_scream_nav_path_probe(entity_player, survivor, navmesh, ENTITY_SCREAM_PATH_SECONDS);
+    }
+}
+
+Mold_Vomit_Tripmine :: class : Component {
+    owner_user_id: string;
+    trip_records: [..]Mold_Vomit_Trip_Record;
+
+    setup :: method(owner: Player) {
+        if owner != null {
+            owner_user_id = owner.get_user_id();
+        }
+    }
+
+    get_next_ping_at :: method(user_id: string) -> float {
+        for record: trip_records {
+            if record.user_id == user_id {
+                return record.next_ping_at;
+            }
+        }
+        return 0.0;
+    }
+
+    set_next_ping_at :: method(user_id: string, next_ping_at: float) {
+        i: s64 = 0;
+        while i < trip_records.count {
+            if trip_records[i].user_id == user_id {
+                trip_records[i].next_ping_at = next_ping_at;
+                return;
+            }
+            i += 1;
+        }
+
+        record: Mold_Vomit_Trip_Record;
+        record.user_id = user_id;
+        record.next_ping_at = next_ping_at;
+        trip_records.append(record);
+    }
+
+    ao_update :: method(dt: float) {
+        gm := get_game_manager();
+        if !#alive(gm) || (gm.phase != .SURVIVOR_HEAD_START && gm.phase != .ACTIVE) {
+            entity.destroy();
+            return;
+        }
+
+        now := get_time();
+        origin := entity.world_position;
+        owner := find_round_entity_for_mold_vomit(owner_user_id);
+
+        for survivor: component_iterator(Player) {
+            if !survivor.is_round_survivor() || survivor.is_round_dead() || !#alive(survivor.entity) {
+                continue;
+            }
+
+            delta := survivor.entity.world_position - origin;
+            if length_squared(delta) > ENTITY_VOMIT_TRIP_RADIUS_SQ {
+                continue;
+            }
+
+            user_id := survivor.get_user_id();
+            if now < this.get_next_ping_at(user_id) {
+                continue;
+            }
+
+            this.set_next_ping_at(user_id, now + ENTITY_VOMIT_TRIP_PING_INTERVAL_SECONDS);
+            ping_survivor_from_mold_vomit(owner, survivor);
+        }
+    }
+}
+
+spawn_mold_vomit_at_position :: proc(position: v2, owner: Player) {
+    prefab := get_asset(Prefab_Asset, ENTITY_VOMIT_PREFAB_PATH);
+    if prefab == null {
+        return;
+    }
+
+    mold_entity := Scene.instantiate(prefab, position);
+    if !#alive(mold_entity) {
+        return;
+    }
+
+    mold_entity.mark_teleported();
+    tripmine := mold_entity.add_component(Mold_Vomit_Tripmine);
+    tripmine.setup(owner);
+}
+
+spawn_mold_vomit_tripmine :: proc(player: Player) {
+    if player == null || !#alive(player.entity) {
+        return;
+    }
+
+    forward_x := -ENTITY_VOMIT_SPAWN_X_OFFSET;
+    if player.is_facing_right_for_vomit() {
+        forward_x = ENTITY_VOMIT_SPAWN_X_OFFSET;
+    }
+
+    spawn_mold_vomit_at_position(player.entity.world_position + v2{forward_x, ENTITY_VOMIT_SPAWN_Y_OFFSET}, player);
+}
+
+Entity_Vomit_Effect :: class : Effect_Base {
+    spawned_mold: bool;
+
+    effect_start :: method() {
+        player_specific.freeze_player = true;
+        set_duration(ENTITY_VOMIT_EFFECT_SECONDS);
+        spawned_mold = false;
+
+        if player == null {
+            return;
+        }
+        if #alive(player.agent) {
+            player.agent.velocity = v2{0.0, 0.0};
+        }
+        if !player.ensure_entity_override_rig() {
+            return;
+        }
+        if player.entity_override_state_machine == null {
+            return;
+        }
+
+        player.entity_override_state_machine.set_trigger("vomit");
+    }
+
+    effect_update :: method(dt: float) {
+        if player != null && #alive(player.agent) {
+            player.agent.velocity = v2{0.0, 0.0};
+        }
+
+        if spawned_mold || get_elapsed_time() < ENTITY_VOMIT_SPAWN_DELAY_SECONDS {
+            return;
+        }
+
+        spawned_mold = true;
+        spawn_mold_vomit_tripmine(player);
+    }
+}
+
+Entity_Vomit_Ability :: class : Ability_Base {
+    on_init :: method() {
+        name = "Vomit";
+        icon = get_asset(Texture_Asset, ENTITY_VOMIT_ICON_PATH);
+    }
+
+    can_use :: method() -> bool {
+        if player == null || !player.is_round_entity() {
+            return false;
+        }
+
+        gm := get_game_manager();
+        if !#alive(gm) || gm.phase != .ACTIVE {
+            return false;
+        }
+
+        if !player.ensure_entity_override_rig() {
+            return false;
+        }
+
+        return player.entity.get_active_effect() == null;
+    }
+
+    on_update :: method(params: ref Ability_Update_Params) {
+        if !params.clicked || !params.can_use {
+            return;
+        }
+
+        effect := new(Entity_Vomit_Effect);
+        player.entity.set_active_effect(effect);
+        play_entity_vomit_sfx(player);
+        current_cooldown = ENTITY_VOMIT_COOLDOWN_SECONDS;
+    }
+
+    on_draw_button :: proc(instance: Entity_Vomit_Ability, rect: Rect) {
+        draw_ability_name_label(rect, "Vomit");
+    }
+}

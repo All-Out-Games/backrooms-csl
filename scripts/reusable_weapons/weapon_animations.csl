@@ -4,8 +4,14 @@ setup_reusable_weapons_player_state_machine :: proc(player: Player) {
     additive_layer := sm.create_layer("additive_layer", 1);
 
     ao_idle := base_layer.try_get_state("Idle");
-    ao_run := base_layer.create_state("Run_Slow", true);
-    ao_run_ghost := base_layer.create_state("Run_Ghost", true);
+    ao_run := base_layer.try_get_state("Run_Slow");
+    if ao_run == null {
+        ao_run = base_layer.create_state("Run_Slow", true);
+    }
+    ao_run_ghost := base_layer.try_get_state("Run_Ghost");
+    if ao_run_ghost == null {
+        ao_run_ghost = base_layer.create_state("Run_Ghost", true);
+    }
     downed_idle := base_layer.create_state("Downed_idle", true);
     downed_crawl := base_layer.create_state("Downed_crawl", true);
     downed_hit := base_layer.create_state("hit_downed", false);
@@ -94,7 +100,6 @@ setup_reusable_weapons_player_state_machine :: proc(player: Player) {
 
     downed_hit_to_crawl := base_layer.create_transition(downed_hit, downed_crawl, true);
     downed_hit_to_crawl.create_bool_condition(moving_var, true);
-
 
     to_sprint := base_layer.create_global_transition(sprint_state, false);
     to_sprint.create_bool_condition(sprinting_var, true);
@@ -220,4 +225,17 @@ setup_reusable_weapons_player_state_machine :: proc(player: Player) {
     melee_state := additive_layer.create_state("Attack_Melee_1_mIK_AL2", false);
     additive_layer.create_transition(idle_state, melee_state, false).create_trigger_condition(sm.create_variable("melee_AL", .TRIGGER));
     additive_layer.create_transition(melee_state, idle_state, true);
+
+    // Dance
+    dance_state := base_layer.try_get_state("Emote/Dance");
+    if dance_state == null {
+        dance_state = base_layer.create_state("Emote/Dance", true);
+    }
+    if dance_state != null {
+        dance_trigger := sm.try_get_variable("dance1");
+        if dance_trigger == null {
+            dance_trigger = sm.create_variable("dance1", .TRIGGER);
+        }
+        base_layer.create_global_transition(dance_state, true).create_trigger_condition(dance_trigger);
+    }
 }

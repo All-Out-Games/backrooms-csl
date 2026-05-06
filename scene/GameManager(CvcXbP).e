@@ -31,6 +31,7 @@
     "RadioSpawns": 2951500453,
     "EntitySpawns": 2938623902,
     "ItemSpawns": 2942794679,
+    "EndOfGameWarp": 2946391297,
     "RoundItemIds": [
       "flashbang",
       "noisemaker",

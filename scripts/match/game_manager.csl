@@ -8,6 +8,10 @@ HUNT_BEGIN_BANNER_SECONDS :: 2.0;
 EXIT_UNLOCK_BANNER_SECONDS :: 2.0;
 LAST_SURVIVOR_ENTITY_WIN_DELAY_SECONDS :: 5.0;
 ENDED_TO_LOBBY_SECONDS :: 10.0;
+END_GAME_CUTSCENE_SECONDS :: 5.0;
+END_GAME_CUTSCENE_RADIUS :: 2.8;
+END_GAME_CUTSCENE_CAMERA_SIZE :: 6.5;
+END_GAME_CUTSCENE_REASON :: "end_game_cutscene";
 
 MIN_TOTAL_PLAYERS :: 5; // 1 entity + 4 survivors
 MAX_TOTAL_PLAYERS :: 7; // 1 entity + 6 survivors
@@ -100,6 +104,8 @@ put_entity_abilities_on_standard_cooldown :: proc(player: Player) {
             ability.current_cooldown = ENTITY_SCREAM_COOLDOWN_SECONDS;
         } else if ability.#type == Entity_Lurch_Ability {
             ability.current_cooldown = ENTITY_LURCH_COOLDOWN_SECONDS;
+        } else if ability.#type == Entity_Vomit_Ability {
+            ability.current_cooldown = ENTITY_VOMIT_COOLDOWN_SECONDS;
         }
     }
 
@@ -271,8 +277,31 @@ draw_entity_scream_arrow_ui :: proc(player: Player) {
         }
 
         distance_units := (distance + 0.5).(s64);
-        player.DrawArrowToPosition(other.entity.world_position, "UI/schleem_hologram.png", format_string("%m", {distance_units}));
+        player.DrawArrowToPosition(other.entity.world_position, "UI/schleem_hologram.png", format_string("%m", {distance_units}), true);
     }
+}
+
+draw_entity_target_ping_arrow_ui :: proc(player: Player) {
+    if !player.is_local() || !player.is_round_entity() {
+        return;
+    }
+    if player.entity_target_ping_remaining <= 0.0 || player.entity_target_ping_user_id.count <= 0 {
+        return;
+    }
+
+    target, found := find_player_by_user_id(player.entity_target_ping_user_id);
+    if !found || target == player || !#alive(target.entity) || !target.is_round_survivor() {
+        return;
+    }
+
+    to_survivor := target.entity.world_position - player.entity.world_position;
+    distance := length(to_survivor);
+    if distance <= ENTITY_SCREAM_ARROW_MIN_DISTANCE {
+        return;
+    }
+
+    distance_units := (distance + 0.5).(s64);
+    player.DrawArrowToPosition(target.entity.world_position, "UI/schleem_hologram.png", format_string("%m", {distance_units}), true);
 }
 
 draw_entity_scream_nav_path_segment :: proc(a: v2, b: v2, alpha: float) {
@@ -393,6 +422,7 @@ draw_match_timer_ui :: proc(player: Player) {
     UIK.end();
     draw_entity_scream_nav_paths_ui(player);
     draw_entity_scream_arrow_ui(player);
+    draw_entity_target_ping_arrow_ui(player);
 }
 
 draw_hunt_begin_banner_ui :: proc(player: Player) {
@@ -538,6 +568,7 @@ Game_Manager :: class : Component {
     RadioSpawns: Entity @ao_serialize;
     EntitySpawns: Entity @ao_serialize;
     ItemSpawns: Entity @ao_serialize;
+    EndOfGameWarp: Entity @ao_serialize;
     RoundItemIds: [..]string @ao_serialize;
     RoundItemWeights: [..]s64 @ao_serialize;
     MinRoundItemSpawnCount: s64 @ao_serialize;
@@ -555,6 +586,7 @@ Game_Manager :: class : Component {
     match_ends_at: float;
     entity_win_delay_ends_at: float;
     ended_at: float;
+    end_game_cutscene_ends_at: float;
 
     // LOBBY: 0 = countdown not running; otherwise get_time() when autostart fires.
     lobby_countdown_ends_at: float;
@@ -584,8 +616,12 @@ Game_Manager :: class : Component {
         match_ends_at = 0.0;
         entity_win_delay_ends_at = 0.0;
         ended_at = 0.0;
+        end_game_cutscene_ends_at = 0.0;
         lobby_countdown_ends_at = 0.0;
         match_rng = rng_root_seed();
+        if !#alive(EndOfGameWarp) {
+            EndOfGameWarp = Scene.get_entity_by_name("EndOfGameWarp");
+        }
         cache_hearing_radius_sprite();
         sync_entity_hearing_radius_visual(0.0);
         clear_spawned_round_items();
@@ -604,6 +640,9 @@ Game_Manager :: class : Component {
     ao_update :: method(dt: float) {
         if phase == .ENDED {
             sync_entity_hearing_radius_visual(0.0);
+            if end_game_cutscene_ends_at > 0.0 && get_time() >= end_game_cutscene_ends_at {
+                finish_end_game_cutscene();
+            }
             if ended_at > 0.0 && get_time() >= ended_at + ENDED_TO_LOBBY_SECONDS {
                 reset_to_lobby();
             }
@@ -1343,6 +1382,7 @@ Game_Manager :: class : Component {
     // --- Internal ---
 
     reset_to_lobby :: method() {
+        finish_end_game_cutscene();
         for player: component_iterator(Player) {
             clear_player_tasks(player);
             player.vent_cooldown_ends_at = 0.0;
@@ -1364,7 +1404,55 @@ Game_Manager :: class : Component {
         match_ends_at = 0.0;
         entity_win_delay_ends_at = 0.0;
         ended_at = 0.0;
+        end_game_cutscene_ends_at = 0.0;
         lobby_countdown_ends_at = 0.0;
+    }
+
+    is_end_game_cutscene_active :: method() -> bool {
+        return phase == .ENDED && end_game_cutscene_ends_at > 0.0 && get_time() < end_game_cutscene_ends_at;
+    }
+
+    get_end_game_cutscene_position :: method() -> v2 {
+        if #alive(EndOfGameWarp) {
+            return EndOfGameWarp.world_position;
+        }
+
+        fallback := Scene.get_entity_by_name("EndOfGameWarp");
+        if #alive(fallback) {
+            EndOfGameWarp = fallback;
+            return fallback.world_position;
+        }
+
+        return v2{0.0, 0.0};
+    }
+
+    begin_end_game_cutscene :: method() {
+        center := get_end_game_cutscene_position();
+        end_game_cutscene_ends_at = get_time() + END_GAME_CUTSCENE_SECONDS;
+
+        for player: component_iterator(Player) {
+            if !#alive(player.entity) {
+                continue;
+            }
+
+            angle := rng_range_float(ref match_rng, 0.0, 2.0 * PI);
+            radius_t := rng_range_float(ref match_rng, 0.0, 1.0);
+            radius := END_GAME_CUTSCENE_RADIUS * sqrt(radius_t);
+            offset := v2{cos(angle) * radius, sin(angle) * radius};
+            dance_index := rng_range_int(ref match_rng, 0, 4);
+            player.prepare_for_end_game_cutscene(center + offset, center, dance_index);
+        }
+    }
+
+    finish_end_game_cutscene :: method() {
+        if end_game_cutscene_ends_at <= 0.0 {
+            return;
+        }
+
+        for player: component_iterator(Player) {
+            player.cleanup_end_game_cutscene();
+        }
+        end_game_cutscene_ends_at = 0.0;
     }
 
     restore_round_end_name_visibility :: method() {
@@ -1387,6 +1475,7 @@ Game_Manager :: class : Component {
         ended_at = get_time();
         unfreeze_entity_if_needed();
         restore_round_end_name_visibility();
+        begin_end_game_cutscene();
         log_info("Game_Manager: Survivors win", {});
     }
 
@@ -1403,6 +1492,7 @@ Game_Manager :: class : Component {
         ended_at = get_time();
         unfreeze_entity_if_needed();
         restore_round_end_name_visibility();
+        begin_end_game_cutscene();
         log_info("Game_Manager: Entity win", {});
     }
 

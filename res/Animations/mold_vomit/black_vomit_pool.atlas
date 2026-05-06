@@ -1,0 +1,15 @@
+ed3428019bf97389.png
+	size: 428, 428
+	filter: Linear, Linear
+imposter/Vomit Trap/BlackBubble_A
+	bounds: 373, 373, 51, 51
+	offsets: 1, 1, 53, 53
+imposter/Vomit Trap/BlackBubble_B
+	bounds: 373, 326, 41, 45
+	offsets: 1, 1, 43, 47
+imposter/Vomit Trap/BlackBubble_C
+	bounds: 373, 288, 36, 35
+	offsets: 1, 1, 38, 37
+	rotate: 90
+imposter/Vomit Trap/BlackVomitPool
+	bounds: 2, 210, 369, 214
