@@ -1,17 +1,16 @@
 14
-755914244097
-2946391297
+850403524609
+2940883308
 {
-  "name": "EndOfGameWarp",
+  "name": "AsyncSpawns",
   "local_enabled": true,
   "local_position": {
-    "Y": 4
+
   },
   "local_rotation": 0,
   "local_scale": {
     "X": 1,
     "Y": 1
   },
-  "previous_sibling": 2942794679,
-  "next_sibling": 2943157284
+  "previous_sibling": 2944047147
 }

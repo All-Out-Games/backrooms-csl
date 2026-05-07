@@ -1,6 +1,8 @@
 import "core:ao"
 
 STIM_REVIVE_RANGE :: 2.4;
+STIM_SPEED_BUFF_SECONDS :: 3.0;
+STIM_SPEED_BUFF_MULTIPLIER :: 1.25;
 
 find_stim_target :: proc(player: Player) -> Player {
     if player == null || !#alive(player.entity) {
@@ -34,6 +36,37 @@ find_stim_target :: proc(player: Player) -> Player {
     return best_target;
 }
 
+Stim_Speed_Effect :: class : Effect_Base {
+    effect_start :: method() {
+        set_duration(STIM_SPEED_BUFF_SECONDS);
+    }
+}
+
+can_player_use_equipped_stim :: proc(player: Player) -> bool {
+    if player == null {
+        return false;
+    }
+    if !player.is_round_survivor() || player.equipped_weapon_type != .STIM {
+        return false;
+    }
+    return player.get_equipped_item_instance() != null;
+}
+
+consume_equipped_stim :: proc(player: Player) -> bool {
+    if player == null {
+        return false;
+    }
+
+    stim_item := player.get_equipped_item_instance();
+    if stim_item == null {
+        return false;
+    }
+
+    Items.destroy_item_instance(stim_item, 1);
+    player.handle_equipped_item_changing(player.last_selected_index);
+    return true;
+}
+
 Stim_Ability :: class : Ability_Base {
     on_init :: method() {
         name = "Stim";
@@ -50,10 +83,7 @@ Stim_Ability :: class : Ability_Base {
         if p == null {
             return false;
         }
-        if !p.is_round_survivor() || p.equipped_weapon_type != .STIM {
-            return false;
-        }
-        if p.get_equipped_item_instance() == null {
+        if !can_player_use_equipped_stim(p) {
             return false;
         }
 
@@ -69,10 +99,7 @@ Stim_Ability :: class : Ability_Base {
         if p == null {
             return;
         }
-        if !p.is_round_survivor() || p.equipped_weapon_type != .STIM {
-            return;
-        }
-        if p.get_equipped_item_instance() == null {
+        if !can_player_use_equipped_stim(p) {
             return;
         }
 
@@ -86,22 +113,60 @@ Stim_Ability :: class : Ability_Base {
             return;
         }
 
-        stim_item := p.get_equipped_item_instance();
-        if stim_item == null {
-            return;
-        }
-
         if !target.revive_from_downed() {
             return;
         }
 
         weapon_play_fire_sound(p, .STIM);
-        Items.destroy_item_instance(stim_item, 1);
-        p.handle_equipped_item_changing(p.last_selected_index);
+        consume_equipped_stim(p);
         current_cooldown = get_weapon_config(.STIM).fire_rate;
     }
 
     on_draw_button :: proc(instance: Stim_Ability, rect: Rect) {
         draw_ability_name_label(rect, "Stim");
+    }
+}
+
+Stim_Boost_Ability :: class : Ability_Base {
+    on_init :: method() {
+        name = "Boost";
+        icon = get_asset(Texture_Asset, "AbilityIcons/syringe_front.png");
+        disable_keybind = true;
+    }
+
+    can_use :: method() -> bool {
+        p := player.(Player);
+        if p == null {
+            return false;
+        }
+        return can_player_use_equipped_stim(p);
+    }
+
+    on_update :: method(params: ref Ability_Update_Params) {
+        if !params.clicked || !params.can_use {
+            return;
+        }
+
+        p := player.(Player);
+        if p == null || !#alive(p.entity) {
+            return;
+        }
+        if !can_player_use_equipped_stim(p) {
+            return;
+        }
+
+        p.current_stamina = p.max_stamina;
+        p.sprint_lockout_remaining = 0.0;
+
+        effect := new(Stim_Speed_Effect);
+        p.entity.add_passive_effect(effect);
+
+        weapon_play_fire_sound(p, .STIM);
+        consume_equipped_stim(p);
+        current_cooldown = get_weapon_config(.STIM).fire_rate;
+    }
+
+    on_draw_button :: proc(instance: Stim_Boost_Ability, rect: Rect) {
+        draw_ability_name_label(rect, "Boost");
     }
 }

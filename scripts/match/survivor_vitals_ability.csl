@@ -1,0 +1,169 @@
+import "core:ao"
+
+SURVIVOR_VITALS_ICON_PATH :: "$AO/ui/kit/Icons/misc_icons_1/heart_icon_full.png";
+
+get_survivor_vitals_status :: proc(player: Player) -> string {
+    if player == null {
+        return "Healthy";
+    }
+    if player.is_round_dead() {
+        return "Dead";
+    }
+    if player.is_round_downed() {
+        return "Downed";
+    }
+    return "Healthy";
+}
+
+get_survivor_vitals_status_color :: proc(player: Player) -> v4 {
+    if player == null {
+        return v4{0.7, 1.0, 0.7, 1.0};
+    }
+    if player.is_round_dead() {
+        return v4{1.0, 0.35, 0.35, 1.0};
+    }
+    if player.is_round_downed() {
+        return v4{1.0, 0.85, 0.35, 1.0};
+    }
+    return v4{0.7, 1.0, 0.7, 1.0};
+}
+
+draw_vitals_player_row :: proc(player: Player) {
+    row := UIK.layout_row(UIK.flex(1), UIK.pixels(72), 12);
+    row.background = .MODAL_TRANSP_BLACK;
+    row.padding = v4{14, 12, 14, 12};
+    row.cross_align = .CENTER;
+    UIK.panel_begin(row);
+
+    name_panel := UIK.layout_column();
+    name_panel.width = UIK.flex(1);
+    name_panel.height = UIK.fit();
+    name_panel.main_align = .CENTER;
+    name_panel.show_background = false;
+    UIK.panel_begin(name_panel);
+
+    name_text := UIK.text_body();
+    UIK.text_set_word_wrap(&name_text, false);
+    UIK.text(player.get_username(), name_text);
+
+    UIK.panel_end();
+
+    status_panel := UIK.layout_column();
+    status_panel.width = UIK.pixels(145);
+    status_panel.height = UIK.fit();
+    status_panel.main_align = .CENTER;
+    status_panel.cross_align = .END;
+    status_panel.show_background = false;
+    UIK.panel_begin(status_panel);
+
+    status_text := UIK.text_body();
+    UIK.text_set_color(&status_text, get_survivor_vitals_status_color(player));
+    UIK.text_set_halign(&status_text, .RIGHT);
+    UIK.text(get_survivor_vitals_status(player), status_text);
+
+    UIK.panel_end();
+
+    UIK.panel_end();
+}
+
+draw_vitals_survivor_list :: proc() {
+    list_panel := UIK.layout_column();
+    list_panel.width = UIK.flex(1);
+    list_panel.height = UIK.flex(1);
+    list_panel.gap = 8;
+    list_panel.padding = v4{2, 2, 2, 2};
+    UIK.list_begin("vitals_survivor_list", list_panel);
+
+    survivor_count: s64 = 0;
+    for other: component_iterator(Player) {
+        if !other.is_round_survivor() {
+            continue;
+        }
+
+        draw_vitals_player_row(other);
+        survivor_count += 1;
+    }
+
+    if survivor_count == 0 {
+        empty_panel := UIK.layout_centered(UIK.flex(1), UIK.flex(1));
+        UIK.panel_begin(empty_panel);
+        UIK.text("No Survivor vitals available.", UIK.text_body());
+        UIK.panel_end();
+    }
+
+    UIK.list_end();
+}
+
+draw_vitals_modal_ui :: proc(player: Player) {
+    if player == null || !player.vitals_modal_open {
+        return;
+    }
+    if !player.is_local_or_server() || !player.is_round_survivor() {
+        return;
+    }
+
+    gm := get_game_manager();
+    if !#alive(gm) || (gm.phase != .SURVIVOR_HEAD_START && gm.phase != .ACTIVE) {
+        player.vitals_modal_open = false;
+        return;
+    }
+
+    UIK.begin(UIK.modal(UIK.rect_window_small(), 15));
+
+    shell := UIK.panel_modal(.TRANSP_BLACK);
+    shell.gap = 10;
+    shell.padding = v4{16, 16, 16, 16};
+    UIK.panel_begin(shell);
+
+    title_desc := UIK.title_area_desc("Vitals");
+    exit_handle := UIK.title_area(title_desc);
+
+    content := UIK.panel_interior(.INSET);
+    content.width = UIK.flex(1);
+    content.height = UIK.flex(1);
+    content.padding = v4{8, 8, 8, 8};
+    UIK.panel_begin(content);
+
+    draw_vitals_survivor_list();
+
+    UIK.panel_end();
+
+    UIK.panel_end();
+    UIK.end();
+
+    if UIK.clicked(exit_handle) {
+        player.vitals_modal_open = false;
+    }
+}
+
+Survivor_Vitals_Ability :: class : Ability_Base {
+    on_init :: method() {
+        name = "Vitals";
+        icon = get_asset(Texture_Asset, SURVIVOR_VITALS_ICON_PATH);
+    }
+
+    can_use :: method() -> bool {
+        if player == null || !player.is_round_survivor() || player.is_round_entity() {
+            return false;
+        }
+
+        gm := get_game_manager();
+        if !#alive(gm) || (gm.phase != .SURVIVOR_HEAD_START && gm.phase != .ACTIVE) {
+            return false;
+        }
+
+        return true;
+    }
+
+    on_update :: method(params: ref Ability_Update_Params) {
+        if !params.clicked || !params.can_use {
+            return;
+        }
+
+        player.vitals_modal_open = !player.vitals_modal_open;
+    }
+
+    on_draw_button :: proc(instance: Survivor_Vitals_Ability, rect: Rect) {
+        draw_ability_name_label(rect, "Vitals");
+    }
+}

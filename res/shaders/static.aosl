@@ -1,0 +1,95 @@
+!!inputs {
+    texture albedo ALBEDO
+    texture noise_texture NOISE
+}
+
+!!pipeline {
+    Pixel_Format: RGBA8_SRGB
+    Blend_Enabled: true
+    Depth_Enabled: true
+    Blend_Src: ONE
+    Blend_Dst: ONE_MINUS_SRC_ALPHA
+    Blend_Op: ADD
+    Alpha_Blend_Src: ONE
+    Alpha_Blend_Dst: ONE
+    Alpha_Blend_Op: ADD
+    Blend_Color: (1, 1, 1, 1)
+    Unlit: true
+}
+
+!!vs
+struct vs_out {
+    float4 pos: SV_Position;
+    float2 uv: UV;
+    float4 color: COLOR0;
+};
+
+vs_out vs_main(vs_in v)
+{
+    float4x4 model;
+    model[0] = matrices.Load(create_pixel_coord(v.matrix_index * 4 + 0));
+    model[1] = matrices.Load(create_pixel_coord(v.matrix_index * 4 + 1));
+    model[2] = matrices.Load(create_pixel_coord(v.matrix_index * 4 + 2));
+    model[3] = matrices.Load(create_pixel_coord(v.matrix_index * 4 + 3));
+
+    vs_out o;
+    o.pos   = mul(mvp, mul(model, float4(v.pos, 0, 1)));
+    o.uv    = v.uv;
+    o.color = v.color;
+    return o;
+}
+
+!!ps
+struct ps_in {
+    float4 pos: SV_Position;
+    float2 uv: UV;
+    float4 color: COLOR0;
+};
+
+float noise(float2 p)
+{
+    float t = resolution_time.z;
+    float2 scroll = float2(1.0f, 2.0f - 2.0f * cos(t)) * t * 8.0f;
+    float s = noise_texture.Sample(noise_texture_smp, scroll + p).x;
+    return s * s;
+}
+
+float onOff(float a, float b, float c)
+{
+    return step(c, sin(resolution_time.z + a * cos(resolution_time.z * b)));
+}
+
+float ramp(float y, float start, float end)
+{
+    float inside = step(start, y) - step(end, y);
+    float fact = (y - start) / (end - start) * inside;
+    return (1.0f - fact) * inside;
+}
+
+float stripes(float2 uv)
+{
+    float t = resolution_time.z;
+    float noi = noise(uv * float2(0.5f, 0.0f) + float2(1.0f, -2.0f));
+    float stripe_y = fmod(uv.y * 4.0f + t * 0.5f + sin(t + sin(t * 0.63f)), 1.0f);
+    return ramp(stripe_y, 0.5f, 0.6f) * noi;
+}
+
+float4 ps_main(ps_in inp) : SV_Target0
+{
+    float2 uv = inp.uv;
+    float t = resolution_time.z;
+    float vigAmt = 3.0f + 0.3f * sin(t + 5.0f * cos(t * 5.0f));
+    float vignette = (1.0f - vigAmt * (uv.y - 0.5f) * (uv.y - 0.5f)) *
+                     (1.0f - vigAmt * (uv.x - 0.5f) * (uv.x - 0.5f));
+    vignette = saturate(vignette);
+
+    float4 result = inp.color * albedo.Sample(albedo_smp, uv);
+    float s = stripes(uv);
+    float n = noise(uv * 2.0f) * 0.5f;
+    result.rgb += float3(s, s, s);
+    result.rgb += float3(n, n, n);
+    result.rgb *= vignette;
+    result.rgb *= float3(0.2f, 0.2f, 0.2f);
+    result.rgb *= result.a;
+    return result;
+}

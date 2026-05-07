@@ -246,9 +246,6 @@ Wire_Puzzle :: class : Interactable {
         if !#alive(gm) {
             return false;
         }
-        if !is_generator_solved() {
-            return false;
-        }
         return gm.phase == .SURVIVOR_HEAD_START || gm.phase == .ACTIVE;
     }
 

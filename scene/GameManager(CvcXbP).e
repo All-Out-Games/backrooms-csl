@@ -31,6 +31,7 @@
     "RadioSpawns": 2951500453,
     "EntitySpawns": 2938623902,
     "ItemSpawns": 2942794679,
+    "AsyncSpawns": 2940883308,
     "EndOfGameWarp": 2946391297,
     "RoundItemIds": [
       "flashbang",
@@ -39,10 +40,11 @@
     ],
     "RoundItemWeights": [
       2,
-      1,
+      2,
       2
     ],
-    "MinRoundItemSpawnCount": 17,
-    "MaxRoundItemSpawnCount": 25
+    "MinRoundItemSpawnCount": 22,
+    "MaxRoundItemSpawnCount": 25,
+    "AsyncSpawnCount": 6
   }
 }

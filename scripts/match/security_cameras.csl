@@ -1,0 +1,391 @@
+import "core:ao"
+
+SECURITY_CAMERA_VIEW_SIZE :: 7.5;
+SECURITY_CAMERA_ICON_PATH :: "$AO/new/Player Inventory/abilities_inventory_bar/scanner_button.png";
+SECURITY_CAMERA_SWITCH_SFX_PATH :: "radio/camera.wav";
+SECURITY_CAMERA_FREEZE_REASON :: "security_cameras";
+
+Security_Camera :: class : Interactable {
+    destroyed: bool @ao_serialize;
+    view_offset: v2 @ao_serialize;
+    view_size: float @ao_serialize;
+
+    ao_start :: method() {
+        this.set_listener(this);
+        this.set_text("Security Camera");
+        required_hold_time = 0.0;
+        if view_size <= 0.0 {
+            view_size = SECURITY_CAMERA_VIEW_SIZE;
+        }
+        this.sync_visual_state();
+    }
+
+    can_use :: method(player: Player) -> bool {
+        return false;
+    }
+
+    on_interact :: method(player: Player) {
+    }
+
+    ao_update :: method(dt: float) {
+        gm := get_game_manager();
+        if #alive(gm) && gm.phase == .LOBBY && destroyed {
+            destroyed = false;
+        }
+        this.sync_visual_state();
+    }
+
+    get_view_position :: method() -> v2 {
+        return entity.world_position + view_offset;
+    }
+
+    get_view_size :: method() -> float {
+        if view_size <= 0.0 {
+            return SECURITY_CAMERA_VIEW_SIZE;
+        }
+        return view_size;
+    }
+
+    sync_visual_state :: method() {
+        if destroyed {
+            this.set_text("Camera Destroyed");
+        } else {
+            this.set_text("Security Camera");
+        }
+
+        sprite := entity.get_component(Sprite_Renderer);
+        if sprite == null {
+            return;
+        }
+
+        color := sprite.color;
+        if destroyed {
+            color.w = 0.35;
+        } else {
+            color.w = 1.0;
+        }
+        sprite.color = color;
+    }
+}
+
+draw_security_camera_static_overlay :: proc() {
+    UI.push_screen_draw_context();
+    defer UI.pop_draw_context();
+
+    UI.push_layer(1200);
+    defer UI.pop_layer();
+
+    full_screen := UI.get_screen_rect();
+    UI.quad(full_screen, core_globals.white_sprite, v4{0.0, 0.0, 0.0, 0.012});
+
+    stripe_height := 3.0;
+    stripe_gap := 20.0;
+    stripe_offset := (get_time() * 38.0) % stripe_gap;
+    y := full_screen.min.y - stripe_offset;
+    while y < full_screen.max.y {
+        stripe_rect := Rect{
+            min = v2{full_screen.min.x, y},
+            max = v2{full_screen.max.x, y + stripe_height}
+        };
+        UI.quad(stripe_rect, core_globals.white_sprite, v4{1.0, 1.0, 1.0, 0.0045});
+        y += stripe_gap;
+    }
+}
+
+play_security_camera_ui_sfx :: proc(player: Player) {
+    if player == null || !player.is_local() {
+        return;
+    }
+
+    desc := SFX.default_sfx_desc();
+    desc.local_only = true;
+    desc.volume = 0.55;
+    desc.speed_perturb = 0.15;
+    SFX.play(get_asset(SFX_Asset, SECURITY_CAMERA_SWITCH_SFX_PATH), desc);
+}
+
+play_security_camera_positional_sfx :: proc(position: v2) {
+    desc := SFX.default_sfx_desc();
+    desc.local_only = false;
+    desc.volume = 0.65;
+    desc.range_multiplier = 2.0;
+    desc.set_position(position);
+    SFX.play(get_asset(SFX_Asset, SECURITY_CAMERA_SWITCH_SFX_PATH), desc);
+}
+
+get_live_security_camera_count :: proc() -> s64 {
+    count: s64 = 0;
+    for camera: component_iterator(Security_Camera) {
+        if camera.destroyed {
+            continue;
+        }
+        if !#alive(camera.entity) {
+            continue;
+        }
+        count += 1;
+    }
+    return count;
+}
+
+wrap_security_camera_index :: proc(index: s64, count: s64) -> s64 {
+    if count <= 0 {
+        return 0;
+    }
+
+    result := index;
+    while result < 0 {
+        result += count;
+    }
+    while result >= count {
+        result -= count;
+    }
+    return result;
+}
+
+get_security_camera_by_wrapped_index :: proc(index: s64) -> Security_Camera {
+    count := get_live_security_camera_count();
+    if count <= 0 {
+        return null;
+    }
+
+    wrapped := wrap_security_camera_index(index, count);
+    current: s64 = 0;
+    for camera: component_iterator(Security_Camera) {
+        if camera.destroyed {
+            continue;
+        }
+        if !#alive(camera.entity) {
+            continue;
+        }
+        if current == wrapped {
+            return camera;
+        }
+        current += 1;
+    }
+    return null;
+}
+
+close_security_cameras_for_player :: proc(player: Player) {
+    if player == null {
+        return;
+    }
+    player.security_cameras_open = false;
+    player.remove_freeze_reason(SECURITY_CAMERA_FREEZE_REASON);
+    if #alive(player.entity) {
+        remove_effect(player.entity, Use_Security_Cameras_Effect, false);
+    }
+}
+
+can_player_use_security_cameras :: proc(player: Player) -> bool {
+    if player == null {
+        return false;
+    }
+    if !player.is_round_survivor() {
+        return false;
+    }
+
+    gm := get_game_manager();
+    if !#alive(gm) || (gm.phase != .SURVIVOR_HEAD_START && gm.phase != .ACTIVE) {
+        return false;
+    }
+
+    return get_live_security_camera_count() > 0;
+}
+
+open_security_cameras_for_player :: proc(player: Player) -> bool {
+    if !can_player_use_security_cameras(player) {
+        return false;
+    }
+    if player.security_cameras_open {
+        return true;
+    }
+    if !#alive(player.entity) {
+        return false;
+    }
+
+    effect := new(Use_Security_Cameras_Effect);
+    player.entity.set_active_effect(effect);
+    play_security_camera_ui_sfx(player);
+    return true;
+}
+
+Security_Camera_Terminal :: class : Interactable {
+    ao_start :: method() {
+        this.set_listener(this);
+        this.set_text("Use Security Cameras");
+        required_hold_time = 0.35;
+    }
+
+    can_use :: method(player: Player) -> bool {
+        return can_player_use_security_cameras(player);
+    }
+
+    on_interact :: method(player: Player) {
+        if !open_security_cameras_for_player(player) && player != null && player.is_local() {
+            Notifier.notify(player, "No security cameras online.");
+        }
+    }
+}
+
+draw_security_camera_controls :: proc(player: Player, camera_count: s64) {
+    if player == null || !player.is_local_or_server() {
+        return;
+    }
+
+    exit_handle: UIK.Interact_Handle;
+    next_handle: UIK.Interact_Handle;
+    prev_handle: UIK.Interact_Handle;
+    close_handle: UIK.Interact_Handle;
+
+    UIK.begin(UIK.modal(UIK.rect_window_large(), 20, v4{0.0, 0.0, 0.0, 0.0}));
+
+    shell := UIK.layout_column();
+    shell.show_background = false;
+    shell.padding = v4{16, 16, 16, 16};
+    shell.gap = 10;
+    UIK.panel_begin(shell);
+
+    title_desc := UIK.title_area_desc("Security Cameras");
+    title_desc.style = .NONE;
+    exit_handle = UIK.title_area(title_desc);
+
+    UIK.spacer(UIK.pixels(1), UIK.flex(1));
+
+    footer := UIK.layout_row(UIK.flex(1), UIK.fit(), 12);
+    footer.cross_align = .CENTER;
+    footer.show_background = false;
+    UIK.panel_begin(footer);
+
+    button_desc := UIK.widget_desc_button_default(.BUTTON_BASIC_GREY);
+    button_desc.panel.width = UIK.flex(1);
+    button_desc.panel.height = UIK.pixels(76);
+
+    prev_handle = UIK.button("security_camera_prev", "Previous", button_desc);
+
+    center_panel := UIK.layout_column();
+    center_panel.width = UIK.flex(1);
+    center_panel.height = UIK.fit();
+    center_panel.gap = 6;
+    center_panel.show_background = false;
+    UIK.panel_begin(center_panel);
+
+    label_panel := UIK.layout_centered(UIK.flex(1), UIK.pixels(52));
+    label_panel.show_background = false;
+    UIK.panel_begin(label_panel);
+    display_index := wrap_security_camera_index(player.security_camera_index, camera_count) + 1;
+    UIK.text(format_string("Camera % / %", {display_index, camera_count}), UIK.text_body());
+    UIK.panel_end();
+
+    close_desc := UIK.widget_desc_button_default(.BUTTON_BASIC_RED);
+    close_desc.panel.width = UIK.flex(1);
+    close_desc.panel.height = UIK.pixels(52);
+    close_handle = UIK.button("security_camera_close_alt", "Close", close_desc);
+
+    UIK.panel_end();
+
+    next_handle = UIK.button("security_camera_next", "Next", button_desc);
+
+    UIK.panel_end();
+
+    UIK.panel_end();
+    UIK.end();
+
+    if UIK.clicked(exit_handle) || UIK.clicked(close_handle) {
+        close_security_cameras_for_player(player);
+        play_security_camera_ui_sfx(player);
+        return;
+    }
+    if UIK.clicked(prev_handle) {
+        player.security_camera_index -= 1;
+        play_security_camera_ui_sfx(player);
+    }
+    if UIK.clicked(next_handle) {
+        player.security_camera_index += 1;
+        play_security_camera_ui_sfx(player);
+    }
+}
+
+Use_Security_Cameras_Effect :: class : Effect_Base {
+    effect_start :: method() {
+        player_specific.freeze_player = true;
+        if player == null {
+            return;
+        }
+
+        player.security_cameras_open = true;
+        player.security_camera_index = wrap_security_camera_index(player.security_camera_index, get_live_security_camera_count());
+        player.add_freeze_reason(SECURITY_CAMERA_FREEZE_REASON);
+        if #alive(player.agent) {
+            player.agent.velocity = v2{0.0, 0.0};
+        }
+    }
+
+    effect_update :: method(dt: float) {
+        if player == null {
+            remove_effect(false);
+            return;
+        }
+        if !can_player_use_security_cameras(player) {
+            player.security_cameras_open = false;
+            remove_effect(false);
+            return;
+        }
+        if #alive(player.agent) {
+            player.agent.velocity = v2{0.0, 0.0};
+        }
+        player.security_camera_index = wrap_security_camera_index(player.security_camera_index, get_live_security_camera_count());
+    }
+
+    effect_late_update :: method(dt: float) {
+        if player == null || !player.security_cameras_open {
+            return;
+        }
+        camera_count := get_live_security_camera_count();
+        if camera_count <= 0 {
+            close_security_cameras_for_player(player);
+            return;
+        }
+
+        if player.is_local() {
+            draw_security_camera_static_overlay();
+        }
+        draw_security_camera_controls(player, camera_count);
+    }
+
+    effect_end :: method(interrupt: bool) {
+        if player == null {
+            return;
+        }
+        player.security_cameras_open = false;
+        player.remove_freeze_reason(SECURITY_CAMERA_FREEZE_REASON);
+    }
+}
+
+Use_Security_Cameras_Ability :: class : Ability_Base {
+    on_init :: method() {
+        name = "Cameras";
+        icon = get_asset(Texture_Asset, SECURITY_CAMERA_ICON_PATH);
+    }
+
+    can_use :: method() -> bool {
+        return can_player_use_security_cameras(player);
+    }
+
+    on_update :: method(params: ref Ability_Update_Params) {
+        if !params.clicked || !params.can_use {
+            return;
+        }
+
+        if player.security_cameras_open {
+            close_security_cameras_for_player(player);
+            play_security_camera_ui_sfx(player);
+            return;
+        }
+
+        open_security_cameras_for_player(player);
+    }
+
+    on_draw_button :: proc(instance: Use_Security_Cameras_Ability, rect: Rect) {
+        draw_ability_name_label(rect, "Cameras");
+    }
+}

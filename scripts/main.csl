@@ -154,7 +154,7 @@ ENTITY_COLOR_GRADE_CONTRAST :: 2.0;
 ENTITY_FLASHBANG_BLACKOUT_COLOR := v4.{0.0, 0.0, 0.0, 1.0};
 ENTITY_FLASHBANG_DEBUFF_ICON_PATH :: "AbilityIcons/flashbang_taped.png";
 ENTITY_NOISEMAKER_DEBUFF_ICON_PATH :: "AbilityIcons/Noisemaker.png";
-ENTITY_DEBUFF_ICON_WORLD_Y_OFFSET :: 2.9;
+ENTITY_DEBUFF_ICON_TOP_DOWN_OFFSET :: 118.0;
 ENTITY_DEBUFF_ICON_SPACING :: 48.0;
 ENTITY_FLASHBANG_DEBUFF_ICON_HALF_SIZE :: 24.0;
 ENTITY_VIEW_PLAYER_REVEAL_FADE_OUT_SECONDS :: 2.0;
@@ -169,7 +169,7 @@ ENTITY_AFK_MOVED_DISTANCE :: 0.25;
 ENTITY_AFK_MOVED_DISTANCE_SQ :: ENTITY_AFK_MOVED_DISTANCE * ENTITY_AFK_MOVED_DISTANCE;
 HELD_ITEM_BONE_NAME :: "Finger_R2";
 HELD_ITEM_SCALE := v2.{0.35, 0.35};
-HELD_ITEM_RENDER_LAYER :: 0;
+HELD_ITEM_RENDER_LAYER :: 1;
 
 ENTITY_OVERRIDE_RIG_PATH :: "Animations/Bacteria/imposter_monster.spine";
 // `imposter_monster.spine` is authored much larger than the reusable player rig,
@@ -236,6 +236,9 @@ Player :: class : Player_Base {
     task_list_inited: bool;
     task_list_open: bool;
     task_help_open: bool;
+    vitals_modal_open: bool;
+    security_cameras_open: bool;
+    security_camera_index: s64;
     override_rig: Spine_Animator;
     entity_override_rig_asset: Spine_Asset;
     entity_override_state_machine: State_Machine;
@@ -477,6 +480,19 @@ Player :: class : Player_Base {
             return;
         }
 
+        if security_cameras_open {
+            security_camera := get_security_camera_by_wrapped_index(security_camera_index);
+            if security_camera != null {
+                security_camera_index = wrap_security_camera_index(security_camera_index, get_live_security_camera_count());
+                camera.follow_player = false;
+                camera.position = security_camera.get_view_position();
+                camera.size = security_camera.get_view_size();
+                return;
+            }
+
+            close_security_cameras_for_player(this);
+        }
+
         camera.follow_player = true;
 
         desired_camera_size := default_camera_size;
@@ -541,6 +557,9 @@ Player :: class : Player_Base {
         task_list_inited = false;
         task_list_open = true;
         task_help_open = false;
+        vitals_modal_open = false;
+        security_cameras_open = false;
+        security_camera_index = 0;
         ensure_sprint_resources();
         footstep_stride_accum = 0.0;
         footstep_left_next = false;
@@ -1043,6 +1062,9 @@ Player :: class : Player_Base {
             if this.is_round_entity() && is_entity_flashbanged(this) {
                 movement_speed_multiplier *= ENTITY_FLASHBANG_MOVEMENT_MULTIPLIER;
             }
+            if has_effect(entity, Stim_Speed_Effect) {
+                movement_speed_multiplier *= STIM_SPEED_BUFF_MULTIPLIER;
+            }
 
             current_speed := agent.movement_speed;
             if !sprint_has_applied_speed || abs(current_speed - sprint_last_applied_speed) > 0.001 {
@@ -1093,7 +1115,7 @@ Player :: class : Player_Base {
     }
 
     ao_late_update :: method(dt: float) {
-        if this.is_local() && this.is_round_entity() {
+        if this.is_local() && (this.is_round_entity() || security_cameras_open) {
             this.apply_entity_local_post_processing();
         }
 
@@ -1105,6 +1127,7 @@ Player :: class : Player_Base {
             draw_match_timer_ui(this);
             draw_match_end_ui(this);
             draw_task_list_ui(this);
+            draw_vitals_modal_ui(this);
             draw_radio_hint_arrows(this);
             draw_radio_tuning_ui(this, dt);
             draw_generator_restart_ui(this, dt);
@@ -1142,6 +1165,9 @@ Player :: class : Player_Base {
                 }
             } else if !round_dead && !round_downed && active_effect == null {
                 draw_ability_button(this, Sprint_Ability, 2);
+                if this.is_round_survivor() {
+                    draw_ability_button(this, Survivor_Vitals_Ability, 3);
+                }
                 // Draw fire ability button based on equipped weapon
                 if equipped_weapon_type != .NONE {
                     config := get_weapon_config(equipped_weapon_type);
@@ -1154,6 +1180,7 @@ Player :: class : Player_Base {
                         case .SPECIAL: {
                             if equipped_weapon_type == .STIM {
                                 draw_ability_button(this, Stim_Ability, 0);
+                                draw_ability_button(this, Stim_Boost_Ability, 1);
                             } else {
                                 draw_ability_button(this, Special_Ability, 0);
                             }
@@ -1203,6 +1230,7 @@ Player :: class : Player_Base {
         silhouette_material_applied = false;
 
         this.destroy_held_item_visual();
+        close_security_cameras_for_player(this);
 
         // Local-only: destroy LOS light entity.
         if this.is_local_or_server() {
@@ -1366,7 +1394,7 @@ Player :: class : Player_Base {
         UI.push_layer(900);
         defer UI.pop_layer();
 
-        screen_pos := world_to_screen(entity.world_position + v2{0.0, ENTITY_DEBUFF_ICON_WORLD_Y_OFFSET});
+        screen_pos := UI.get_safe_screen_rect().top_center_rect().offset(0.0, -ENTITY_DEBUFF_ICON_TOP_DOWN_OFFSET).center();
         centered_slot := slot_index.(float) - (slot_count - 1).(float) * 0.5;
         screen_pos += v2{centered_slot * ENTITY_DEBUFF_ICON_SPACING, 0.0};
         pulse := 1.0 + sin(get_time() * 8.0) * 0.06 * alpha;
@@ -1611,7 +1639,10 @@ Player :: class : Player_Base {
     }
 
     ensure_local_vision_light :: proc(using this: Player) {
-        if local_light_entity != null && #alive(local_light_entity) return;
+        if local_light_entity != null && #alive(local_light_entity) {
+            local_light_entity.set_local_enabled(true);
+            return;
+        }
 
         local_light_entity = Scene.create_entity();
         local_light_entity.set_parent(this.entity, false);
@@ -1629,9 +1660,20 @@ Player :: class : Player_Base {
         local_light_caster.radii = this.get_local_light_radii();
     }
 
+    suspend_local_vision_light :: proc(using this: Player) {
+        if local_light_entity != null && #alive(local_light_entity) {
+            local_light_entity.set_local_enabled(false);
+        }
+    }
+
     update_local_vision_light :: proc(using this: Player) {
         if !this.is_local() return;
         if !#alive(this.entity) return;
+
+        if security_cameras_open {
+            this.suspend_local_vision_light();
+            return;
+        }
 
         this.ensure_local_vision_light();
 

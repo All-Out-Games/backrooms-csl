@@ -1,0 +1,40 @@
+import "core:ao"
+
+ASYNC_CORPSE_LOOT_HOLD_SECONDS :: 1.0;
+
+DeadAsync :: class : Interactable {
+    looted: bool;
+
+    ao_start :: method() {
+        this.set_listener(this);
+        this.set_text("Loot Corpse");
+        this.required_hold_time = ASYNC_CORPSE_LOOT_HOLD_SECONDS;
+        looted = false;
+    }
+
+    can_use :: method(player: Player) -> bool {
+        if looted {
+            return false;
+        }
+        if player == null {
+            return false;
+        }
+        return player.is_round_survivor();
+    }
+
+    on_interact :: method(player: Player) {
+        if looted {
+            return;
+        }
+
+        gm := get_game_manager();
+        if !#alive(gm) {
+            return;
+        }
+
+        if gm.spawn_async_corpse_loot(entity.world_position) {
+            looted = true;
+            this.set_text("Looted");
+        }
+    }
+}

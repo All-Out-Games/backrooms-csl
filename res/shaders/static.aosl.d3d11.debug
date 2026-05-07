@@ -1,0 +1,171 @@
+HLSL:
+Vertex Shader:
+#define MATRIX_TEXTURE_PROVIDED
+
+struct vs_in {
+    float2 pos: POS;
+    float2 uv: UV;
+    float2 uv2: UV1;
+    float4 color: COLOR;
+    int matrix_index: MATRIX_INDEX;
+};
+
+
+cbuffer params: register(b0) {
+    float4x4 mvp;
+    float4 resolution_time;
+    int matrix_image_size;
+};
+#define FLIP_IF_GL(y) do { } while (0);
+
+Texture2D<float4> matrices: register(t0);
+sampler matrices_smp: register(s0);
+
+#ifdef MATRIX_TEXTURE_PROVIDED
+int3 create_pixel_coord(int index) {
+    int x = index % matrix_image_size;
+    int y = index / matrix_image_size;
+    return int3(x, y, 0);
+}
+float4x4 final_mvp(vs_in inp) {
+    float4 _0 = matrices.Load(create_pixel_coord(inp.matrix_index.x*4 + 0));
+    float4 _1 = matrices.Load(create_pixel_coord(inp.matrix_index.x*4 + 1));
+    float4 _2 = matrices.Load(create_pixel_coord(inp.matrix_index.x*4 + 2));
+    float4 _3 = matrices.Load(create_pixel_coord(inp.matrix_index.x*4 + 3));
+    float4x4 model_matrix = float4x4(_0, _1, _2, _3);
+    return mul(mvp, model_matrix);
+}
+#endif
+
+float4 bc7_correct_alpha(float4 color) {
+    // map 254 to 255. this is because bc7 is lossy in the alpha channel and an opaque pixel often outputs as 254 alpha.
+    if (color.a > 0.995f && color.a <= 1.0f) color.a = 1.0f;
+    return color;
+}
+
+struct vs_out {
+    float4 pos: SV_Position;
+    float2 uv: UV;
+    float4 color: COLOR0;
+};
+
+vs_out vs_main(vs_in v)
+{
+    float4x4 model;
+    model[0] = matrices.Load(create_pixel_coord(v.matrix_index * 4 + 0));
+    model[1] = matrices.Load(create_pixel_coord(v.matrix_index * 4 + 1));
+    model[2] = matrices.Load(create_pixel_coord(v.matrix_index * 4 + 2));
+    model[3] = matrices.Load(create_pixel_coord(v.matrix_index * 4 + 3));
+
+    vs_out o;
+    o.pos   = mul(mvp, mul(model, float4(v.pos, 0, 1)));
+    o.uv    = v.uv;
+    o.color = v.color;
+    return o;
+}
+
+
+
+Fragment Shader:
+Texture2D<float4> albedo: register(t0);
+sampler albedo_smp: register(s0);
+Texture2D<float4> noise_texture: register(t1);
+sampler noise_texture_smp: register(s1);
+
+#define MATRIX_TEXTURE_PROVIDED
+
+struct vs_in {
+    float2 pos: POS;
+    float2 uv: UV;
+    float2 uv2: UV1;
+    float4 color: COLOR;
+    int matrix_index: MATRIX_INDEX;
+};
+
+
+cbuffer params: register(b0) {
+    float4x4 mvp;
+    float4 resolution_time;
+    int matrix_image_size;
+};
+#define FLIP_IF_GL(y) do { } while (0);
+
+Texture2D<float4> matrices: register(t0);
+sampler matrices_smp: register(s0);
+
+#ifdef MATRIX_TEXTURE_PROVIDED
+int3 create_pixel_coord(int index) {
+    int x = index % matrix_image_size;
+    int y = index / matrix_image_size;
+    return int3(x, y, 0);
+}
+float4x4 final_mvp(vs_in inp) {
+    float4 _0 = matrices.Load(create_pixel_coord(inp.matrix_index.x*4 + 0));
+    float4 _1 = matrices.Load(create_pixel_coord(inp.matrix_index.x*4 + 1));
+    float4 _2 = matrices.Load(create_pixel_coord(inp.matrix_index.x*4 + 2));
+    float4 _3 = matrices.Load(create_pixel_coord(inp.matrix_index.x*4 + 3));
+    float4x4 model_matrix = float4x4(_0, _1, _2, _3);
+    return mul(mvp, model_matrix);
+}
+#endif
+
+float4 bc7_correct_alpha(float4 color) {
+    // map 254 to 255. this is because bc7 is lossy in the alpha channel and an opaque pixel often outputs as 254 alpha.
+    if (color.a > 0.995f && color.a <= 1.0f) color.a = 1.0f;
+    return color;
+}
+
+struct ps_in {
+    float4 pos: SV_Position;
+    float2 uv: UV;
+    float4 color: COLOR0;
+};
+
+float noise(float2 p)
+{
+    float t = resolution_time.z;
+    float2 scroll = float2(1.0f, 2.0f - 2.0f * cos(t)) * t * 8.0f;
+    float s = noise_texture.Sample(noise_texture_smp, scroll + p).x;
+    return s * s;
+}
+
+float onOff(float a, float b, float c)
+{
+    return step(c, sin(resolution_time.z + a * cos(resolution_time.z * b)));
+}
+
+float ramp(float y, float start, float end)
+{
+    float inside = step(start, y) - step(end, y);
+    float fact = (y - start) / (end - start) * inside;
+    return (1.0f - fact) * inside;
+}
+
+float stripes(float2 uv)
+{
+    float t = resolution_time.z;
+    float noi = noise(uv * float2(0.5f, 0.0f) + float2(1.0f, -2.0f));
+    float stripe_y = fmod(uv.y * 4.0f + t * 0.5f + sin(t + sin(t * 0.63f)), 1.0f);
+    return ramp(stripe_y, 0.5f, 0.6f) * noi;
+}
+
+float4 ps_main(ps_in inp) : SV_Target0
+{
+    float2 uv = inp.uv;
+    float t = resolution_time.z;
+    float vigAmt = 3.0f + 0.3f * sin(t + 5.0f * cos(t * 5.0f));
+    float vignette = (1.0f - vigAmt * (uv.y - 0.5f) * (uv.y - 0.5f)) *
+                     (1.0f - vigAmt * (uv.x - 0.5f) * (uv.x - 0.5f));
+    vignette = saturate(vignette);
+
+    float4 result = inp.color * albedo.Sample(albedo_smp, uv);
+    float s = stripes(uv);
+    float n = noise(uv * 2.0f) * 0.5f;
+    result.rgb += float3(s, s, s);
+    result.rgb += float3(n, n, n);
+    result.rgb *= vignette;
+    result.rgb *= float3(0.2f, 0.2f, 0.2f);
+    result.rgb *= result.a;
+    return result;
+}
+
