@@ -16,22 +16,39 @@ play_entity_scream_sfx :: proc(player: Player) {
     SFX.play(get_asset(SFX_Asset, "SFX/entityscream.wav"), desc);
 }
 
-ping_all_survivors_with_entity_scream :: proc(entity_player: Player) {
-    sound_sight_interfered := is_entity_sound_sight_interfered();
-    gm := get_game_manager();
-    navmesh: Navmesh;
-    if #alive(gm) {
-        navmesh = gm.get_navmesh_to_lock_to();
+ping_survivor_with_entity_scream :: proc(entity_player: Player, survivor: Player) {
+    if survivor == null || !#alive(survivor.entity) {
+        return;
+    }
+    if !survivor.is_round_survivor() || survivor.is_round_dead() {
+        return;
     }
 
+    sound_sight_interfered := is_entity_sound_sight_interfered();
+    ping_player_with_footstep_echo(survivor, ENTITY_SCREAM_REVEAL_FADE_OUT_SECONDS);
+    survivor.reveal_for_entity_scream_local_view(ENTITY_SCREAM_REVEAL_FADE_OUT_SECONDS);
+
+    if entity_player == null || !#alive(entity_player.entity) {
+        return;
+    }
+
+    entity_player.show_entity_target_ping_arrow(survivor, ENTITY_SCREAM_ARROW_SECONDS);
+
+    if !sound_sight_interfered {
+        gm := get_game_manager();
+        navmesh: Navmesh;
+        if #alive(gm) {
+            navmesh = gm.get_navmesh_to_lock_to();
+        }
+        spawn_entity_scream_nav_path_probe(entity_player, survivor, navmesh, ENTITY_SCREAM_PATH_SECONDS);
+    }
+}
+
+ping_all_survivors_with_entity_scream :: proc(entity_player: Player) {
     for other: component_iterator(Player) {
         if other == entity_player continue;
         if !other.is_round_survivor() continue;
-        ping_player_with_footstep_echo(other, ENTITY_SCREAM_REVEAL_FADE_OUT_SECONDS);
-        other.reveal_for_entity_scream_local_view(ENTITY_SCREAM_REVEAL_FADE_OUT_SECONDS);
-        if !sound_sight_interfered {
-            spawn_entity_scream_nav_path_probe(entity_player, other, navmesh, ENTITY_SCREAM_PATH_SECONDS);
-        }
+        ping_survivor_with_entity_scream(entity_player, other);
     }
 }
 

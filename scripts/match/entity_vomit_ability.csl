@@ -50,31 +50,7 @@ find_round_entity_for_mold_vomit :: proc(owner_user_id: string) -> Player {
 }
 
 ping_survivor_from_mold_vomit :: proc(entity_player: Player, survivor: Player) {
-    if survivor == null || !#alive(survivor.entity) {
-        return;
-    }
-    if !survivor.is_round_survivor() || survivor.is_round_dead() {
-        return;
-    }
-
-    sound_sight_interfered := is_entity_sound_sight_interfered();
-    ping_player_with_footstep_echo(survivor, ENTITY_SCREAM_REVEAL_FADE_OUT_SECONDS);
-    survivor.reveal_for_entity_scream_local_view(ENTITY_SCREAM_REVEAL_FADE_OUT_SECONDS);
-
-    if entity_player == null || !#alive(entity_player.entity) {
-        return;
-    }
-
-    entity_player.show_entity_target_ping_arrow(survivor, ENTITY_SCREAM_ARROW_SECONDS);
-
-    if !sound_sight_interfered {
-        gm := get_game_manager();
-        navmesh: Navmesh;
-        if #alive(gm) {
-            navmesh = gm.get_navmesh_to_lock_to();
-        }
-        spawn_entity_scream_nav_path_probe(entity_player, survivor, navmesh, ENTITY_SCREAM_PATH_SECONDS);
-    }
+    ping_survivor_with_entity_scream(entity_player, survivor);
 }
 
 Mold_Vomit_Tripmine :: class : Component {

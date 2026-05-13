@@ -3,7 +3,7 @@ import "core:ao"
 // --- Match layout: 1 Entity vs 4–6 Survivors (5–7 players total) ---
 
 HEAD_START_SECONDS :: 15.0;
-MATCH_MAX_SECONDS :: 600.0; // ~10 minutes after survivors' head start ends
+MATCH_MAX_SECONDS :: 480.0; // ~8 minutes after survivors' head start ends
 HUNT_BEGIN_BANNER_SECONDS :: 2.0;
 EXIT_UNLOCK_BANNER_SECONDS :: 2.0;
 LAST_SURVIVOR_ENTITY_WIN_DELAY_SECONDS :: 5.0;
@@ -106,6 +106,8 @@ put_entity_abilities_on_standard_cooldown :: proc(player: Player) {
             ability.current_cooldown = ENTITY_LURCH_COOLDOWN_SECONDS;
         } else if ability.#type == Entity_Vomit_Ability {
             ability.current_cooldown = ENTITY_VOMIT_COOLDOWN_SECONDS;
+        } else if ability.#type == Entity_Wall_Seep_Ability {
+            ability.current_cooldown = ENTITY_WALL_SEEP_COOLDOWN_SECONDS;
         }
     }
 
@@ -1644,6 +1646,22 @@ start :: proc(player: Player) {
     } else {
         log_info("start: unable to start match from current state", {});
     }
+} @chat_command
+
+end :: proc(player: Player) {
+    gm := get_game_manager();
+    if !#alive(gm) {
+        log_info("end: no game manager found", {});
+        return;
+    }
+
+    if gm.phase != .SURVIVOR_HEAD_START && gm.phase != .ACTIVE {
+        log_info("end: unable to end match from current state", {});
+        return;
+    }
+
+    gm.end_match_survivors_win();
+    log_info("end: % forced a Survivor win", {player.get_username()});
 } @chat_command
 
 g :: proc(player: Player, item_id: string) {

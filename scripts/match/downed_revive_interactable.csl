@@ -1,0 +1,46 @@
+import "core:ao"
+
+DOWNED_REVIVE_HOLD_SECONDS :: 3.0;
+
+Downed_Revive_Interactable :: class : Interactable {
+    target_player: Player;
+
+    ao_start :: method() {
+        this.set_listener(this);
+        this.set_text("Revive");
+        required_hold_time = DOWNED_REVIVE_HOLD_SECONDS;
+        priority = 25;
+    }
+
+    can_use :: method(player: Player) -> bool {
+        if player == null || target_player == null {
+            return false;
+        }
+        if player == target_player {
+            return false;
+        }
+        if player.is_round_dead() || player.is_round_downed() {
+            return false;
+        }
+        if !#alive(target_player.entity) {
+            return false;
+        }
+        if !target_player.is_round_downed() {
+            return false;
+        }
+        return player.is_round_survivor();
+    }
+
+    on_interact :: method(player: Player) {
+        if !can_use(player) {
+            return;
+        }
+        if !target_player.revive_from_downed() {
+            return;
+        }
+
+        entity_player := get_round_entity_player();
+        ping_survivor_with_entity_scream(entity_player, player);
+        weapon_play_fire_sound(player, .STIM);
+    }
+}

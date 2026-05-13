@@ -1,0 +1,189 @@
+import "core:ao"
+
+ENTITY_WALL_SEEP_RANGE :: 5.0;
+ENTITY_WALL_SEEP_RANGE_SQ :: ENTITY_WALL_SEEP_RANGE * ENTITY_WALL_SEEP_RANGE;
+ENTITY_WALL_SEEP_DISAPPEAR_SECONDS :: 0.733;
+ENTITY_WALL_SEEP_APPEAR_SECONDS :: 0.533;
+ENTITY_WALL_SEEP_COOLDOWN_SECONDS :: ENTITY_WALL_SEEP_DISAPPEAR_SECONDS + ENTITY_WALL_SEEP_APPEAR_SECONDS + 15;
+ENTITY_WALL_SEEP_MIN_AIM_DISTANCE :: 0.15;
+
+get_wall_seep_navmesh :: proc() -> Navmesh {
+    gm := get_game_manager();
+    if #alive(gm) {
+        return gm.get_navmesh_to_lock_to();
+    }
+    return find_scene_navmesh();
+}
+
+get_wall_seep_selected_position :: proc(player: Player, params: ref Ability_Update_Params, aim_direction: v2) -> v2 {
+    start_position := player.entity.world_position;
+
+    if player.device_kind == .PC {
+        offset := get_mouse_world_position() - start_position;
+        distance := length(offset);
+        if distance <= ENTITY_WALL_SEEP_MIN_AIM_DISTANCE {
+            return start_position;
+        }
+        distance = min(distance, ENTITY_WALL_SEEP_RANGE);
+        return start_position + normalize(offset) * distance;
+    }
+
+    drag_t := clamp(length(params.drag_offset), 0.0, 1.0);
+    distance := ENTITY_WALL_SEEP_RANGE * drag_t;
+    return start_position + normalize(aim_direction) * distance;
+}
+
+resolve_wall_seep_target :: proc(player: Player, params: ref Ability_Update_Params, aim_direction: v2) -> v2, bool {
+    if player == null || !#alive(player.entity) {
+        return v2{0.0, 0.0}, false;
+    }
+
+    navmesh := get_wall_seep_navmesh();
+    if !#alive(navmesh) {
+        return player.entity.world_position, false;
+    }
+
+    start_position := player.entity.world_position;
+    selected_position := get_wall_seep_selected_position(player, ref params, aim_direction);
+
+    snapped_position: v2;
+    triangle_hint: s64 = 0;
+    if !navmesh.try_find_closest_point_on_navmesh(selected_position, ref snapped_position, ref triangle_hint) {
+        return start_position, false;
+    }
+
+    offset := snapped_position - start_position;
+    if length_squared(offset) > ENTITY_WALL_SEEP_RANGE_SQ {
+        return start_position, false;
+    }
+
+    return snapped_position, true;
+}
+
+Entity_Wall_Seep_Effect :: class : Effect_Base {
+    target_position: v2;
+    teleported: bool;
+    teleported_at: float;
+
+    effect_start :: method() {
+        player_specific.freeze_player = true;
+        teleported = false;
+        teleported_at = 0.0;
+
+        if player == null {
+            return;
+        }
+        if #alive(player.agent) {
+            player.agent.velocity = v2{0.0, 0.0};
+        }
+        if !player.ensure_entity_override_rig() {
+            return;
+        }
+        if player.entity_override_state_machine == null {
+            return;
+        }
+
+        player.entity_override_state_machine.set_trigger("teleport_disapear");
+    }
+
+    effect_update :: method(dt: float) {
+        if player != null && #alive(player.agent) {
+            player.agent.velocity = v2{0.0, 0.0};
+        }
+
+        elapsed := get_elapsed_time();
+        if !teleported {
+            if elapsed < ENTITY_WALL_SEEP_DISAPPEAR_SECONDS {
+                return;
+            }
+
+            teleported = true;
+            teleported_at = elapsed;
+            entity.set_local_position(target_position);
+            entity.mark_teleported();
+
+            if player != null {
+                lock_player_to_game_navmesh(player);
+                if player.ensure_entity_override_rig() && player.entity_override_state_machine != null {
+                    player.entity_override_state_machine.set_trigger("teleport_appear");
+                }
+            }
+            return;
+        }
+
+        if elapsed >= teleported_at + ENTITY_WALL_SEEP_APPEAR_SECONDS {
+            remove_effect(false);
+            return;
+        }
+    }
+}
+
+Entity_Wall_Seep_Ability :: class : Ability_Base {
+    on_init :: method() {
+        name = "Wall Seep";
+        icon = get_asset(Texture_Asset, "AbilityIcons/Scream.png");
+        is_aimed_ability = true;
+    }
+
+    can_use :: method() -> bool {
+        if player == null || !player.is_round_entity() {
+            return false;
+        }
+
+        gm := get_game_manager();
+        if !#alive(gm) || gm.phase != .ACTIVE {
+            return false;
+        }
+
+        if !#alive(get_wall_seep_navmesh()) {
+            return false;
+        }
+
+        if !player.ensure_entity_override_rig() {
+            return false;
+        }
+
+        return player.entity.get_active_effect() == null;
+    }
+
+    on_update :: method(params: ref Ability_Update_Params) {
+        targeted := Ability_Utilities.update_targeted_ability(player, this, ref params);
+        if !targeted.targeting {
+            return;
+        }
+
+        aiming := Ability_Utilities.update_aiming_ability(player, ref params);
+        if aiming.cancel {
+            player.active_ability = null;
+            return;
+        }
+
+        if aiming.aim {
+            player.last_aim_direction = aiming.aim_direction;
+            draw_aiming_line(player.entity.world_position, aiming.aim_direction, 1.0 / player.camera.size * 4);
+        }
+
+        if !aiming.activate {
+            return;
+        }
+
+        player.active_ability = null;
+        if !params.can_use {
+            return;
+        }
+
+        target_position, found := resolve_wall_seep_target(player, ref params, aiming.aim_direction);
+        if !found {
+            return;
+        }
+
+        effect := new(Entity_Wall_Seep_Effect);
+        effect.target_position = target_position;
+        player.entity.set_active_effect(effect);
+        current_cooldown = ENTITY_WALL_SEEP_COOLDOWN_SECONDS;
+    }
+
+    on_draw_button :: proc(instance: Entity_Wall_Seep_Ability, rect: Rect) {
+        draw_ability_name_label(rect, "Seep");
+    }
+}

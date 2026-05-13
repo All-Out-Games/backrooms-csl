@@ -154,9 +154,12 @@ ENTITY_COLOR_GRADE_CONTRAST :: 2.0;
 ENTITY_FLASHBANG_BLACKOUT_COLOR := v4.{0.0, 0.0, 0.0, 1.0};
 ENTITY_FLASHBANG_DEBUFF_ICON_PATH :: "AbilityIcons/flashbang_taped.png";
 ENTITY_NOISEMAKER_DEBUFF_ICON_PATH :: "AbilityIcons/Noisemaker.png";
-ENTITY_DEBUFF_ICON_TOP_DOWN_OFFSET :: 118.0;
+ENTITY_DEBUFF_ICON_TOP_DOWN_OFFSET :: 132.0;
 ENTITY_DEBUFF_ICON_SPACING :: 48.0;
 ENTITY_FLASHBANG_DEBUFF_ICON_HALF_SIZE :: 24.0;
+ENTITY_REVEALED_EYE_ICON_PATH :: "UI/Eye.png";
+ENTITY_REVEALED_EYE_ICON_HALF_SIZE :: 22.0;
+ENTITY_REVEALED_EYE_ICON_NAMEPLATE_OFFSET :: 14.0;
 ENTITY_VIEW_PLAYER_REVEAL_FADE_OUT_SECONDS :: 2.0;
 ENTITY_NAME_INVISIBILITY_REASON :: "entity_role_active";
 ROUND_SURVIVOR_NORMAL_MOVEMENT_MULTIPLIER :: 0.90;
@@ -216,6 +219,12 @@ is_revealed_in_entity_local_view :: proc(player: Player) -> bool {
     return player.entity_local_view_is_active && player.entity_local_view_alpha > 0.0;
 }
 
+is_entity_reveal_active :: proc(player: Player) -> bool {
+    if player == null return false;
+    if !player.is_round_survivor() return false;
+    return player.entity_local_view_is_active && player.entity_local_view_alpha > 0.0;
+}
+
 is_hidden_by_round_dead_local_view :: proc(player: Player) -> bool {
     if player == null return false;
     if !player.is_round_dead() return false;
@@ -263,6 +272,7 @@ Player :: class : Player_Base {
     entity_lurch_remaining: float;
     round_downed: bool;
     round_dead: bool;
+    downed_revive_interactable: Downed_Revive_Interactable;
     round_dead_ghost_state_active: bool;
     local_voice_chat_enabled_range: float;
     local_voice_chat_muted_for_round_dead: bool;
@@ -602,6 +612,9 @@ Player :: class : Player_Base {
         wt.max_health = 100.0;
         wt.owner_entity_id = entity.id;
         weapon_target = wt;
+
+        downed_revive_interactable = entity.add_component(Downed_Revive_Interactable);
+        downed_revive_interactable.target_player = this;
 
         last_selected_index = -1;
 
@@ -1134,6 +1147,7 @@ Player :: class : Player_Base {
             draw_wire_puzzle_ui(this, dt);
             draw_keypad_ui(this);
             this.draw_round_dead_player_pointers();
+            this.draw_revealed_survivor_eye_icons();
             this.draw_downed_bleed_out_ui();
             gm := get_game_manager();
             if #alive(gm) && gm.phase == .LOBBY {
@@ -1155,6 +1169,7 @@ Player :: class : Player_Base {
                     if #alive(gm) && gm.phase == .ACTIVE {
                         draw_ability_button(this, Entity_Lurch_Ability, 2);
                         draw_ability_button(this, Entity_Vomit_Ability, 3);
+                        draw_ability_button(this, Entity_Wall_Seep_Ability, 4);
                     }
                 }
                 if equipped_weapon_type != .NONE {
@@ -1179,8 +1194,7 @@ Player :: class : Player_Base {
                         case .BEAM:        { draw_ability_button(this, Beam_Ability, 0); }
                         case .SPECIAL: {
                             if equipped_weapon_type == .STIM {
-                                draw_ability_button(this, Stim_Ability, 0);
-                                draw_ability_button(this, Stim_Boost_Ability, 1);
+                                draw_ability_button(this, Stim_Boost_Ability, 0);
                             } else {
                                 draw_ability_button(this, Special_Ability, 0);
                             }
@@ -1433,6 +1447,48 @@ Player :: class : Player_Base {
             this.draw_entity_status_debuff_icon(icon_paths[i], icon_alphas[i], i, icon_count);
             i += 1;
         }
+    }
+
+    draw_revealed_survivor_eye_icons :: proc(using this: Player) {
+        if !this.is_local() || !this.is_round_survivor() {
+            return;
+        }
+
+        icon := get_asset(Texture_Asset, ENTITY_REVEALED_EYE_ICON_PATH);
+        if icon == null {
+            return;
+        }
+
+        UI.push_screen_draw_context();
+        defer UI.pop_draw_context();
+
+        UI.push_layer(910);
+        defer UI.pop_layer();
+
+        this.draw_revealed_survivor_eye_icon_for_player(this, icon);
+    }
+
+    draw_revealed_survivor_eye_icon_for_player :: proc(using this: Player, survivor: Player, icon: Texture_Asset) {
+        if survivor == null || !#alive(survivor.entity) return;
+        if !is_entity_reveal_active(survivor) return;
+        if survivor.is_round_dead() return;
+
+        nameplate_rect := survivor.full_nameplate_rect;
+        screen_pos := nameplate_rect.top_center_rect().center();
+        if nameplate_rect.width() <= 1.0 || nameplate_rect.height() <= 1.0 {
+            screen_pos = world_to_screen(survivor.entity.world_position + v2{0.0, 2.0});
+        } else {
+            screen_pos.y = nameplate_rect.max.y + ENTITY_REVEALED_EYE_ICON_NAMEPLATE_OFFSET;
+        }
+
+        alpha := clamp(survivor.entity_local_view_alpha, 0.0, 1.0);
+        pulse := 1.0 + sin(get_time() * 8.0 + survivor.entity.world_position.x) * 0.045;
+        half_size := ENTITY_REVEALED_EYE_ICON_HALF_SIZE * pulse;
+        rect := Rect{min=screen_pos + v2{-half_size, -half_size}, max=screen_pos + v2{half_size, half_size}};
+        glow_rect := rect.grow(7.0);
+
+        UI.quad(glow_rect.fit_aspect(icon.get_aspect(), .KEEP_BIGGER), icon, v4{0.25, 0.78, 1.0, alpha * 0.22});
+        UI.quad(rect.fit_aspect(icon.get_aspect(), .KEEP_BIGGER), icon, v4{1.0, 1.0, 1.0, alpha});
     }
 
     set_animator_alpha :: proc(using this: Player, alpha: float) {

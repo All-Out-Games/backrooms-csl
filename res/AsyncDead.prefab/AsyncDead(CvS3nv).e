@@ -26,6 +26,7 @@
       "full_character/exterminator_full"
     ],
     "depth_offset": 0.0587491989135742,
+    "mask_in_shadow": true,
     "initial_animation": "Death_No_HP"
   }
 }

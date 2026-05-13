@@ -75,51 +75,11 @@ Stim_Ability :: class : Ability_Base {
     }
 
     can_use :: method() -> bool {
-        if player == null {
-            return false;
-        }
-
-        p := player.(Player);
-        if p == null {
-            return false;
-        }
-        if !can_player_use_equipped_stim(p) {
-            return false;
-        }
-
-        return find_stim_target(p) != null;
+        return false;
     }
 
     on_update :: method(params: ref Ability_Update_Params) {
-        if !params.clicked {
-            return;
-        }
-
-        p := player.(Player);
-        if p == null {
-            return;
-        }
-        if !can_player_use_equipped_stim(p) {
-            return;
-        }
-
-        target := find_stim_target(p);
-        if target == null {
-            Notifier.notify(p, "Use Stims to Revive a downed player!");
-            return;
-        }
-
-        if !params.can_use {
-            return;
-        }
-
-        if !target.revive_from_downed() {
-            return;
-        }
-
-        weapon_play_fire_sound(p, .STIM);
-        consume_equipped_stim(p);
-        current_cooldown = get_weapon_config(.STIM).fire_rate;
+        return;
     }
 
     on_draw_button :: proc(instance: Stim_Ability, rect: Rect) {
@@ -131,7 +91,6 @@ Stim_Boost_Ability :: class : Ability_Base {
     on_init :: method() {
         name = "Boost";
         icon = get_asset(Texture_Asset, "AbilityIcons/syringe_front.png");
-        disable_keybind = true;
     }
 
     can_use :: method() -> bool {
