@@ -6,10 +6,11 @@ GENERATOR_COMPLETE_PROMPT      :: "Generator Online";
 GENERATOR_UI_BG_TEXTURE_PATH      :: "sprites/tasks/generator/wall_bg.png";
 GENERATOR_UI_GENERATOR_TEXTURE    :: "sprites/tasks/generator/generator.png";
 GENERATOR_UI_HANDLE_TEXTURE       :: "sprites/tasks/generator/Handle.png";
+GENERATOR_UI_CORD_TEXTURE         :: "sprites/tasks/generator/Cord.png";
 GENERATOR_UI_CLOCK_TEXTURE        :: "sprites/tasks/generator/Clock.png";
 GENERATOR_UI_POINTER_TEXTURE      :: "sprites/tasks/generator/Ponteiro.png";
 
-GENERATOR_UI_LAYER                :: 452;
+GENERATOR_UI_LAYER                :: 9700;
 GENERATOR_UI_PREVIEW_ENABLED      :: false;
 GENERATOR_PULLS_REQUIRED          :: 3;
 GENERATOR_SUCCESS_DISPLAY_TIME    :: 0.6;
@@ -17,6 +18,8 @@ GENERATOR_WINDOW_HALF_HEIGHT      :: 500.0;
 GENERATOR_WINDOW_HALF_WIDTH       :: 500.0;
 GENERATOR_PULL_MIN_X_FRACTION     :: 0.16;
 GENERATOR_PULL_SUCCESS_FRACTION   :: 0.18;
+GENERATOR_UI_BUTTON_CLICK_SOUND   :: "sfx/button_click.wav";
+GENERATOR_UI_LEVER_SOUND          :: "sfx/pull_lever.wav";
 
 generator_ui_preview_auto_opened: bool;
 
@@ -210,26 +213,72 @@ init_generator_restart_layout :: proc(effect: Generator_Restart_Effect, window_r
 }
 
 draw_generator_close_button :: proc(panel_rect: Rect) -> bool {
-    return draw_task_overlay_close_button(panel_rect, "generator_close_btn");
+    size := panel_rect.height() * 0.065;
+    if size < 34.0 { size = 34.0; }
+    if size > 78.0 { size = 78.0; }
+    pad := size * 0.45;
+
+    anchor := panel_rect.top_right_rect().offset_unscaled(-pad, -pad);
+    btn := anchor.grow_unscaled(size * 0.5, size * 0.5, size * 0.5, size * 0.5);
+
+    UI.push_id("generator_close_btn");
+    defer UI.pop_id();
+
+    bs: Button_Settings = .{};
+    bs.click_sound = get_asset(SFX_Asset, GENERATOR_UI_BUTTON_CLICK_SOUND);
+    bs.click_sound_desc.speed = 1.0;
+    interact := UI.button(btn, bs, .{}, "");
+
+    close_icon := get_asset(Texture_Asset, "sprites/icons/close_icon.png");
+    if close_icon != null {
+        icon_rect := btn.inset(max(2.0, size * 0.06));
+        UI.quad(icon_rect.fit_aspect(close_icon.get_aspect()), close_icon, v4.{1, 1, 1, 1});
+    } else {
+        ts := UI.default_text_settings();
+        ts.size = size * 0.8;
+        ts.color = v4.{1, 1, 1, 1};
+        ts.halign = .CENTER;
+        ts.valign = .CENTER;
+        ts.do_outline = true;
+        ts.outline_thickness = 2;
+        ts.outline_color = v4.{0, 0, 0, 1};
+        UI.text(btn, ts, "X");
+    }
+
+    return interact.clicked;
+}
+
+generator_rotate_about_point :: proc(point: v2, degrees: float) -> Matrix4 {
+    return Matrix4.translate(point).multiply(Matrix4.rotate(degrees, v3.{0.0, 0.0, 1.0}).multiply(Matrix4.translate(-point)));
+}
+
+play_generator_lever_sfx :: proc(player: Player) {
+    if player == null return;
+    if !player.is_local() return;
+
+    asset := get_asset(SFX_Asset, GENERATOR_UI_LEVER_SOUND);
+    if asset == null return;
+
+    desc := SFX.default_sfx_desc();
+    desc.volume = 0.7;
+    desc.volume *= 0.25;
+    desc.volume_perturb *= 0.25;
+    SFX.play(asset, desc);
 }
 
 draw_generator_restart_panel :: proc(player: Player, effect: Generator_Restart_Effect, success_state: bool, preview_mode: bool) -> bool {
     bg_tex := get_asset(Texture_Asset, GENERATOR_UI_BG_TEXTURE_PATH);
     generator_tex := get_asset(Texture_Asset, GENERATOR_UI_GENERATOR_TEXTURE);
     handle_tex := get_asset(Texture_Asset, GENERATOR_UI_HANDLE_TEXTURE);
+    cord_tex := get_asset(Texture_Asset, GENERATOR_UI_CORD_TEXTURE);
     clock_tex := get_asset(Texture_Asset, GENERATOR_UI_CLOCK_TEXTURE);
     pointer_tex := get_asset(Texture_Asset, GENERATOR_UI_POINTER_TEXTURE);
 
-    full_screen := UI.get_screen_rect();
-    safe_screen := UI.get_safe_screen_rect();
-    UI.quad(full_screen, core_globals.white_sprite, v4{0.0, 0.0, 0.0, 0.82});
+    screen := UI.get_screen_rect();
+    UI.quad(screen, core_globals.white_sprite, v4{0.0, 0.0, 0.0, 0.85});
 
-    panel_rect := safe_screen.center_rect().grow(
-        GENERATOR_WINDOW_HALF_HEIGHT,
-        GENERATOR_WINDOW_HALF_WIDTH,
-        GENERATOR_WINDOW_HALF_HEIGHT,
-        GENERATOR_WINDOW_HALF_WIDTH
-    );
+    window_size := 1000.0;
+    panel_rect := screen.center_rect().grow(window_size / 2.0);
     if bg_tex != null {
         panel_rect = panel_rect.fit_aspect(bg_tex.get_aspect(), .KEEP_HEIGHT);
         UI.quad(panel_rect, bg_tex, v4{1.0, 1.0, 1.0, 1.0});
@@ -246,8 +295,11 @@ draw_generator_restart_panel :: proc(player: Player, effect: Generator_Restart_E
     w := panel_rect.width();
     h := panel_rect.height();
 
+    // Generator sprite on the right
+    gen_h := h * 0.7;
+    gen_w := gen_h * generator_tex.get_aspect();
     gen_center := v2{panel_rect.min.x + w * 0.80, panel_rect.min.y + h * 0.50};
-    gen_rect := Rect{gen_center, gen_center}.grow(h * 0.24, h * 0.18, h * 0.24, h * 0.18);
+    gen_rect := Rect{gen_center, gen_center}.grow_unscaled(gen_h * 0.5, gen_w * 0.5, gen_h * 0.5, gen_w * 0.5);
     if generator_tex != null {
         gen_rect = gen_rect.fit_aspect(generator_tex.get_aspect(), .KEEP_HEIGHT);
         UI.quad(gen_rect, generator_tex, v4{1.0, 1.0, 1.0, 1.0});
@@ -255,8 +307,10 @@ draw_generator_restart_panel :: proc(player: Player, effect: Generator_Restart_E
         UI.quad(gen_rect, core_globals.white_sprite, v4{0.35, 0.35, 0.35, 1.0});
     }
 
+    // Clock + pointer (upper-center of generator)
+    clock_size := gen_rect.height() * 0.5;
     clock_center := v2{gen_rect.min.x + gen_rect.width() * 0.58, gen_rect.min.y + gen_rect.height() * 0.6};
-    clock_rect := Rect{clock_center, clock_center}.grow(h * 0.12, h * 0.12, h * 0.12, h * 0.12);
+    clock_rect := Rect{clock_center, clock_center}.grow_unscaled(clock_size * 0.5, clock_size * 0.5, clock_size * 0.5, clock_size * 0.5);
     if clock_tex != null {
         clock_rect = clock_rect.fit_aspect(clock_tex.get_aspect(), .KEEP_HEIGHT);
         UI.quad(clock_rect, clock_tex, v4{1.0, 1.0, 1.0, 1.0});
@@ -277,42 +331,53 @@ draw_generator_restart_panel :: proc(player: Player, effect: Generator_Restart_E
     needle_angle = clamp(needle_angle, 0.0, 45.0);
 
     needle_pivot := clock_center - v2{0.0, clock_rect.height() * 0.4};
-    needle_rect := Rect{needle_pivot, needle_pivot}.grow(clock_rect.height() * 0.25, h * 0.015, 0.0, h * 0.12);
+    needle_h := clock_rect.height() * 0.50;
+    needle_w := needle_h * pointer_tex.get_aspect();
+    needle_rect := Rect{needle_pivot, needle_pivot}.grow_unscaled(needle_h, 0.0, 0.0, needle_w);
     if pointer_tex != null {
-        needle_rect = needle_rect.fit_aspect(pointer_tex.get_aspect(), .KEEP_HEIGHT);
-        UI.push_matrix(Matrix4.rotate_about_point(needle_pivot, -needle_angle));
+        UI.push_matrix(generator_rotate_about_point(needle_pivot, -needle_angle));
         defer UI.pop_matrix();
         UI.quad(needle_rect, pointer_tex, v4{1.0, 1.0, 1.0, 1.0});
     }
 
-    handle_h := h * 0.26;
-    handle_rect := Rect{effect.handle_pos, effect.handle_pos}.grow(handle_h * 0.5, handle_h * 0.16, handle_h * 0.5, handle_h * 0.16);
+    // Handle sizing
+    handle_h := h * 0.52;
+    handle_w := handle_h * handle_tex.get_aspect();
+
+    // Cord anchor in window space
+    anchor := effect.anchor_pos;
+
+    // Cord between anchor and the handle's connection point (near right side of the handle)
+    handle_attach := effect.handle_pos + v2.{handle_w * 0.32, -0.05};
+    dir := handle_attach - anchor;
+    dist := length(dir);
+    if dist < 1.0 { dist = 1.0; }
+    angle_deg := to_degrees(atan2(dir.y, dir.x));
+    mid := (anchor + handle_attach) * 0.5;
+
+    cord_thickness := h * 0.045;
+    if cord_thickness < 7.0 { cord_thickness = 7.0; }
+    cord_rect := Rect{mid, mid}.grow_unscaled(cord_thickness * 0.5, dist * 0.5, cord_thickness * 0.5, dist * 0.5);
+
+    if cord_tex != null {
+        UI.quad(cord_rect, cord_tex, v4{1.0, 1.0, 1.0, 1.0});
+    } else {
+        UI.line(anchor, handle_attach, cord_thickness, core_globals.white_sprite, v4{0.12, 0.12, 0.12, 1.0}, true);
+    }
+
+    // Handle interaction (drag left)
+    handle_rect := Rect{effect.handle_pos, effect.handle_pos}.grow_unscaled(handle_h * 0.5, handle_w * 0.5, handle_h * 0.5, handle_w * 0.5);
     if handle_tex != null {
         handle_rect = handle_rect.fit_aspect(handle_tex.get_aspect(), .KEEP_HEIGHT);
     }
 
-    UI.line(
-        effect.anchor_pos,
-        effect.handle_pos + v2{handle_rect.width() * 0.32, 0.0},
-        h * 0.025,
-        core_globals.white_sprite,
-        v4{0.12, 0.12, 0.12, 1.0},
-        true
-    );
-
     UI.push_id("restart_generator_handle");
     defer UI.pop_id();
 
-    handle_bs := UI.default_button_settings();
-    handle_bs.sprite = core_globals.white_sprite;
-    handle_bs.press_scaling = 0.0;
-    handle_bs.color = v4{0.0, 0.0, 0.0, 0.0};
-    handle_bs.hovered_color = v4{0.0, 0.0, 0.0, 0.0};
-    handle_bs.pressed_color = v4{0.0, 0.0, 0.0, 0.0};
-    handle_bs.disabled_color = v4{0.0, 0.0, 0.0, 0.0};
-    handle_bs.background_color_multiplier = v4{0.0, 0.0, 0.0, 0.0};
-
-    interact := UI.button(handle_rect, handle_bs, UI.default_text_settings(), "");
+    handle_bs: Button_Settings = .{};
+    handle_bs.click_sound = get_asset(SFX_Asset, GENERATOR_UI_BUTTON_CLICK_SOUND);
+    handle_bs.click_sound_desc.speed = 1.0;
+    interact := UI.button(handle_rect, handle_bs, .{}, "");
     if interact.clicked {
         effect.grab_offset = effect.handle_pos - interact.mouse_position;
     }
@@ -339,30 +404,17 @@ draw_generator_restart_panel :: proc(player: Player, effect: Generator_Restart_E
 
         if success_pull {
             effect.pulls_done += 1;
+            play_generator_lever_sfx(player);
             if effect.pulls_done >= GENERATOR_PULLS_REQUIRED {
                 effect.success_time = get_time();
             }
         }
     }
 
-    title_rect := panel_rect.top_left_rect().offset(180.0, -80.0).grow(40.0, 260.0, 40.0, 0.0);
-    title_ts := UI.default_text_settings();
-    title_ts.size = 32;
-    title_ts.color = v4{1.0, 1.0, 1.0, 1.0};
-    title_ts.halign = .LEFT;
-    title_ts.valign = .CENTER;
-    title_ts.do_outline = true;
-    title_ts.outline_thickness = 3;
-    title_ts.outline_color = v4{0.0, 0.0, 0.0, 1.0};
-    title_text := "Restart Generator";
-    if preview_mode {
-        title_text = "Restart Generator Preview";
-    }
-    UI.text(title_rect, title_ts, title_text);
-
-    info_rect := panel_rect.bottom_center_rect().offset(0.0, 80.0).grow(30.0, 280.0, 30.0, 280.0);
+    // Progress UI (bottom)
+    info_rect := panel_rect.bottom_center_rect().offset(0.0, 80.0);
     info_ts := UI.default_text_settings();
-    info_ts.size = 42;
+    info_ts.size = 46;
     info_ts.color = v4{1.0, 1.0, 1.0, 1.0};
     info_ts.halign = .CENTER;
     info_ts.valign = .CENTER;
@@ -370,11 +422,11 @@ draw_generator_restart_panel :: proc(player: Player, effect: Generator_Restart_E
     info_ts.outline_thickness = 3;
     info_ts.outline_color = v4{0.0, 0.0, 0.0, 1.0};
 
-    status_text := "GENERATOR STARTED!";
-    if !success_state {
-        status_text = format_string("PULL %/%", {effect.pulls_done, GENERATOR_PULLS_REQUIRED});
+    if success_state {
+        UI.text(info_rect, info_ts, "GENERATOR STARTED!");
+    } else {
+        UI.text(info_rect, info_ts, "PULL %/%", .{effect.pulls_done, GENERATOR_PULLS_REQUIRED});
     }
-    UI.text(info_rect, info_ts, status_text);
 
     return false;
 }

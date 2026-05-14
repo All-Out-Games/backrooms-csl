@@ -154,14 +154,16 @@ ENTITY_COLOR_GRADE_CONTRAST :: 2.0;
 ENTITY_FLASHBANG_BLACKOUT_COLOR := v4.{0.0, 0.0, 0.0, 1.0};
 ENTITY_FLASHBANG_DEBUFF_ICON_PATH :: "AbilityIcons/flashbang_taped.png";
 ENTITY_NOISEMAKER_DEBUFF_ICON_PATH :: "AbilityIcons/Noisemaker.png";
-ENTITY_DEBUFF_ICON_TOP_DOWN_OFFSET :: 132.0;
+ENTITY_DEBUFF_ICON_TOP_DOWN_OFFSET :: 210.0;
 ENTITY_DEBUFF_ICON_SPACING :: 48.0;
 ENTITY_FLASHBANG_DEBUFF_ICON_HALF_SIZE :: 24.0;
 ENTITY_REVEALED_EYE_ICON_PATH :: "UI/Eye.png";
 ENTITY_REVEALED_EYE_ICON_HALF_SIZE :: 22.0;
 ENTITY_REVEALED_EYE_ICON_NAMEPLATE_OFFSET :: 14.0;
+ENTITY_REVEALED_EYE_ICON_LAYER :: 80;
 ENTITY_VIEW_PLAYER_REVEAL_FADE_OUT_SECONDS :: 2.0;
 ENTITY_NAME_INVISIBILITY_REASON :: "entity_role_active";
+PLAYER_WINS_SAVE_KEY :: "playerWins";
 ROUND_SURVIVOR_NORMAL_MOVEMENT_MULTIPLIER :: 0.90;
 DOWNED_SURVIVOR_MOVEMENT_MULTIPLIER :: 0.30;
 DOWNED_BLEED_OUT_SECONDS :: 30.0;
@@ -285,6 +287,7 @@ Player :: class : Player_Base {
     entity_afk_has_position: bool;
     entity_afk_kick_issued: bool;
     entity_cached_facing_right: bool;
+    playerWins: s64;
 
     footstep_stride_accum: float;
     footstep_left_next: bool;
@@ -295,6 +298,7 @@ Player :: class : Player_Base {
     entity_scream_arrow_remaining: float;
     entity_target_ping_remaining: float;
     entity_target_ping_user_id: string;
+    ghost_item_ping_cooldown_ends_at: float;
     entity_name_hidden: bool;
     silhouette_material: Material;
     silhouette_material_applied: bool;
@@ -580,6 +584,7 @@ Player :: class : Player_Base {
         entity_scream_arrow_remaining = 0.0;
         entity_target_ping_remaining = 0.0;
         entity_target_ping_user_id = "";
+        ghost_item_ping_cooldown_ends_at = 0.0;
         entity_name_hidden = false;
         silhouette_material_applied = false;
         current_stamina = SPRINT_STAMINA_MAX;
@@ -604,6 +609,8 @@ Player :: class : Player_Base {
         entity_afk_last_move_at = get_time();
         entity_afk_kick_issued = false;
         entity_cached_facing_right = true;
+        playerWins = Save.get_int(this, PLAYER_WINS_SAVE_KEY, 0);
+        this.sync_player_wins_leaderboard();
         held_item_weapon_type = .NONE;
         this.update_local_voice_chat_range_cache();
 
@@ -640,6 +647,22 @@ Player :: class : Player_Base {
         if #alive(gm) {
             gm.handle_round_player_joined(this);
         }
+    }
+
+    increment_player_wins :: method() {
+        if !is_local_or_server() {
+            return;
+        }
+        playerWins += 1;
+        Save.set_int(this, PLAYER_WINS_SAVE_KEY, playerWins);
+        this.sync_player_wins_leaderboard();
+    }
+
+    sync_player_wins_leaderboard :: method() {
+        if !Game.is_server() || playerWins <= 0 {
+            return;
+        }
+        Save.ordered_set(PLAYER_WINS_SAVE_KEY, this.get_user_id(), playerWins.(f64));
     }
 
     is_round_entity :: method() -> bool {
@@ -701,6 +724,7 @@ Player :: class : Player_Base {
         entity_scream_arrow_remaining = 0.0;
         entity_target_ping_remaining = 0.0;
         entity_target_ping_user_id = "";
+        ghost_item_ping_cooldown_ends_at = 0.0;
 
         if #alive(agent) {
             agent.velocity = v2{0.0, 0.0};
@@ -785,6 +809,7 @@ Player :: class : Player_Base {
         entity_scream_arrow_remaining = 0.0;
         entity_target_ping_remaining = 0.0;
         entity_target_ping_user_id = "";
+        ghost_item_ping_cooldown_ends_at = 0.0;
         sprint_input_held = false;
         sprint_active = false;
 
@@ -1134,6 +1159,7 @@ Player :: class : Player_Base {
 
         if is_local_or_server() {
             draw_match_lobby_ui(this);
+            draw_role_selection_ui(this);
             draw_head_start_ui(this);
             draw_hunt_begin_banner_ui(this);
             draw_exit_unlocked_banner_ui(this);
@@ -1149,6 +1175,9 @@ Player :: class : Player_Base {
             this.draw_round_dead_player_pointers();
             this.draw_revealed_survivor_eye_icons();
             this.draw_downed_bleed_out_ui();
+            for lb: component_iterator(Leaderboard) {
+                lb.draw();
+            }
             gm := get_game_manager();
             if #alive(gm) && gm.phase == .LOBBY {
                 if entity_opt_in {
@@ -1284,6 +1313,12 @@ Player :: class : Player_Base {
     ao_can_use_interactable :: method(interactable: Interactable) -> bool {
         // Called to determine if the player is allowed to use the given interactable
         if round_dead || round_downed {
+            if round_dead {
+                listener := interactable.listener;
+                if #alive(listener) && listener.#type == Ghost_Item_Ping_Interactable {
+                    return true;
+                }
+            }
             return false;
         }
 
@@ -1453,6 +1488,9 @@ Player :: class : Player_Base {
         if !this.is_local() || !this.is_round_survivor() {
             return;
         }
+        if this.should_hide_revealed_eye_for_local_ui() {
+            return;
+        }
 
         icon := get_asset(Texture_Asset, ENTITY_REVEALED_EYE_ICON_PATH);
         if icon == null {
@@ -1462,10 +1500,20 @@ Player :: class : Player_Base {
         UI.push_screen_draw_context();
         defer UI.pop_draw_context();
 
-        UI.push_layer(910);
+        UI.push_layer(ENTITY_REVEALED_EYE_ICON_LAYER);
         defer UI.pop_layer();
 
         this.draw_revealed_survivor_eye_icon_for_player(this, icon);
+    }
+
+    should_hide_revealed_eye_for_local_ui :: proc(using this: Player) -> bool {
+        if vitals_modal_open || task_help_open || security_cameras_open {
+            return true;
+        }
+        if entity != null && entity.get_active_effect() != null {
+            return true;
+        }
+        return false;
     }
 
     draw_revealed_survivor_eye_icon_for_player :: proc(using this: Player, survivor: Player, icon: Texture_Asset) {
@@ -1985,7 +2033,7 @@ Player :: class : Player_Base {
 
     // Port of the provided C# DrawArrowToPosition.
     // Draws a screen-space arrow pointing toward a world-space `position`.
-    DrawArrowToPosition :: proc(using this: Player, position: v2, texture_path: string = "", label: string = "", icon_upright: bool = false) {
+    DrawArrowToPosition :: proc(using this: Player, position: v2, texture_path: string = "", label: string = "", icon_upright: bool = false, arrow_size_px: float = 40.0) {
         if this == null return;
         if entity == null || entity.self == null return;
         if this.is_local() {
@@ -2020,7 +2068,6 @@ Player :: class : Player_Base {
             dir = normalize(delta_screen);
         }
 
-        arrow_size_px :: 40.0;
         anim := pow(abs(sin(PI * get_time())), 0.75);
 
         // distanceThreshold = ((dir * threshold) / (1, aspect)).Length

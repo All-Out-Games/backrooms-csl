@@ -1,0 +1,136 @@
+ROLE_SELECTION_UI_LAYER :: 9800;
+
+Round_Role :: enum {
+    NONE;
+    SURVIVOR;
+    ENTITY;
+}
+
+role_selection_player_role :: proc(player: Player) -> Round_Role {
+    gm := get_game_manager();
+    if !#alive(gm) || player == null {
+        return .NONE;
+    }
+    if gm.is_entity_player(player) {
+        return .ENTITY;
+    }
+    if gm.is_survivor_player(player) {
+        return .SURVIVOR;
+    }
+    return .NONE;
+}
+
+role_selection_role_name :: proc(role: Round_Role) -> string {
+    switch role {
+        case .SURVIVOR: return "Survivor";
+        case .ENTITY: return "Bacteria Monster";
+        default: {}
+    }
+    return "Unknown";
+}
+
+role_selection_category_name :: proc(role: Round_Role) -> string {
+    switch role {
+        case .SURVIVOR: return "SURVIVOR";
+        case .ENTITY: return "Monster";
+        default: {}
+    }
+    return "UNKNOWN";
+}
+
+role_selection_role_color :: proc(role: Round_Role) -> v4 {
+    switch role {
+        case .SURVIVOR: return v4{0.20, 0.72, 1.0, 1.0};
+        case .ENTITY: return v4{1.0, 0.16, 0.12, 1.0};
+        default: {}
+    }
+    return v4{1.0, 1.0, 1.0, 1.0};
+}
+
+draw_role_selection_ui :: proc(player: Player) {
+    gm := get_game_manager();
+    if !#alive(gm) || gm.phase != .SURVIVOR_HEAD_START || gm.role_selection_ends_at <= 0.0 || get_time() >= gm.role_selection_ends_at {
+        return;
+    }
+
+    target_role := role_selection_player_role(player);
+    if target_role == .NONE {
+        return;
+    }
+
+    elapsed := get_time() - gm.role_selection_started_at;
+    if elapsed < 0.0 {
+        elapsed = 0.0;
+    }
+
+    UI.push_screen_draw_context();
+    defer UI.pop_draw_context();
+    UI.push_layer(ROLE_SELECTION_UI_LAYER);
+    defer UI.pop_layer();
+
+    screen := UI.get_screen_rect();
+
+    fade_in := clamp(elapsed / 0.25, 0.0, 1.0);
+    fade_out := clamp((gm.role_selection_ends_at - get_time()) / 0.35, 0.0, 1.0);
+    alpha := min(fade_in, fade_out);
+
+    bg_progress := clamp(elapsed / 0.5, 0.0, 1.0);
+    player_progress := clamp((elapsed - 0.3) / 0.8, 0.0, 1.0);
+    type_progress := clamp((elapsed - 0.6) / 0.6, 0.0, 1.0);
+    role_progress := clamp((elapsed - 0.9) / 0.6, 0.0, 1.0);
+
+    bg_alpha := Ease.out_cubic(bg_progress) * alpha;
+    player_scale := Ease.out_back(player_progress);
+    type_ease := Ease.out_back(type_progress) * alpha;
+    role_ease := Ease.out_elastic(role_progress) * alpha;
+
+    bg_texture := get_asset(Texture_Asset, "UI/IntroBackdrop.png");
+    if bg_texture != null {
+        bg_rect := screen.fit_aspect(bg_texture.get_aspect(), .KEEP_BIGGER);
+        UI.quad(bg_rect, bg_texture, v4{1.0, 1.0, 1.0, bg_alpha});
+    } else {
+        UI.quad(screen, core_globals.white_sprite, v4{0.0, 0.0, 0.0, bg_alpha});
+    }
+
+    spine_size := 150.0 * player_scale;
+    spine_rect := screen.center_rect().grow(spine_size);
+    spine_rect = spine_rect.offset(0.0, -400.0);
+
+    if player != null && target_role == .ENTITY && player.ensure_entity_override_rig() && #alive(player.override_rig) && player.override_rig.instance != null {
+        player.override_rig.set_animation("idle", true, 0);
+        UI.spine(spine_rect.center(), player.override_rig.instance, v2{200.0, 200.0}, 0.0);
+    } else if player != null && player.animator != null && player.animator.instance != null {
+        UI.push_player_material(player);
+        UI.spine(spine_rect.center(), player.animator.instance, v2{200.0, 200.0}, 0.0);
+        UI.pop_material();
+    }
+
+    type_color := role_selection_role_color(target_role);
+
+    role_name := role_selection_role_name(target_role);
+    if target_role != .NONE && role_name != "" {
+        rs := UI.default_text_settings();
+        rs.size = 64;
+        rs.color = v4{1.0, 0.9, 0.3, role_ease};
+        rs.outline_color.w = role_ease;
+        rs.drop_shadow_color.w = role_ease;
+        rs.halign = .CENTER;
+        rs.valign = .CENTER;
+
+        role_rect := screen.center_rect().grow(200.0);
+        role_rect = role_rect.offset(0.0, 90.0 + 50.0 * (1.0 - role_ease));
+        UI.text(role_rect, rs, role_name);
+    }
+
+    label_ts := UI.default_text_settings();
+    label_ts.size = 45;
+    label_ts.color = v4{1.0, 1.0, 1.0, type_ease * 0.8};
+    label_ts.outline_color.w = type_ease * 0.8;
+    label_ts.drop_shadow_color.w = type_ease * 0.8;
+    label_ts.halign = .CENTER;
+    label_ts.valign = .CENTER;
+
+    label_rect := screen.center_rect().grow(150.0);
+    label_rect = label_rect.offset(0.0, 200.0);
+    UI.text(label_rect, label_ts, "You are a...");
+}

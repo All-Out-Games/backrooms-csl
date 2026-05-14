@@ -2,7 +2,8 @@ import "core:ao"
 
 // --- Match layout: 1 Entity vs 4–6 Survivors (5–7 players total) ---
 
-HEAD_START_SECONDS :: 15.0;
+HEAD_START_SECONDS :: 20.0;
+ROLE_SELECTION_SECONDS :: 2.5;
 MATCH_MAX_SECONDS :: 480.0; // ~8 minutes after survivors' head start ends
 HUNT_BEGIN_BANNER_SECONDS :: 2.0;
 EXIT_UNLOCK_BANNER_SECONDS :: 2.0;
@@ -15,6 +16,8 @@ END_GAME_CUTSCENE_REASON :: "end_game_cutscene";
 
 MIN_TOTAL_PLAYERS :: 5; // 1 entity + 4 survivors
 MAX_TOTAL_PLAYERS :: 7; // 1 entity + 6 survivors
+MATCHMAKING_PRIORITY_BETWEEN_ROUNDS :: 0;
+MATCHMAKING_PRIORITY_IN_ROUND :: 1;
 
 LOBBY_COUNTDOWN_SECONDS :: 10.0;
 ENTITY_SCREAM_ARROW_MIN_DISTANCE :: 20.0;
@@ -51,6 +54,14 @@ game_manager_singleton: Game_Manager;
 
 get_game_manager :: proc() -> Game_Manager {
     return game_manager_singleton;
+}
+
+set_matchmaking_priority_for_phase :: proc(phase: Match_Phase) {
+    priority := MATCHMAKING_PRIORITY_BETWEEN_ROUNDS;
+    if phase == .SURVIVOR_HEAD_START || phase == .ACTIVE {
+        priority = MATCHMAKING_PRIORITY_IN_ROUND;
+    }
+    Server.set_matchmaking_priority(priority);
 }
 
 // Prefer this when integrating matchmaking UI (lobby queue for Entity role).
@@ -188,14 +199,38 @@ format_countdown_mm_ss :: proc(total_seconds: s64) -> string {
     return format_string("%:%", {minutes, seconds_text});
 }
 
+MATCH_TIMER_TOP_DOWN_OFFSET :: 90.0;
+
+draw_match_status_title_outline :: proc(title: string) {
+    UI.push_screen_draw_context();
+    defer UI.pop_draw_context();
+
+    UI.push_layer(120);
+    defer UI.pop_layer();
+
+    status_rect := UIK.rect_topbar().offset(0.0, -MATCH_TIMER_TOP_DOWN_OFFSET);
+    title_rect := status_rect.center_rect().offset(0.0, 18.0).grow(18.0, 180.0, 18.0, 180.0);
+
+    title_ts := UI.default_text_settings();
+    title_ts.size = 24;
+    title_ts.color = v4{1.0, 1.0, 1.0, 1.0};
+    title_ts.halign = .CENTER;
+    title_ts.valign = .CENTER;
+    title_ts.do_outline = true;
+    title_ts.outline_thickness = 4;
+    title_ts.outline_color = v4{0.0, 0.0, 0.0, 1.0};
+    UI.text(title_rect, title_ts, title);
+}
+
 draw_match_status_ui :: proc(title: string, value: string) {
-    UIK.begin(UIK.window(UIK.rect_topbar()));
+    UIK.begin(UIK.window(UIK.rect_topbar().offset(0.0, -MATCH_TIMER_TOP_DOWN_OFFSET)));
 
     shell := UIK.panel_modal(.TRANSP_BLACK);
     shell.cross_align = .CENTER;
     shell.main_align = .CENTER;
     shell.gap = 4;
     shell.padding = v4{16, 12, 16, 12};
+    shell.show_background = false;
     UIK.panel_begin(shell);
 
     UIK.text(title, UIK.text_body());
@@ -203,6 +238,8 @@ draw_match_status_ui :: proc(title: string, value: string) {
 
     UIK.panel_end();
     UIK.end();
+
+    draw_match_status_title_outline(title);
 }
 
 get_head_start_countdown_seconds :: proc(gm: Game_Manager) -> s64 {
@@ -402,13 +439,14 @@ draw_match_timer_ui :: proc(player: Player) {
         return;
     }
 
-    UIK.begin(UIK.window(UIK.rect_topbar()));
+    UIK.begin(UIK.window(UIK.rect_topbar().offset(0.0, -MATCH_TIMER_TOP_DOWN_OFFSET)));
 
     shell := UIK.panel_modal(.TRANSP_BLACK);
     shell.cross_align = .CENTER;
     shell.main_align = .CENTER;
     shell.gap = 4;
     shell.padding = v4{16, 12, 16, 12};
+    shell.show_background = false;
     UIK.panel_begin(shell);
 
     UIK.text("Time Remaining", UIK.text_body());
@@ -423,6 +461,7 @@ draw_match_timer_ui :: proc(player: Player) {
     UIK.panel_end();
     UIK.end();
     draw_entity_scream_nav_paths_ui(player);
+    draw_ghost_item_ping_nav_paths_ui(player);
     draw_entity_scream_arrow_ui(player);
     draw_entity_target_ping_arrow_ui(player);
 }
@@ -585,6 +624,8 @@ Game_Manager :: class : Component {
     emergency_systems_online: bool;
 
     head_start_ends_at: float;
+    role_selection_started_at: float;
+    role_selection_ends_at: float;
     hunt_started_at: float;
     exit_unlocked_at: float;
     match_ends_at: float;
@@ -613,10 +654,13 @@ Game_Manager :: class : Component {
 
         phase = .LOBBY;
         result = .NONE;
+        set_matchmaking_priority_for_phase(phase);
         entity_user_id = "";
         survivors_alive = 0;
         emergency_systems_online = false;
         head_start_ends_at = 0.0;
+        role_selection_started_at = 0.0;
+        role_selection_ends_at = 0.0;
         hunt_started_at = 0.0;
         exit_unlocked_at = 0.0;
         match_ends_at = 0.0;
@@ -637,6 +681,7 @@ Game_Manager :: class : Component {
     }
 
     ao_end :: method() {
+        Server.set_matchmaking_priority(MATCHMAKING_PRIORITY_BETWEEN_ROUNDS);
         clear_spawned_round_items();
         clear_spawned_async_entities();
         sync_entity_hearing_radius_visual(0.0);
@@ -1013,6 +1058,7 @@ Game_Manager :: class : Component {
         item := Items.create_item_instance(chosen_item_def, 1);
         dropped_item := Dropped_Item.spawn(position, item);
         if #alive(dropped_item) {
+            install_ghost_item_ping_listener(dropped_item);
             if dropped_item.sprite != null {
                 dropped_item.sprite.mask_in_shadow = true;
             }
@@ -1381,6 +1427,7 @@ Game_Manager :: class : Component {
         result = .NONE;
 
         now := get_time();
+        next_role_selection_ends_at := now + ROLE_SELECTION_SECONDS;
         next_head_start_ends_at := now + HEAD_START_SECONDS;
         if entity_player, ok := find_player_by_user_id(entity_user_id); ok && #alive(entity_player.entity) {
             entity_player.entity.set_local_position(entity_spawn.world_position);
@@ -1411,14 +1458,17 @@ Game_Manager :: class : Component {
         }
 
         head_start_ends_at = next_head_start_ends_at;
+        role_selection_started_at = now;
+        role_selection_ends_at = next_role_selection_ends_at;
         hunt_started_at = 0.0;
         exit_unlocked_at = 0.0;
         // Match clock starts after head start (full hunt window).
         match_ends_at = head_start_ends_at + MATCH_MAX_SECONDS;
         entity_win_delay_ends_at = 0.0;
         phase = .SURVIVOR_HEAD_START;
+        set_matchmaking_priority_for_phase(phase);
 
-        log_info("Game_Manager: Entity is % (head start % sec)", {entity_user_id, HEAD_START_SECONDS});
+        log_info("Game_Manager: Entity is % (role reveal during head start % sec, head start % sec)", {entity_user_id, ROLE_SELECTION_SECONDS, HEAD_START_SECONDS});
         return true;
     }
 
@@ -1438,6 +1488,7 @@ Game_Manager :: class : Component {
 
         hunt_started_at = get_time();
         phase = .ACTIVE;
+        set_matchmaking_priority_for_phase(phase);
         log_info("Game_Manager: Hunt started; match ends at t=%", {match_ends_at});
     }
 
@@ -1514,6 +1565,7 @@ Game_Manager :: class : Component {
         for player: component_iterator(Player) {
             clear_player_tasks(player);
             player.vent_cooldown_ends_at = 0.0;
+            player.remove_freeze_reason(FREEZE_ENTITY_HEAD_START);
         }
         clear_all_player_round_inventories();
         clear_spawned_round_items();
@@ -1523,11 +1575,14 @@ Game_Manager :: class : Component {
         reset_generator_for_round(0);
         reset_all_wire_puzzles_for_round(0);
         phase = .LOBBY;
+        set_matchmaking_priority_for_phase(phase);
         result = .NONE;
         entity_user_id = "";
         survivors_alive = 0;
         emergency_systems_online = false;
         head_start_ends_at = 0.0;
+        role_selection_started_at = 0.0;
+        role_selection_ends_at = 0.0;
         hunt_started_at = 0.0;
         exit_unlocked_at = 0.0;
         match_ends_at = 0.0;
@@ -1591,15 +1646,27 @@ Game_Manager :: class : Component {
         }
     }
 
+    award_player_wins :: method(winning_result: Match_Result) {
+        for player: component_iterator(Player) {
+            if winning_result == .SURVIVORS_WIN && is_survivor_player(player) {
+                player.increment_player_wins();
+            } else if winning_result == .ENTITY_WIN && is_entity_player(player) {
+                player.increment_player_wins();
+            }
+        }
+    }
+
     end_match_survivors_win :: method() {
         if phase == .ENDED {
             return;
         }
         stop_entity_ambience_sound();
+        award_player_wins(.SURVIVORS_WIN);
         clear_all_player_round_inventories();
         clear_spawned_round_items();
         clear_spawned_async_entities();
         phase = .ENDED;
+        set_matchmaking_priority_for_phase(phase);
         result = .SURVIVORS_WIN;
         entity_win_delay_ends_at = 0.0;
         ended_at = get_time();
@@ -1614,10 +1681,12 @@ Game_Manager :: class : Component {
             return;
         }
         stop_entity_ambience_sound();
+        award_player_wins(.ENTITY_WIN);
         clear_all_player_round_inventories();
         clear_spawned_round_items();
         clear_spawned_async_entities();
         phase = .ENDED;
+        set_matchmaking_priority_for_phase(phase);
         result = .ENTITY_WIN;
         entity_win_delay_ends_at = 0.0;
         ended_at = get_time();

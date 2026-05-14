@@ -40,7 +40,7 @@
     ],
     "RoundItemWeights": [
       2,
-      2,
+      1,
       2
     ],
     "MinRoundItemSpawnCount": 22,

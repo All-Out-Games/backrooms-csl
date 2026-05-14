@@ -10,8 +10,8 @@ RADIO_SUCCESS_SFX_PATH    :: "radio/camera.wav";
 RADIO_STATIC_REPLAY_SECONDS :: 1.0;
 RADIO_DIGIT_REPLAY_SECONDS  :: 1.25;
 RADIO_SIGNAL_WINDOW_DEGREES :: 35.0;
-RADIO_LOCK_HOLD_SECONDS     :: 0.75;
-RADIO_SIGNAL_LOCK_THRESHOLD :: 0.5;
+RADIO_LOCK_HOLD_SECONDS     :: 0.1;
+RADIO_SIGNAL_LOCK_THRESHOLD :: 0.8;
 RADIO_UI_LAYER              :: 450;
 RADIO_LAYOUT_RIGHT_CUT      :: 1350.0;
 RADIO_LAYOUT_LEFT_INSET     :: 350.0;
@@ -273,12 +273,12 @@ draw_radio_hint_arrows :: proc(player: Player) {
             return;
         }
 
-        player.DrawArrowToPosition(gm.GeneratorEntity.world_position, "generator icon_be87ae.png", "", true);
+        player.DrawArrowToPosition(gm.GeneratorEntity.world_position, "UI/GeneratorArrow.png", "", false, 56.0);
         return;
     }
 
     if !is_task_completed(player, TASK_ID_RECONNECT_WIRE) {
-        player.DrawArrowToPosition(get_wire_hint_position(), WIRE_HINT_TEXTURE_PATH, "", true);
+        player.DrawArrowToPosition(get_wire_hint_position(), WIRE_HINT_TEXTURE_PATH, "", false, 56.0);
     }
 }
 

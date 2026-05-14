@@ -1,0 +1,317 @@
+import "core:ao"
+
+GHOST_ITEM_PING_COOLDOWN_SECONDS :: 30.0;
+GHOST_ITEM_PING_PATH_SECONDS :: 3.0;
+GHOST_ITEM_PING_PATH_MAX_POINTS :: 32;
+GHOST_ITEM_PING_PATH_MIN_ADVANCE :: 0.08;
+GHOST_ITEM_PING_PATH_REACHED_DISTANCE :: 0.35;
+GHOST_ITEM_PING_PATH_PROBE_SPEED :: 900.0;
+GHOST_ITEM_PING_PROMPT :: "Ping Item";
+
+is_round_dead_survivor_ghost :: proc(player: Player) -> bool {
+    if player == null || !player.is_round_dead() {
+        return false;
+    }
+
+    gm := get_game_manager();
+    if !#alive(gm) || !gm.is_round_in_progress() {
+        return false;
+    }
+
+    return gm.is_survivor_player(player);
+}
+
+is_alive_survivor_for_item_ping :: proc(player: Player) -> bool {
+    if player == null || !#alive(player.entity) {
+        return false;
+    }
+    if !player.is_round_survivor() || player.is_round_dead() || player.is_round_downed() {
+        return false;
+    }
+    return true;
+}
+
+get_dropped_item_prompt_text :: proc(dropped_item: Dropped_Item) -> string {
+    if !#alive(dropped_item) || !#alive(dropped_item.item) {
+        return "Pick up Item";
+    }
+
+    defn := dropped_item.item.get_definition();
+    if defn == null {
+        return "Pick up Item";
+    }
+
+    return format_string("Pick up %", {defn.get_name()});
+}
+
+Ghost_Item_Ping_Nav_Path_Probe :: class : Component {
+    owner_user_id: string;
+    target_position: v2;
+    expires_at: float;
+    path_complete: bool;
+    points: [..]v2;
+
+    navmesh: Navmesh;
+    agent: Movement_Agent;
+
+    setup :: method(owner: Player, target: v2, path_navmesh: Navmesh, duration_seconds: float) {
+        if owner == null || !#alive(owner.entity) {
+            expires_at = get_time();
+            return;
+        }
+
+        owner_user_id = owner.get_user_id();
+        navmesh = path_navmesh;
+        expires_at = get_time() + duration_seconds;
+        path_complete = false;
+
+        start_position := owner.entity.world_position;
+        target_position = target;
+        if #alive(navmesh) {
+            start_hint: s64 = 0;
+            target_hint: s64 = 0;
+            snapped_start: v2;
+            snapped_target: v2;
+            if navmesh.try_find_closest_point_on_navmesh(start_position, ref snapped_start, ref start_hint) {
+                start_position = snapped_start;
+            }
+            if navmesh.try_find_closest_point_on_navmesh(target_position, ref snapped_target, ref target_hint) {
+                target_position = snapped_target;
+            }
+        }
+
+        points.clear();
+        points.append(start_position);
+
+        entity.set_local_position(start_position);
+        entity.mark_teleported();
+
+        agent = entity.get_component(Movement_Agent);
+        if agent != null && #alive(navmesh) {
+            agent.set_navmesh_to_lock_to(navmesh);
+        }
+    }
+
+    ao_start :: method() {
+        agent = entity.get_component(Movement_Agent);
+        if agent != null && #alive(navmesh) {
+            agent.set_navmesh_to_lock_to(navmesh);
+        }
+    }
+
+    ao_update :: method(dt: float) {
+        if get_time() >= expires_at {
+            entity.destroy();
+            return;
+        }
+        if path_complete {
+            return;
+        }
+        if points.count <= 0 {
+            points.append(entity.world_position);
+        }
+        if points.count >= GHOST_ITEM_PING_PATH_MAX_POINTS {
+            path_complete = true;
+            return;
+        }
+        if agent == null {
+            agent = entity.get_component(Movement_Agent);
+        }
+        if agent == null {
+            path_complete = true;
+            return;
+        }
+        if #alive(navmesh) {
+            agent.set_navmesh_to_lock_to(navmesh);
+        }
+
+        current := entity.world_position;
+        to_target := target_position - current;
+        if length(to_target) <= GHOST_ITEM_PING_PATH_REACHED_DISTANCE {
+            points.append(target_position);
+            path_complete = true;
+            return;
+        }
+
+        result := agent.set_path_target(target_position, GHOST_ITEM_PING_PATH_PROBE_SPEED);
+        if !result.success {
+            return;
+        }
+
+        next_point := result.next_point;
+        if length(next_point - current) < GHOST_ITEM_PING_PATH_MIN_ADVANCE {
+            next_point = current + result.move_direction * GHOST_ITEM_PING_PATH_REACHED_DISTANCE;
+        }
+
+        if length(next_point - current) < GHOST_ITEM_PING_PATH_MIN_ADVANCE {
+            path_complete = true;
+            return;
+        }
+
+        points.append(next_point);
+        entity.set_local_position(next_point);
+        entity.mark_teleported();
+    }
+}
+
+spawn_ghost_item_ping_nav_path_probe :: proc(owner: Player, target_position: v2, navmesh: Navmesh, duration_seconds: float) {
+    if owner == null || !#alive(owner.entity) || !#alive(navmesh) {
+        return;
+    }
+
+    e := Scene.create_entity();
+    e.set_local_position(owner.entity.world_position);
+    e.mark_teleported();
+
+    e.add_component(Movement_Agent);
+    probe := e.add_component(Ghost_Item_Ping_Nav_Path_Probe);
+    probe.setup(owner, target_position, navmesh, duration_seconds);
+}
+
+ping_item_for_alive_survivors :: proc(item_position: v2) {
+    gm := get_game_manager();
+    if !#alive(gm) || !gm.is_round_in_progress() {
+        return;
+    }
+
+    navmesh := gm.get_navmesh_to_lock_to();
+    if !#alive(navmesh) {
+        return;
+    }
+
+    for survivor: component_iterator(Player) {
+        if !is_alive_survivor_for_item_ping(survivor) {
+            continue;
+        }
+
+        spawn_ghost_item_ping_nav_path_probe(survivor, item_position, navmesh, GHOST_ITEM_PING_PATH_SECONDS);
+    }
+}
+
+draw_ghost_item_ping_nav_paths_ui :: proc(player: Player) {
+    if !player.is_local() || !is_alive_survivor_for_item_ping(player) {
+        return;
+    }
+
+    now := get_time();
+    UI.push_screen_draw_context();
+    defer UI.pop_draw_context();
+
+    UI.push_layer(850);
+    defer UI.pop_layer();
+
+    for probe: component_iterator(Ghost_Item_Ping_Nav_Path_Probe) {
+        if probe.owner_user_id != player.get_user_id() {
+            continue;
+        }
+        if now >= probe.expires_at {
+            continue;
+        }
+        if probe.points.count < 2 {
+            continue;
+        }
+
+        alpha := ENTITY_SCREAM_PATH_LINE_ALPHA;
+        remaining := probe.expires_at - now;
+        if remaining < 0.45 {
+            alpha *= clamp(remaining / 0.45, 0.0, 1.0);
+        }
+
+        i: s64 = 0;
+        while i < probe.points.count - 1 {
+            draw_entity_scream_nav_path_segment(probe.points[i], probe.points[i + 1], alpha);
+            i += 1;
+        }
+    }
+}
+
+Ghost_Item_Ping_Interactable :: class : Component {
+    dropped_item: Dropped_Item;
+
+    setup :: method(item: Dropped_Item) {
+        dropped_item = item;
+        this.install_listener();
+    }
+
+    install_listener :: method() {
+        if !#alive(dropped_item) || dropped_item.interactable == null {
+            return;
+        }
+
+        dropped_item.interactable.set_listener(this);
+    }
+
+    ao_start :: method() {
+        this.install_listener();
+    }
+
+    can_ghost_ping :: method(player: Player) -> bool {
+        if !is_round_dead_survivor_ghost(player) {
+            return false;
+        }
+        if !#alive(dropped_item) || dropped_item.claimed || dropped_item.is_animating {
+            return false;
+        }
+        if dropped_item.exclusive_to_player.count > 0 {
+            return false;
+        }
+        if player.ghost_item_ping_cooldown_ends_at > get_time() {
+            return false;
+        }
+        return true;
+    }
+
+    can_use :: method(player: Player) -> bool {
+        if !#alive(dropped_item) || dropped_item.interactable == null {
+            return false;
+        }
+
+        if is_round_dead_survivor_ghost(player) {
+            dropped_item.interactable.set_text(GHOST_ITEM_PING_PROMPT);
+            return this.can_ghost_ping(player);
+        }
+
+        dropped_item.interactable.set_text(get_dropped_item_prompt_text(dropped_item));
+        if player == null || player.is_round_entity() || player.is_round_dead() || player.is_round_downed() {
+            return false;
+        }
+
+        return dropped_item.can_use(player);
+    }
+
+    on_holding :: method(player: Player) {
+        if #alive(dropped_item) {
+            dropped_item.on_holding(player);
+        }
+    }
+
+    on_interact :: method(player: Player) {
+        if !#alive(dropped_item) {
+            return;
+        }
+
+        if is_round_dead_survivor_ghost(player) {
+            if !this.can_ghost_ping(player) {
+                return;
+            }
+
+            player.ghost_item_ping_cooldown_ends_at = get_time() + GHOST_ITEM_PING_COOLDOWN_SECONDS;
+            ping_item_for_alive_survivors(dropped_item.entity.world_position);
+            return;
+        }
+
+        dropped_item.on_interact(player);
+    }
+}
+
+install_ghost_item_ping_listener :: proc(dropped_item: Dropped_Item) {
+    if !#alive(dropped_item) || !#alive(dropped_item.entity) {
+        return;
+    }
+
+    listener := dropped_item.entity.get_component(Ghost_Item_Ping_Interactable);
+    if listener == null {
+        listener = dropped_item.entity.add_component(Ghost_Item_Ping_Interactable);
+    }
+    listener.setup(dropped_item);
+}
