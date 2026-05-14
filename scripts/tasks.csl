@@ -1,4 +1,5 @@
 TASK_ID_TUNE_RADIO        :: "tune_radio";
+TASK_ID_ENTER_KEYCODE     :: "enter_keycode";
 TASK_ID_RESTART_GENERATOR :: "restart_generator";
 TASK_ID_RECONNECT_WIRE    :: "reconnect_wire";
 
@@ -22,6 +23,7 @@ TASK_TEX_INFO_ICON        :: "UI/info_icon_b.png";
 TASK_TEX_PROGRESS_BACK    :: "UI/task list/task_progress_back.png";
 TASK_TEX_PROGRESS_FILL    :: "UI/task list/task_progress_fill.png";
 TASK_TEX_PROGRESS_SEGMENT :: "UI/task list/task_progress_segment.png";
+TASK_TEX_PROGRESS_EXIT    :: "ExitDoorOpenIcon.png";
 TASK_CLOSE_BUTTON_HALF_WIDTH   :: 120.0;
 TASK_CLOSE_BUTTON_HALF_HEIGHT  :: 24.0;
 TASK_CLOSE_BUTTON_BOTTOM_PAD   :: 10.0;
@@ -90,7 +92,23 @@ is_task_required_for_progress :: proc(task: Task_Base) -> bool {
     if task == null {
         return false;
     }
-    return task.id != TASK_ID_TUNE_RADIO;
+    return true;
+}
+
+is_task_unlocked_for_player :: proc(player: Player, task_id: string) -> bool {
+    if task_id == TASK_ID_TUNE_RADIO {
+        return true;
+    }
+    if task_id == TASK_ID_ENTER_KEYCODE {
+        return is_task_completed(player, TASK_ID_TUNE_RADIO);
+    }
+    if task_id == TASK_ID_RESTART_GENERATOR {
+        return is_task_completed(player, TASK_ID_ENTER_KEYCODE);
+    }
+    if task_id == TASK_ID_RECONNECT_WIRE {
+        return is_task_completed(player, TASK_ID_RESTART_GENERATOR);
+    }
+    return false;
 }
 
 get_required_task_counts :: proc(total: ref int, remaining: ref int) {
@@ -161,9 +179,10 @@ notify_survivors :: proc(fmt: string, args: [^]any = {}) {
 
 get_task_display_name :: proc(task_id: string) -> string {
     switch task_id {
-        case TASK_ID_TUNE_RADIO:        return "Tune Radio - (Optional)";
+        case TASK_ID_TUNE_RADIO:        return "Tune Radio";
+        case TASK_ID_ENTER_KEYCODE:     return "Enter Keycode";
         case TASK_ID_RESTART_GENERATOR: return "Restart Generator";
-        case TASK_ID_RECONNECT_WIRE:    return "Reconnect Wire";
+        case TASK_ID_RECONNECT_WIRE:    return "Reconnect Wires";
     }
     return "Unknown Task";
 }
@@ -171,7 +190,10 @@ get_task_display_name :: proc(task_id: string) -> string {
 get_task_description :: proc(task_id: string) -> string {
     switch task_id {
         case TASK_ID_TUNE_RADIO: {
-            return "Tune the radio and use the broadcast code on the keypad.";
+            return "Tune the radio to hear the broadcast code.";
+        }
+        case TASK_ID_ENTER_KEYCODE: {
+            return "Enter the broadcast code into the exit keypad.";
         }
         case TASK_ID_RESTART_GENERATOR: {
             return "Restore power to the facility.";
@@ -200,6 +222,7 @@ assign_default_survivor_tasks :: proc(player: Player) {
 
     clear_player_tasks(player);
     append(ref player.active_tasks, create_task(TASK_ID_TUNE_RADIO));
+    append(ref player.active_tasks, create_task(TASK_ID_ENTER_KEYCODE));
     append(ref player.active_tasks, create_task(TASK_ID_RESTART_GENERATOR));
     append(ref player.active_tasks, create_task(TASK_ID_RECONNECT_WIRE));
 }
@@ -556,6 +579,13 @@ draw_task_progress_bar :: proc(player: Player, screen: Rect) {
         }
     }
 
+    exit_icon := get_asset(Texture_Asset, TASK_TEX_PROGRESS_EXIT);
+    if exit_icon != null {
+        exit_rect := progress_rect.right_center_rect().offset(12.0, 0.0).grow(32.0);
+        exit_rect = exit_rect.fit_aspect(exit_icon.get_aspect(), .KEEP_HEIGHT);
+        UI.quad(exit_rect, exit_icon, v4.{1, 1, 1, 1});
+    }
+
     label_ts := UI.default_text_settings();
     label_ts.size = 26;
     label_ts.spacing_multiplier = 1.1;
@@ -569,7 +599,7 @@ draw_task_progress_bar :: proc(player: Player, screen: Rect) {
     label_ts.autofit_min_size = 14;
     label_ts.autofit_max_size = 26;
     label_rect := progress_rect.top_rect().offset(0.0, -12.0).grow(24, 0, 0, 0);
-    UI.text(label_rect, label_ts, "TOTAL PROGRESS");
+    UI.text(label_rect, label_ts, "PROGRESS");
 
     pct_ts := UI.default_text_settings();
     pct_ts.size = 24;

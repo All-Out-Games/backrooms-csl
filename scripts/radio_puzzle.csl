@@ -222,6 +222,7 @@ Radio_Puzzle :: class : Interactable {
         solve_hold_progress = RADIO_LOCK_HOLD_SECONDS;
         this.set_text("Signal Locked");
 
+        complete_task_for_survivors(TASK_ID_TUNE_RADIO);
         play_radio_sfx(RADIO_SUCCESS_SFX_PATH, entity.world_position, 0.45, range_multiplier=0.5);
         notify_survivors("% tuned the radio. Use the broadcast code on the keypad.", {player.get_username()});
     }
@@ -264,6 +265,11 @@ draw_radio_hint_arrows :: proc(player: Player) {
         }
     }
     if !has_solved_radio {
+        return;
+    }
+
+    if !is_task_completed(player, TASK_ID_ENTER_KEYCODE) {
+        player.DrawArrowToPosition(get_keypad_hint_position(), "UI/KeypadArrow.png", "", false, 56.0);
         return;
     }
 

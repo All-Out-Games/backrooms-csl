@@ -246,7 +246,10 @@ Wire_Puzzle :: class : Interactable {
         if !#alive(gm) {
             return false;
         }
-        return gm.phase == .SURVIVOR_HEAD_START || gm.phase == .ACTIVE;
+        if gm.phase != .SURVIVOR_HEAD_START && gm.phase != .ACTIVE {
+            return false;
+        }
+        return is_task_unlocked_for_player(player, TASK_ID_RECONNECT_WIRE);
     }
 
     on_interact :: method(player: Player) {

@@ -201,27 +201,6 @@ format_countdown_mm_ss :: proc(total_seconds: s64) -> string {
 
 MATCH_TIMER_TOP_DOWN_OFFSET :: 90.0;
 
-draw_match_status_title_outline :: proc(title: string) {
-    UI.push_screen_draw_context();
-    defer UI.pop_draw_context();
-
-    UI.push_layer(120);
-    defer UI.pop_layer();
-
-    status_rect := UIK.rect_topbar().offset(0.0, -MATCH_TIMER_TOP_DOWN_OFFSET);
-    title_rect := status_rect.center_rect().offset(0.0, 18.0).grow(18.0, 180.0, 18.0, 180.0);
-
-    title_ts := UI.default_text_settings();
-    title_ts.size = 24;
-    title_ts.color = v4{1.0, 1.0, 1.0, 1.0};
-    title_ts.halign = .CENTER;
-    title_ts.valign = .CENTER;
-    title_ts.do_outline = true;
-    title_ts.outline_thickness = 4;
-    title_ts.outline_color = v4{0.0, 0.0, 0.0, 1.0};
-    UI.text(title_rect, title_ts, title);
-}
-
 draw_match_status_ui :: proc(title: string, value: string) {
     UIK.begin(UIK.window(UIK.rect_topbar().offset(0.0, -MATCH_TIMER_TOP_DOWN_OFFSET)));
 
@@ -233,13 +212,11 @@ draw_match_status_ui :: proc(title: string, value: string) {
     shell.show_background = false;
     UIK.panel_begin(shell);
 
-    UIK.text(title, UIK.text_body());
+    UIK.text(title, UIK.text_title());
     UIK.text(value, UIK.text_title());
 
     UIK.panel_end();
     UIK.end();
-
-    draw_match_status_title_outline(title);
 }
 
 get_head_start_countdown_seconds :: proc(gm: Game_Manager) -> s64 {
@@ -449,13 +426,13 @@ draw_match_timer_ui :: proc(player: Player) {
     shell.show_background = false;
     UIK.panel_begin(shell);
 
-    UIK.text("Time Remaining", UIK.text_body());
+    UIK.text("Time Remaining", UIK.text_title());
     UIK.text(format_countdown_mm_ss(countdown), UIK.text_title());
 
     if player.is_local() && !player.is_round_entity() && player.entity_scream_reveal_remaining > 0.0 {
         UIK.spacer(UIK.pixels(1), UIK.pixels(10));
         remaining_text := format_string("Revealed: %", {format_float(player.entity_scream_reveal_remaining, decimals=1)});
-        UIK.text(remaining_text, UIK.text_body());
+        UIK.text(remaining_text, UIK.text_title());
     }
 
     UIK.panel_end();
@@ -674,6 +651,7 @@ Game_Manager :: class : Component {
         }
         cache_hearing_radius_sprite();
         sync_entity_hearing_radius_visual(0.0);
+        clear_all_footstep_echoes();
         clear_spawned_round_items();
         clear_spawned_async_entities();
 
@@ -682,6 +660,7 @@ Game_Manager :: class : Component {
 
     ao_end :: method() {
         Server.set_matchmaking_priority(MATCHMAKING_PRIORITY_BETWEEN_ROUNDS);
+        clear_all_footstep_echoes();
         clear_spawned_round_items();
         clear_spawned_async_entities();
         sync_entity_hearing_radius_visual(0.0);
@@ -1425,6 +1404,7 @@ Game_Manager :: class : Component {
 
         emergency_systems_online = false;
         result = .NONE;
+        clear_all_footstep_echoes();
 
         now := get_time();
         next_role_selection_ends_at := now + ROLE_SELECTION_SECONDS;
@@ -1562,6 +1542,7 @@ Game_Manager :: class : Component {
 
     reset_to_lobby :: method() {
         finish_end_game_cutscene();
+        clear_all_footstep_echoes();
         for player: component_iterator(Player) {
             clear_player_tasks(player);
             player.vent_cooldown_ends_at = 0.0;
@@ -1663,6 +1644,7 @@ Game_Manager :: class : Component {
         stop_entity_ambience_sound();
         award_player_wins(.SURVIVORS_WIN);
         clear_all_player_round_inventories();
+        clear_all_footstep_echoes();
         clear_spawned_round_items();
         clear_spawned_async_entities();
         phase = .ENDED;
@@ -1683,6 +1665,7 @@ Game_Manager :: class : Component {
         stop_entity_ambience_sound();
         award_player_wins(.ENTITY_WIN);
         clear_all_player_round_inventories();
+        clear_all_footstep_echoes();
         clear_spawned_round_items();
         clear_spawned_async_entities();
         phase = .ENDED;

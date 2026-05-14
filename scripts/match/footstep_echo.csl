@@ -17,6 +17,7 @@ FootstepEcho :: class : Component {
     target_scale: v2 @ao_serialize;
     duration_seconds: float @ao_serialize;
     start_alpha: float @ao_serialize;
+    owner_user_id: string;
 
     elapsed: float;
     start_scale: v2;
@@ -28,7 +29,7 @@ FootstepEcho :: class : Component {
             duration_seconds = 1.0;
         }
         sprite = entity.get_component(Sprite_Renderer);
-        if sprite != null {
+        if #alive(sprite) {
             start_scale = sprite.scale;
             start_alpha = sprite.color.w;
         } else {
@@ -53,7 +54,7 @@ FootstepEcho :: class : Component {
         };
         new_a := lerp(start_alpha, 0.0, u);
 
-        if sprite != null {
+        if #alive(sprite) {
             sprite.scale = new_s;
             c := sprite.color;
             c.w = new_a;
@@ -64,7 +65,53 @@ FootstepEcho :: class : Component {
     }
 }
 
-spawn_footstep_echo :: proc(world_pos: v2, prefab_path: string) {
+clear_footstep_echoes_for_user_id :: proc(user_id: string) {
+    if user_id.count <= 0 {
+        return;
+    }
+
+    to_destroy: [..]Entity;
+    for echo: component_iterator(FootstepEcho) {
+        if echo.owner_user_id == user_id && #alive(echo.entity) {
+            to_destroy.append(echo.entity);
+        }
+    }
+
+    for e: to_destroy {
+        if #alive(e) {
+            e.destroy();
+        }
+    }
+    to_destroy.clear();
+}
+
+clear_footstep_echoes_for_player :: proc(player: Player) {
+    if player == null {
+        return;
+    }
+
+    player.footstep_stride_accum = 0.0;
+    clear_entity_local_view_reveal(player);
+    clear_footstep_echoes_for_user_id(player.get_user_id());
+}
+
+clear_all_footstep_echoes :: proc() {
+    to_destroy: [..]Entity;
+    for echo: component_iterator(FootstepEcho) {
+        if #alive(echo.entity) {
+            to_destroy.append(echo.entity);
+        }
+    }
+
+    for e: to_destroy {
+        if #alive(e) {
+            e.destroy();
+        }
+    }
+    to_destroy.clear();
+}
+
+spawn_footstep_echo :: proc(world_pos: v2, prefab_path: string, owner: Player = null) {
     e: Entity;
     prefab: Prefab_Asset;
     if prefab_path.count > 0 {
@@ -100,17 +147,21 @@ spawn_footstep_echo :: proc(world_pos: v2, prefab_path: string) {
             fe2.duration_seconds = 1.0;
         }
     }
+
+    if owner != null {
+        fe2.owner_user_id = owner.get_user_id();
+    }
 }
 
 get_visible_player_spine :: proc(player: Player) -> Spine_Animator {
-    if player.is_round_entity() && #alive(player.override_rig) && player.override_rig.entity.get_local_enabled() {
+    if player.is_round_entity() && #alive(player.override_rig) && #alive(player.override_rig.entity) && player.override_rig.entity.get_local_enabled() {
         return player.override_rig;
     }
     return player.animator;
 }
 
 get_footstep_bone_name :: proc(player: Player, left_foot: bool) -> string {
-    if player.is_round_entity() && #alive(player.override_rig) && player.override_rig.entity.get_local_enabled() {
+    if player.is_round_entity() && #alive(player.override_rig) && #alive(player.override_rig.entity) && player.override_rig.entity.get_local_enabled() {
         if left_foot return "IK_LegL3";
         return "IK_LegR3";
     }
@@ -121,6 +172,13 @@ get_footstep_bone_name :: proc(player: Player, left_foot: bool) -> string {
 
 spine_bone_to_world :: proc(player: Player, bone_name: string) -> v2 {
     spine := get_visible_player_spine(player);
+    if !#alive(spine) || spine.instance == null || !#alive(spine.entity) {
+        if #alive(player.entity) {
+            return player.entity.world_position;
+        }
+        return v2{0.0, 0.0};
+    }
+
     local := spine.get_bone_local_position(bone_name);
     sc := spine.scale;
     scaled := v2{local.x * sc.x, local.y * sc.y};
@@ -142,7 +200,7 @@ ping_player_with_footstep_echo :: proc(player: Player, fade_out_seconds: float) 
 
     bone := get_footstep_bone_name(player, player.footstep_left_next);
     wp := spine_bone_to_world(player, bone);
-    spawn_footstep_echo(wp, "Echo.prefab");
+    spawn_footstep_echo(wp, "Echo.prefab", player);
     player.reveal_for_entity_local_view_with_duration(fade_out_seconds);
 }
 
@@ -184,7 +242,7 @@ is_player_within_entity_hearing_radius :: proc(player: Player) -> bool {
 
 tick_footstep_echo_for_player :: proc(player: Player, dt: float) {
     if player == null return;
-    if player.entity == null return;
+    if !#alive(player.entity) return;
 
     gm := get_game_manager();
     if !#alive(gm) || (gm.phase != .SURVIVOR_HEAD_START && gm.phase != .ACTIVE) {
@@ -212,7 +270,7 @@ tick_footstep_echo_for_player :: proc(player: Player, dt: float) {
     }
 
     agent := player.agent;
-    if agent == null {
+    if !#alive(agent) {
         player.footstep_stride_accum = 0.0;
         return;
     }

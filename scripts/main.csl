@@ -714,6 +714,7 @@ Player :: class : Player_Base {
 
     clear_round_death_state :: method() {
         this.clear_round_downed_state();
+        footstep_stride_accum = 0.0;
         round_dead = false;
         round_dead_ghost_state_active = false;
         this.set_local_round_dead_voice_chat_muted(false);
@@ -797,6 +798,7 @@ Player :: class : Player_Base {
 
         was_round_survivor := this.is_round_survivor();
         death_position := entity.world_position;
+        clear_footstep_echoes_for_player(this);
 
         this.clear_round_downed_state();
         round_dead = true;
@@ -1255,6 +1257,8 @@ Player :: class : Player_Base {
     }
 
     ao_end :: method() {
+        clear_footstep_echoes_for_player(this);
+
         gm := get_game_manager();
         if #alive(gm) {
             gm.handle_round_player_left(this);
@@ -1523,16 +1527,14 @@ Player :: class : Player_Base {
 
         nameplate_rect := survivor.full_nameplate_rect;
         screen_pos := nameplate_rect.top_center_rect().center();
-        if nameplate_rect.width() <= 1.0 || nameplate_rect.height() <= 1.0 {
-            screen_pos = world_to_screen(survivor.entity.world_position + v2{0.0, 2.0});
-        } else {
-            screen_pos.y = nameplate_rect.max.y + ENTITY_REVEALED_EYE_ICON_NAMEPLATE_OFFSET;
-        }
+        
+
+        screen_pos = world_to_screen(survivor.entity.world_position + v2{0.0, 2.0});
 
         alpha := clamp(survivor.entity_local_view_alpha, 0.0, 1.0);
         pulse := 1.0 + sin(get_time() * 8.0 + survivor.entity.world_position.x) * 0.045;
         half_size := ENTITY_REVEALED_EYE_ICON_HALF_SIZE * pulse;
-        rect := Rect{min=screen_pos + v2{-half_size, -half_size}, max=screen_pos + v2{half_size, half_size}};
+        rect := Rect{screen_pos, screen_pos}.grow(half_size);
         glow_rect := rect.grow(7.0);
 
         UI.quad(glow_rect.fit_aspect(icon.get_aspect(), .KEEP_BIGGER), icon, v4{0.25, 0.78, 1.0, alpha * 0.22});

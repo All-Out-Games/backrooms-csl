@@ -31,7 +31,7 @@ reveal_downed_player_with_echo :: proc(player: Player, fade_out_seconds: float =
         fade_out_seconds = ENTITY_VIEW_PLAYER_REVEAL_FADE_OUT_SECONDS;
     }
 
-    spawn_footstep_echo(player.entity.world_position, "Echo.prefab");
+    spawn_footstep_echo(player.entity.world_position, "Echo.prefab", player);
     player.reveal_for_entity_local_view_with_duration(fade_out_seconds);
 }
 
