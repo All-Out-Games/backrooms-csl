@@ -5,7 +5,8 @@
   "name": "ExitKeypad",
   "local_enabled": true,
   "local_position": {
-    "X": 1.4212867021560669
+    "X": 13.3798637390136719,
+    "Y": 8.3988113403320312
   },
   "local_rotation": 0,
   "local_scale": {

@@ -1160,14 +1160,25 @@ Player :: class : Player_Base {
         }
 
         if is_local_or_server() {
+            task_info_was_open := task_help_open;
+            if task_info_was_open {
+                draw_task_list_ui(this);
+                return;
+            }
+
             draw_match_lobby_ui(this);
             draw_role_selection_ui(this);
+            draw_survivor_intro_static_ui(this);
+            draw_intro_spawn_transition_ui(this);
             draw_head_start_ui(this);
             draw_hunt_begin_banner_ui(this);
             draw_exit_unlocked_banner_ui(this);
             draw_match_timer_ui(this);
             draw_match_end_ui(this);
             draw_task_list_ui(this);
+            if task_info_was_open || task_help_open {
+                return;
+            }
             draw_vitals_modal_ui(this);
             draw_radio_hint_arrows(this);
             draw_radio_tuning_ui(this, dt);
@@ -1515,6 +1526,25 @@ Player :: class : Player_Base {
             return true;
         }
         if entity != null && entity.get_active_effect() != null {
+            return true;
+        }
+        return false;
+    }
+
+    should_hide_arrow_overlays_for_modal_ui :: proc(using this: Player) -> bool {
+        if task_help_open || vitals_modal_open || security_cameras_open {
+            return true;
+        }
+        if get_radio_tuning_effect(this) != null {
+            return true;
+        }
+        if get_generator_restart_effect(this) != null {
+            return true;
+        }
+        if get_wire_puzzle_effect(this) != null {
+            return true;
+        }
+        if get_keypad_entry_effect(this) != null {
             return true;
         }
         return false;
@@ -2039,6 +2069,9 @@ Player :: class : Player_Base {
         if this == null return;
         if entity == null || entity.self == null return;
         if this.is_local() {
+            if this.should_hide_arrow_overlays_for_modal_ui() {
+                return;
+            }
 
         // Screen-space overlay so it can't be occluded by world sprites.
         UI.push_screen_draw_context();

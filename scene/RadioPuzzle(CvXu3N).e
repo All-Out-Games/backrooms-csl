@@ -5,7 +5,8 @@
   "name": "RadioPuzzle",
   "local_enabled": true,
   "local_position": {
-
+    "X": -0.8679389953613281,
+    "Y": 1.5596847534179688
   },
   "local_rotation": 0,
   "local_scale": {
@@ -23,8 +24,8 @@
   "data": {
     "texture": "radio/radio.png",
     "scale": {
-      "X": 0.5000000000000000,
-      "Y": 0.5000000000000000
+      "X": 0.3499999940395355,
+      "Y": 0.3499999940395355
     }
   }
 },

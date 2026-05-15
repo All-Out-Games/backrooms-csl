@@ -5,8 +5,8 @@
   "name": "GenSpawn",
   "local_enabled": true,
   "local_position": {
-    "X": 36.4259796142578125,
-    "Y": 61.2937583923339844
+    "X": 15.9042835235595703,
+    "Y": 44.4933433532714844
   },
   "local_rotation": 0,
   "local_scale": {

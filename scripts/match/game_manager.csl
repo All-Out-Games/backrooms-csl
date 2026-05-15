@@ -2,8 +2,12 @@ import "core:ao"
 
 // --- Match layout: 1 Entity vs 4–6 Survivors (5–7 players total) ---
 
-HEAD_START_SECONDS :: 20.0;
-ROLE_SELECTION_SECONDS :: 2.5;
+HEAD_START_SECONDS :: 10.0;
+ROLE_SELECTION_SECONDS :: 3.5;
+INTRO_SPAWN_FADE_TO_BLACK_LEAD_SECONDS :: 1.85;
+INTRO_SPAWN_FADE_TO_BLACK_SECONDS :: 0.75;
+INTRO_SPAWN_BLACK_HOLD_SECONDS :: 1;
+INTRO_SPAWN_FADE_FROM_BLACK_SECONDS :: 0.45;
 MATCH_MAX_SECONDS :: 480.0; // ~8 minutes after survivors' head start ends
 HUNT_BEGIN_BANNER_SECONDS :: 2.0;
 EXIT_UNLOCK_BANNER_SECONDS :: 2.0;
@@ -28,6 +32,7 @@ ENTITY_SCREAM_PATH_LINE_ALPHA :: 0.86;
 ENTITY_QUEUE_NAME :: "entity";
 
 FREEZE_ENTITY_HEAD_START :: "game_manager_entity_head_start";
+FREEZE_INTRO_POPUP :: "game_manager_intro_popup";
 ENTITY_HEARING_VISUAL_BUFFER :: 2.0;
 ENTITY_HEARING_VISUAL_MAX_ALPHA :: 245.0 / 255.0;
 ENTITY_HEARING_VISUAL_FADE_SPEED :: 6.0;
@@ -35,6 +40,8 @@ SURVIVOR_SPAWN_RADIUS :: 1.5;
 ROUND_ITEM_DESPAWN_TOTAL_SECONDS :: 600.0;
 ROUND_ITEM_ENGINE_DESPAWN_WINDOW_SECONDS :: 40.0; // Dropped_Item warns for 30s and expires over the next 10s.
 SURVIVOR_ESCAPE_ENABLED :: true;
+TASK_ZONE_RANDOM_RADIUS :: 7.0;
+TASK_ZONE_ARROW_HIDE_DISTANCE :: 20.0;
 
 Match_Phase :: enum {
     LOBBY;
@@ -200,6 +207,7 @@ format_countdown_mm_ss :: proc(total_seconds: s64) -> string {
 }
 
 MATCH_TIMER_TOP_DOWN_OFFSET :: 90.0;
+INTRO_SPAWN_TRANSITION_UI_LAYER :: 10000;
 
 draw_match_status_ui :: proc(title: string, value: string) {
     UIK.begin(UIK.window(UIK.rect_topbar().offset(0.0, -MATCH_TIMER_TOP_DOWN_OFFSET)));
@@ -402,6 +410,44 @@ draw_head_start_ui :: proc(player: Player) {
     }
 }
 
+draw_intro_spawn_transition_ui :: proc(player: Player) {
+    gm := get_game_manager();
+    if !#alive(gm) || player == null || !player.is_local() {
+        return;
+    }
+    if gm.phase != .SURVIVOR_HEAD_START || gm.role_selection_ends_at <= 0.0 {
+        return;
+    }
+
+    now := get_time();
+    fade_to_black_starts_at := gm.get_intro_spawn_fade_to_black_starts_at();
+    fade_to_black_ends_at := gm.get_intro_spawn_fade_to_black_ends_at();
+    teleport_at := gm.get_intro_spawn_teleport_at();
+    transition_ends_at := gm.get_intro_spawn_transition_ends_at();
+
+    if now < fade_to_black_starts_at || now >= transition_ends_at {
+        return;
+    }
+
+    alpha := 1.0;
+    if now < fade_to_black_ends_at {
+        alpha = clamp((now - fade_to_black_starts_at) / INTRO_SPAWN_FADE_TO_BLACK_SECONDS, 0.0, 1.0);
+    } else if now >= teleport_at {
+        alpha = 1.0 - clamp((now - teleport_at) / INTRO_SPAWN_FADE_FROM_BLACK_SECONDS, 0.0, 1.0);
+    }
+
+    if alpha <= 0.0 {
+        return;
+    }
+
+    UI.push_screen_draw_context();
+    defer UI.pop_draw_context();
+    UI.push_layer(INTRO_SPAWN_TRANSITION_UI_LAYER);
+    defer UI.pop_layer();
+
+    UI.quad(UI.get_screen_rect(), core_globals.white_sprite, v4{0.0, 0.0, 0.0, alpha});
+}
+
 draw_match_timer_ui :: proc(player: Player) {
     gm := get_game_manager();
     if !#alive(gm) {
@@ -579,6 +625,7 @@ Game_Manager :: class : Component {
     hearing_radius_entity: Entity @ao_serialize;
     GeneratorEntity: Entity @ao_serialize;
     ReconnectWiresEntity: Entity @ao_serialize;
+    TaskZoneEntity: Entity @ao_serialize;
     RadioPuzzle: Entity @ao_serialize;
     SurvivorSpawn: Entity @ao_serialize;
     GeneratorSpawns: Entity @ao_serialize;
@@ -618,6 +665,10 @@ Game_Manager :: class : Component {
     spawned_round_items: [..]Dropped_Item;
     spawned_async_deads: [..]Entity;
     spawned_async_molds: [..]Entity;
+    round_entity_spawn: Entity;
+    round_start_positions_applied: bool;
+    round_start_transition_finished: bool;
+    task_zone_task_id: string;
 
     ao_start :: method() {
         if #alive(game_manager_singleton) {
@@ -645,10 +696,15 @@ Game_Manager :: class : Component {
         ended_at = 0.0;
         end_game_cutscene_ends_at = 0.0;
         lobby_countdown_ends_at = 0.0;
+        round_entity_spawn = null;
+        round_start_positions_applied = false;
+        round_start_transition_finished = false;
+        task_zone_task_id = "";
         match_rng = rng_root_seed();
         if !#alive(EndOfGameWarp) {
             EndOfGameWarp = Scene.get_entity_by_name("EndOfGameWarp");
         }
+        hide_task_zone();
         cache_hearing_radius_sprite();
         sync_entity_hearing_radius_visual(0.0);
         clear_all_footstep_echoes();
@@ -664,6 +720,7 @@ Game_Manager :: class : Component {
         clear_spawned_round_items();
         clear_spawned_async_entities();
         sync_entity_hearing_radius_visual(0.0);
+        hide_task_zone();
         if game_manager_singleton == this {
             game_manager_singleton = null;
         }
@@ -709,6 +766,13 @@ Game_Manager :: class : Component {
         }
 
         if phase == .SURVIVOR_HEAD_START {
+            if !round_start_positions_applied && role_selection_ends_at > 0.0 && get_time() >= get_intro_spawn_teleport_at() {
+                teleport_players_to_round_start_positions();
+            }
+            if round_start_positions_applied && !round_start_transition_finished && get_time() >= get_intro_spawn_transition_ends_at() {
+                round_start_transition_finished = true;
+                remove_intro_popup_freeze_from_all_players();
+            }
             if get_time() >= head_start_ends_at {
                 end_head_start_and_begin_hunt();
             }
@@ -741,6 +805,22 @@ Game_Manager :: class : Component {
 
     is_round_in_progress :: method() -> bool {
         return phase == .SURVIVOR_HEAD_START || phase == .ACTIVE;
+    }
+
+    get_intro_spawn_fade_to_black_starts_at :: method() -> float {
+        return role_selection_ends_at - INTRO_SPAWN_FADE_TO_BLACK_LEAD_SECONDS;
+    }
+
+    get_intro_spawn_fade_to_black_ends_at :: method() -> float {
+        return get_intro_spawn_fade_to_black_starts_at() + INTRO_SPAWN_FADE_TO_BLACK_SECONDS;
+    }
+
+    get_intro_spawn_teleport_at :: method() -> float {
+        return role_selection_ends_at + INTRO_SPAWN_BLACK_HOLD_SECONDS;
+    }
+
+    get_intro_spawn_transition_ends_at :: method() -> float {
+        return get_intro_spawn_teleport_at() + INTRO_SPAWN_FADE_FROM_BLACK_SECONDS;
     }
 
     can_start_match :: method() -> bool {
@@ -782,6 +862,83 @@ Game_Manager :: class : Component {
             navmesh_to_lock_to = find_scene_navmesh();
         }
         return navmesh_to_lock_to;
+    }
+
+    get_task_zone_entity :: method() -> Entity {
+        if !#alive(TaskZoneEntity) {
+            TaskZoneEntity = Scene.get_entity_by_name("Task Zone");
+        }
+        return TaskZoneEntity;
+    }
+
+    hide_task_zone :: method() {
+        task_zone_task_id = "";
+        zone := get_task_zone_entity();
+        if #alive(zone) {
+            zone.set_local_enabled(false);
+        }
+    }
+
+    random_task_zone_position_near :: method(station: Entity) -> v2 {
+        angle := rng_range_float(ref match_rng, 0.0, 2.0 * PI);
+        radius_t := rng_range_float(ref match_rng, 0.0, 1.0);
+        radius := TASK_ZONE_RANDOM_RADIUS * sqrt(radius_t);
+        offset := v2{cos(angle) * radius, sin(angle) * radius};
+        return station.world_position + offset;
+    }
+
+    place_task_zone_near :: method(task_id: string, station: Entity) -> bool {
+        if !#alive(station) {
+            return false;
+        }
+
+        zone := get_task_zone_entity();
+        if !#alive(zone) {
+            return false;
+        }
+
+        zone.set_local_position(random_task_zone_position_near(station));
+        zone.mark_teleported();
+        zone.set_local_enabled(true);
+        task_zone_task_id = task_id;
+        return true;
+    }
+
+    place_task_zone_for_next_task :: method(task_id: string) {
+        if task_id == TASK_ID_RESTART_GENERATOR {
+            place_task_zone_near(TASK_ID_RESTART_GENERATOR, GeneratorEntity);
+            return;
+        }
+
+        if task_id == TASK_ID_RECONNECT_WIRE {
+            place_task_zone_near(TASK_ID_RECONNECT_WIRE, get_reconnect_wires_entity());
+            return;
+        }
+
+        hide_task_zone();
+    }
+
+    handle_completed_team_task :: method(task_id: string) {
+        if task_id == TASK_ID_ENTER_KEYCODE {
+            place_task_zone_for_next_task(TASK_ID_RESTART_GENERATOR);
+            return;
+        }
+
+        if task_id == TASK_ID_RESTART_GENERATOR {
+            place_task_zone_for_next_task(TASK_ID_RECONNECT_WIRE);
+            return;
+        }
+
+        if task_id == TASK_ID_RECONNECT_WIRE {
+            hide_task_zone();
+        }
+    }
+
+    is_task_zone_active_for :: method(task_id: string) -> bool {
+        if task_zone_task_id != task_id {
+            return false;
+        }
+        return #alive(get_task_zone_entity());
     }
 
     sync_entity_hearing_radius_visual :: method(dt: float) {
@@ -864,6 +1021,9 @@ Game_Manager :: class : Component {
                 continue;
             }
             if !#alive(player.entity) {
+                continue;
+            }
+            if player.is_round_dead() {
                 continue;
             }
 
@@ -1310,6 +1470,26 @@ Game_Manager :: class : Component {
         RadioPuzzle.mark_teleported();
     }
 
+    teleport_players_to_round_start_positions :: method() {
+        round_start_positions_applied = true;
+
+        if entity_player, ok := find_player_by_user_id(entity_user_id); ok && #alive(entity_player.entity) && #alive(round_entity_spawn) {
+            entity_player.entity.set_local_position(round_entity_spawn.world_position);
+            entity_player.entity.mark_teleported();
+        }
+
+        players: [..]Player;
+        collect_players(ref players);
+        teleport_survivors_to_spawn(players);
+        players.clear();
+    }
+
+    remove_intro_popup_freeze_from_all_players :: method() {
+        for player: component_iterator(Player) {
+            player.remove_freeze_reason(FREEZE_INTRO_POPUP);
+        }
+    }
+
     reset_generator_for_round :: method(round_seed_key: u64) {
         if !#alive(GeneratorEntity) {
             return;
@@ -1404,15 +1584,16 @@ Game_Manager :: class : Component {
 
         emergency_systems_online = false;
         result = .NONE;
+        hide_task_zone();
         clear_all_footstep_echoes();
 
         now := get_time();
         next_role_selection_ends_at := now + ROLE_SELECTION_SECONDS;
-        next_head_start_ends_at := now + HEAD_START_SECONDS;
-        if entity_player, ok := find_player_by_user_id(entity_user_id); ok && #alive(entity_player.entity) {
-            entity_player.entity.set_local_position(entity_spawn.world_position);
-            entity_player.entity.mark_teleported();
-        }
+        intro_spawn_after_popup_seconds := INTRO_SPAWN_BLACK_HOLD_SECONDS + INTRO_SPAWN_FADE_FROM_BLACK_SECONDS;
+        next_head_start_ends_at := next_role_selection_ends_at + intro_spawn_after_popup_seconds + HEAD_START_SECONDS;
+        round_entity_spawn = entity_spawn;
+        round_start_positions_applied = false;
+        round_start_transition_finished = false;
         GeneratorEntity.set_local_position(generator_spawn.world_position);
         GeneratorEntity.mark_teleported();
         teleport_reconnect_wires_to_random_spawn();
@@ -1420,10 +1601,13 @@ Game_Manager :: class : Component {
         reset_generator_for_round((next_head_start_ends_at * 1000.0).(u64));
         reset_all_wire_puzzles_for_round((next_head_start_ends_at * 1000.0).(u64));
 
-        teleport_survivors_to_spawn(players);
         for i: 0..players.count - 1 {
             clear_player_tasks(players[i]);
             players[i].vent_cooldown_ends_at = 0.0;
+            players[i].add_freeze_reason(FREEZE_INTRO_POPUP);
+            if #alive(players[i].agent) {
+                players[i].agent.velocity = v2{0.0, 0.0};
+            }
             if players[i].get_user_id() != entity_user_id {
                 assign_default_survivor_tasks(players[i]);
             }
@@ -1547,6 +1731,7 @@ Game_Manager :: class : Component {
             clear_player_tasks(player);
             player.vent_cooldown_ends_at = 0.0;
             player.remove_freeze_reason(FREEZE_ENTITY_HEAD_START);
+            player.remove_freeze_reason(FREEZE_INTRO_POPUP);
         }
         clear_all_player_round_inventories();
         clear_spawned_round_items();
@@ -1571,6 +1756,10 @@ Game_Manager :: class : Component {
         ended_at = 0.0;
         end_game_cutscene_ends_at = 0.0;
         lobby_countdown_ends_at = 0.0;
+        round_entity_spawn = null;
+        round_start_positions_applied = false;
+        round_start_transition_finished = false;
+        hide_task_zone();
     }
 
     is_end_game_cutscene_active :: method() -> bool {
@@ -1680,6 +1869,7 @@ Game_Manager :: class : Component {
     }
 
     unfreeze_entity_if_needed :: method() {
+        remove_intro_popup_freeze_from_all_players();
         if entity_player, ok := find_player_by_user_id(entity_user_id); ok {
             entity_player.remove_freeze_reason(FREEZE_ENTITY_HEAD_START);
         }

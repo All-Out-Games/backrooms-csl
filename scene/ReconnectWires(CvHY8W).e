@@ -27,7 +27,8 @@
     "scale": {
       "X": 2,
       "Y": 2
-    }
+    },
+    "mask_in_shadow": true
   }
 },
 {

@@ -1,4 +1,6 @@
 ROLE_SELECTION_UI_LAYER :: 9800;
+SURVIVOR_INTRO_STATIC_UI_LAYER :: 9900;
+SURVIVOR_INTRO_STATIC_SECONDS :: 1.0;
 
 Round_Role :: enum {
     NONE;
@@ -45,6 +47,75 @@ role_selection_role_color :: proc(role: Round_Role) -> v4 {
         default: {}
     }
     return v4{1.0, 1.0, 1.0, 1.0};
+}
+
+draw_survivor_intro_static_ui :: proc(player: Player) {
+    gm := get_game_manager();
+    if !#alive(gm) || player == null || !player.is_local() {
+        return;
+    }
+    if gm.phase != .SURVIVOR_HEAD_START || role_selection_player_role(player) == .NONE {
+        return;
+    }
+    if gm.role_selection_started_at <= 0.0 || gm.role_selection_ends_at <= 0.0 {
+        return;
+    }
+
+    now := get_time();
+    start_elapsed := now - gm.role_selection_started_at;
+    end_elapsed := now - gm.role_selection_ends_at;
+    post_fade_elapsed := now - gm.get_intro_spawn_transition_ends_at();
+    alpha := 0.0;
+
+    if start_elapsed >= 0.0 && start_elapsed < SURVIVOR_INTRO_STATIC_SECONDS {
+        t := clamp(start_elapsed / SURVIVOR_INTRO_STATIC_SECONDS, 0.0, 1.0);
+        alpha = 1.0 - pow(t, 2.0);
+    } else if end_elapsed >= 0.0 && end_elapsed < SURVIVOR_INTRO_STATIC_SECONDS {
+        t := clamp(end_elapsed / SURVIVOR_INTRO_STATIC_SECONDS, 0.0, 1.0);
+        alpha = 1.0 - pow(t, 2.0);
+    } else if post_fade_elapsed >= 0.0 && post_fade_elapsed < SURVIVOR_INTRO_STATIC_SECONDS {
+        t := clamp(post_fade_elapsed / SURVIVOR_INTRO_STATIC_SECONDS, 0.0, 1.0);
+        alpha = 1.0 - pow(t, 2.0);
+    }
+
+    if alpha <= 0.0 {
+        return;
+    }
+
+    UI.push_screen_draw_context();
+    defer UI.pop_draw_context();
+    UI.push_layer(SURVIVOR_INTRO_STATIC_UI_LAYER);
+    defer UI.pop_layer();
+
+    screen := UI.get_screen_rect();
+    UI.quad(screen, core_globals.white_sprite, v4{0.02, 0.025, 0.03, 0.42 * alpha});
+
+    stripe_height := 4.0;
+    stripe_gap := 14.0;
+    stripe_offset := (get_time() * 190.0) % stripe_gap;
+    y := screen.min.y - stripe_offset;
+    while y < screen.max.y {
+        stripe_rect := Rect{
+            min = v2{screen.min.x, y},
+            max = v2{screen.max.x, y + stripe_height}
+        };
+        UI.quad(stripe_rect, core_globals.white_sprite, v4{1.0, 1.0, 1.0, 0.16 * alpha});
+        y += stripe_gap;
+    }
+
+    rng: u64 = get_frame_number() * 1103515245 + 12345;
+    for i: 0..17 {
+        block_w := rng_range_float(ref rng, 45.0, 220.0);
+        block_h := rng_range_float(ref rng, 3.0, 12.0);
+        block_x := rng_range_float(ref rng, screen.min.x, screen.max.x - block_w);
+        block_y := rng_range_float(ref rng, screen.min.y, screen.max.y - block_h);
+        block_alpha := rng_range_float(ref rng, 0.08, 0.26) * alpha;
+        block_rect := Rect{
+            min = v2{block_x, block_y},
+            max = v2{block_x + block_w, block_y + block_h}
+        };
+        UI.quad(block_rect, core_globals.white_sprite, v4{0.75, 0.9, 1.0, block_alpha});
+    }
 }
 
 draw_role_selection_ui :: proc(player: Player) {

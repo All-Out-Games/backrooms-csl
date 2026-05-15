@@ -246,6 +246,42 @@ get_radio_tuning_effect :: proc(player: Player) -> Radio_Tuning_Effect {
     return active_effect.(Radio_Tuning_Effect);
 }
 
+draw_task_zone_hint_arrow :: proc(player: Player, task_id: string, texture_path: string) {
+    if player == null || !#alive(player.entity) {
+        return;
+    }
+
+    gm := get_game_manager();
+    if !#alive(gm) || !gm.is_task_zone_active_for(task_id) {
+        return;
+    }
+
+    zone := gm.get_task_zone_entity();
+    if !#alive(zone) {
+        return;
+    }
+
+    offset := zone.world_position - player.entity.world_position;
+    if length_squared(offset) <= TASK_ZONE_ARROW_HIDE_DISTANCE * TASK_ZONE_ARROW_HIDE_DISTANCE {
+        return;
+    }
+
+    player.DrawArrowToPosition(zone.world_position, texture_path, "", false, 56.0);
+}
+
+draw_escape_door_hint_arrow :: proc(player: Player) {
+    if player == null {
+        return;
+    }
+
+    for door: component_iterator(Exit_Door) {
+        if #alive(door.entity) {
+            player.DrawArrowToPosition(door.entity.world_position, "ExitDoorOpenIcon.png", "", true, 56.0);
+            return;
+        }
+    }
+}
+
 draw_radio_hint_arrows :: proc(player: Player) {
     if player == null || !player.is_local_or_server() {
         return;
@@ -274,18 +310,16 @@ draw_radio_hint_arrows :: proc(player: Player) {
     }
 
     if !is_task_completed(player, TASK_ID_RESTART_GENERATOR) {
-        gm := get_game_manager();
-        if !#alive(gm) || !#alive(gm.GeneratorEntity) {
-            return;
-        }
-
-        player.DrawArrowToPosition(gm.GeneratorEntity.world_position, "UI/GeneratorArrow.png", "", false, 56.0);
+        draw_task_zone_hint_arrow(player, TASK_ID_RESTART_GENERATOR, "UI/GeneratorArrow.png");
         return;
     }
 
     if !is_task_completed(player, TASK_ID_RECONNECT_WIRE) {
-        player.DrawArrowToPosition(get_wire_hint_position(), WIRE_HINT_TEXTURE_PATH, "", false, 56.0);
+        draw_task_zone_hint_arrow(player, TASK_ID_RECONNECT_WIRE, WIRE_HINT_TEXTURE_PATH);
+        return;
     }
+
+    draw_escape_door_hint_arrow(player);
 }
 
 draw_radio_tuning_ui :: proc(player: Player, dt: float) {

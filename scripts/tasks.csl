@@ -166,6 +166,11 @@ complete_task_for_survivors :: proc(task_id: string) {
         }
         set_task_completed(player, task_id, true);
     }
+
+    gm := get_game_manager();
+    if #alive(gm) {
+        gm.handle_completed_team_task(task_id);
+    }
 }
 
 notify_survivors :: proc(fmt: string, args: [^]any = {}) {
@@ -294,141 +299,71 @@ draw_task_overlay_close_button :: proc(panel_rect: Rect, id: string) -> bool {
     return UI.button(close_rect, close_bs, close_ts, "Close").clicked;
 }
 
-draw_task_help_entry_list :: proc(area: Rect, scroll_id: string, entries: ref [..]Task_Help_Entry) {
-    scroll_area := area;
-    scroll_bar_area := scroll_area.cut_right(6).inset(2);
+draw_task_help_entry_row :: proc(entry: Task_Help_Entry) {
+    row := UIK.layout_row(UIK.flex(1), UIK.pixels(92), 12);
+    row.background = .MODAL_TRANSP_BLACK;
+    row.padding = v4{14, 12, 14, 12};
+    row.cross_align = .CENTER;
+    UIK.panel_begin(row);
 
-    settings: Scroll_View_Settings;
-    settings.vertical = true;
-    settings.horizontal = false;
-    settings.clip_padding = v4.{6, 6, 6, 6};
+    if entry.icon_path.count > 0 {
+        icon_panel := UIK.layout_centered(UIK.pixels(54), UIK.flex(1));
+        UIK.panel_begin(icon_panel);
 
-    sv := UI.push_scroll_view(scroll_area, scroll_id, settings); {
-        defer UI.pop_scroll_view();
+        icon_tex := get_asset(Texture_Asset, entry.icon_path);
+        if icon_tex != null {
+            UIK.image_fitted(icon_tex, UIK.image_desc(.CONTAIN));
+        }
 
-        sc := sv.content_rect;
-        row_h := 55.0;
-        icon_size := 32.0;
-        row_gap := 15.0;
+        UIK.panel_end();
+    }
 
+    text_panel := UIK.layout_column();
+    text_panel.width = UIK.flex(1);
+    text_panel.height = UIK.fit();
+    text_panel.gap = 3;
+    text_panel.main_align = .CENTER;
+    text_panel.show_background = false;
+    UIK.panel_begin(text_panel);
+
+    name_text := UIK.text_button();
+    UIK.text_set_word_wrap(&name_text, false);
+    UIK.text(entry.entry_name, name_text);
+
+    desc_text := UIK.text_body();
+    UIK.text_set_color(&desc_text, v4{0.78, 0.8, 0.88, 0.95});
+    UIK.text_set_word_wrap(&desc_text, true);
+    UIK.text(entry.description, desc_text);
+
+    UIK.panel_end();
+    UIK.panel_end();
+}
+
+draw_task_help_entry_list :: proc(scroll_id: string, entries: ref [..]Task_Help_Entry) {
+    list_panel := UIK.layout_column();
+    list_panel.width = UIK.flex(1);
+    list_panel.height = UIK.flex(1);
+    list_panel.gap = 8;
+    list_panel.padding = v4{2, 2, 2, 2};
+    UIK.list_begin(scroll_id, list_panel);
+
+    if entries.count <= 0 {
+        empty_panel := UIK.layout_centered(UIK.flex(1), UIK.flex(1));
+        UIK.panel_begin(empty_panel);
+        UIK.text("No tasks assigned.", UIK.text_body());
+        UIK.panel_end();
+    } else {
         for i: 0..entries.count - 1 {
-            entry := entries[i];
-
-            UI.push_id("task_help_row_%", {i});
-            defer UI.pop_id();
-
-            row := sc.cut_top(row_h);
-            if i < entries.count - 1 {
-                sc.cut_top(row_gap);
-            }
-
-            row_content := row.inset(6, 8, 6, 8);
-            if entry.icon_path.count > 0 {
-                icon_slot := row_content.cut_left(icon_size * 2.0 + 8.0);
-                icon_tex := get_asset(Texture_Asset, entry.icon_path);
-                if icon_tex != null {
-                    icon_rect := icon_slot.center_rect().grow(icon_size);
-                    UI.quad(icon_rect.fit_aspect(icon_tex.get_aspect()), icon_tex, v4.{1, 1, 1, 1});
-                }
-            }
-
-            name_ts := UI.default_text_settings();
-            name_ts.size = 30;
-            name_ts.color = v4.{1, 1, 1, 1};
-            name_ts.halign = .LEFT;
-            name_ts.valign = .TOP;
-            name_ts.do_outline = true;
-            name_ts.outline_thickness = 2;
-            name_ts.outline_color = v4.{0, 0, 0, 1};
-
-            name_row := row_content.cut_top(26.0);
-            UI.text(name_row, name_ts, entry.entry_name);
-
-            desc_ts := UI.default_text_settings();
-            desc_ts.size = 22;
-            desc_ts.color = v4.{0.8, 0.8, 0.85, 0.85};
-            desc_ts.halign = .LEFT;
-            desc_ts.valign = .TOP;
-            desc_ts.word_wrap = true;
-            desc_ts.do_outline = true;
-            desc_ts.outline_thickness = 2;
-            desc_ts.outline_color = v4.{0, 0, 0, 1};
-            UI.text(row_content, desc_ts, entry.description);
+            draw_task_help_entry_row(entries[i]);
         }
     }
 
-    scroll_bar_rect := sv.compute_scroll_bar_rect(scroll_bar_area);
-    UI.quad(scroll_bar_area, core_globals.white_sprite, v4.{0.1, 0.1, 0.1, 0.4});
-    UI.quad(scroll_bar_rect, core_globals.white_sprite, v4.{0.4, 0.4, 0.4, 0.6});
+    UIK.list_end();
 }
 
 draw_task_help_panel :: proc(player: Player) {
     if player == null return;
     if !player.task_help_open return;
-
-    UI.push_layer(500);
-    defer UI.pop_layer();
-
-    full_screen := UI.get_screen_rect();
-    UI.quad(full_screen, core_globals.white_sprite, v4.{0, 0, 0, 0.72});
-
-    panel_w := full_screen.width() * 0.6;
-    panel_h := full_screen.height() * 0.75;
-    help_slice_px := 16.0;
-
-    help_bg := get_asset(Texture_Asset, TASK_TEX_HELP_BG);
-    safe := UI.get_safe_screen_rect();
-    panel_rect := safe.center_rect().grow_unscaled(panel_h * 0.5, panel_w * 0.5, panel_h * 0.5, panel_w * 0.5);
-
-    if help_bg != null {
-        draw_task_nine_slice_panel(panel_rect, help_bg, help_slice_px);
-    } else {
-        UI.quad(panel_rect, core_globals.white_sprite, v4.{0.06, 0.06, 0.08, 0.96});
-    }
-
-    if draw_task_overlay_close_button(panel_rect, "task_help_close_btn") {
-        player.task_help_open = false;
-    }
-
-    content := panel_rect.inset(20, 24, 72, 24);
-    header_strip := content.cut_top(70.0);
-    content.cut_top(12.0);
-
-    title_ts := UI.default_text_settings();
-    title_ts.size = 34;
-    title_ts.color = v4.{1, 1, 1, 1};
-    title_ts.halign = .CENTER;
-    title_ts.valign = .CENTER;
-    title_ts.do_outline = true;
-    title_ts.outline_thickness = 3;
-    title_ts.outline_color = v4.{0, 0, 0, 1};
-    UI.text(header_strip, title_ts, "Tasks");
-
-    if is_generator_ui_preview_enabled() {
-        preview_row := content.cut_top(42.0);
-        content.cut_top(12.0);
-
-        preview_bs := UI.default_button_settings();
-        preview_bs.sprite = core_globals.white_sprite;
-        preview_bs.press_scaling = 0.35;
-        preview_bs.color = v4.{0.14, 0.16, 0.24, 0.9};
-        preview_bs.hovered_color = v4.{0.2, 0.22, 0.32, 0.96};
-        preview_bs.pressed_color = v4.{0.1, 0.12, 0.18, 1.0};
-        preview_bs.background_color_multiplier = v4.{1, 1, 1, 1};
-
-        preview_ts := UI.default_text_settings();
-        preview_ts.size = 22;
-        preview_ts.color = v4.{1, 1, 1, 1};
-        preview_ts.halign = .CENTER;
-        preview_ts.valign = .CENTER;
-        preview_ts.do_outline = true;
-        preview_ts.outline_thickness = 2;
-        preview_ts.outline_color = v4.{0, 0, 0, 1};
-
-        if UI.button(preview_row, preview_bs, preview_ts, "Open Generator Preview").clicked {
-            open_generator_ui_preview(player);
-        }
-    }
 
     entries: [..]Task_Help_Entry;
     if player.active_tasks.elements.count > 0 {
@@ -441,7 +376,46 @@ draw_task_help_panel :: proc(player: Player) {
         }
     }
 
-    draw_task_help_entry_list(content, "task_help_scroll", ref entries);
+    exit_handle: UIK.Interact_Handle;
+    preview_handle: UIK.Interact_Handle;
+    preview_available := is_generator_ui_preview_enabled();
+
+    UIK.begin(UIK.modal(UIK.rect_window(), 500, v4{0.0, 0.0, 0.0, 0.72}));
+
+    shell := UIK.panel_modal(.TRANSP_BLACK);
+    shell.gap = 10;
+    shell.padding = v4{16, 16, 16, 16};
+    UIK.panel_begin(shell);
+
+    title_desc := UIK.title_area_desc("Tasks");
+    exit_handle = UIK.title_area(title_desc);
+
+    if preview_available {
+        preview_desc := UIK.widget_desc_button_default(.BUTTON_BASIC_BLUE);
+        preview_desc.panel.width = UIK.flex(1);
+        preview_desc.panel.height = UIK.pixels(56);
+        preview_handle = UIK.button("task_help_generator_preview", "Open Generator Preview", preview_desc);
+    }
+
+    content := UIK.panel_interior(.INSET);
+    content.width = UIK.flex(1);
+    content.height = UIK.flex(1);
+    content.padding = v4{8, 8, 8, 8};
+    UIK.panel_begin(content);
+
+    draw_task_help_entry_list("task_help_scroll", ref entries);
+
+    UIK.panel_end();
+    UIK.panel_end();
+    UIK.end();
+
+    if UIK.clicked(exit_handle) {
+        player.task_help_open = false;
+        return;
+    }
+    if preview_available && UIK.clicked(preview_handle) {
+        open_generator_ui_preview(player);
+    }
 }
 
 draw_task_list_header :: proc(screen: Rect, player: Player) -> Rect {
@@ -599,7 +573,7 @@ draw_task_progress_bar :: proc(player: Player, screen: Rect) {
     label_ts.autofit_min_size = 14;
     label_ts.autofit_max_size = 26;
     label_rect := progress_rect.top_rect().offset(0.0, -12.0).grow(24, 0, 0, 0);
-    UI.text(label_rect, label_ts, "PROGRESS");
+    UI.text(label_rect, label_ts, "ESCAPE");
 
     pct_ts := UI.default_text_settings();
     pct_ts.size = 24;
@@ -663,6 +637,11 @@ draw_task_list_ui :: proc(player: Player) {
     if !player.task_list_inited {
         player.task_list_inited = true;
         player.task_list_open = true;
+    }
+
+    if player.task_help_open {
+        draw_task_help_panel(player);
+        return;
     }
 
     UI.push_screen_draw_context();
