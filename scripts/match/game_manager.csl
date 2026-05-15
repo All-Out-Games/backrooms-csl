@@ -1716,6 +1716,52 @@ end :: proc(player: Player) {
     log_info("end: % forced a Survivor win", {player.get_username()});
 } @chat_command
 
+kill_all :: proc(player: Player) {
+    gm := get_game_manager();
+    if !#alive(gm) {
+        log_info("kill_all: no game manager found", {});
+        return;
+    }
+
+    if gm.phase != .SURVIVOR_HEAD_START && gm.phase != .ACTIVE {
+        log_info("kill_all: unable to bite survivors from current state", {});
+        return;
+    }
+
+    entity_player, found_entity := find_player_by_user_id(gm.entity_user_id);
+    if found_entity && #alive(entity_player.entity) {
+        entity_player.ensure_entity_override_rig();
+        if entity_player.entity_override_state_machine != null {
+            entity_player.entity_override_state_machine.set_trigger("bite");
+        }
+        play_entity_bite_sfx(entity_player);
+    }
+
+    downed_count := 0;
+    killed_count := 0;
+    for survivor: component_iterator(Player) {
+        if !survivor.is_round_survivor() {
+            continue;
+        }
+        if !#alive(survivor.entity) {
+            continue;
+        }
+
+        was_downed := survivor.is_round_downed();
+        if !apply_entity_bite_to_survivor(survivor) {
+            continue;
+        }
+
+        if was_downed {
+            killed_count += 1;
+        } else {
+            downed_count += 1;
+        }
+    }
+
+    log_info("kill_all: % forced Bite on all survivors (% downed, % killed)", {player.get_username(), downed_count, killed_count});
+} @chat_command
+
 g :: proc(player: Player, item_id: string) {
     init_weapon_items();
 

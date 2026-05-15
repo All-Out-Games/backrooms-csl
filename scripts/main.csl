@@ -734,6 +734,7 @@ Player :: class : Player_Base {
         lock_player_to_game_navmesh(this);
 
         if animator != null && animator.instance != null {
+            animator.state_machine.set_bool("round_dead", false);
             animator.state_machine.set_bool("ghost_form", false);
             animator.state_machine.set_bool("sprinting", false);
         }
