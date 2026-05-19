@@ -1,6 +1,7 @@
 ROLE_SELECTION_UI_LAYER :: 9800;
 SURVIVOR_INTRO_STATIC_UI_LAYER :: 9900;
 SURVIVOR_INTRO_STATIC_SECONDS :: 1.0;
+SURVIVOR_INTRO_CHROMATIC_TARGET := v3.{0.25, 0.1, 0.3};
 
 Round_Role :: enum {
     NONE;
@@ -65,20 +66,49 @@ draw_survivor_intro_static_ui :: proc(player: Player) {
     start_elapsed := now - gm.role_selection_started_at;
     end_elapsed := now - gm.role_selection_ends_at;
     post_fade_elapsed := now - gm.get_intro_spawn_transition_ends_at();
-    alpha := 0.0;
+    static_alpha := 0.0;
+    chromatic_t := 0.0;
 
     if start_elapsed >= 0.0 && start_elapsed < SURVIVOR_INTRO_STATIC_SECONDS {
         t := clamp(start_elapsed / SURVIVOR_INTRO_STATIC_SECONDS, 0.0, 1.0);
-        alpha = 1.0 - pow(t, 2.0);
+        static_alpha = 1.0 - pow(t, 2.0);
+        chromatic_t = t;
+    } else if start_elapsed >= SURVIVOR_INTRO_STATIC_SECONDS && start_elapsed < SURVIVOR_INTRO_STATIC_SECONDS * 2.0 {
+        t := clamp((start_elapsed - SURVIVOR_INTRO_STATIC_SECONDS) / SURVIVOR_INTRO_STATIC_SECONDS, 0.0, 1.0);
+        chromatic_t = 1.0 - t;
     } else if end_elapsed >= 0.0 && end_elapsed < SURVIVOR_INTRO_STATIC_SECONDS {
         t := clamp(end_elapsed / SURVIVOR_INTRO_STATIC_SECONDS, 0.0, 1.0);
-        alpha = 1.0 - pow(t, 2.0);
+        static_alpha = 1.0 - pow(t, 2.0);
+        chromatic_t = t;
+    } else if end_elapsed >= SURVIVOR_INTRO_STATIC_SECONDS && end_elapsed < SURVIVOR_INTRO_STATIC_SECONDS * 2.0 {
+        t := clamp((end_elapsed - SURVIVOR_INTRO_STATIC_SECONDS) / SURVIVOR_INTRO_STATIC_SECONDS, 0.0, 1.0);
+        chromatic_t = 1.0 - t;
     } else if post_fade_elapsed >= 0.0 && post_fade_elapsed < SURVIVOR_INTRO_STATIC_SECONDS {
         t := clamp(post_fade_elapsed / SURVIVOR_INTRO_STATIC_SECONDS, 0.0, 1.0);
-        alpha = 1.0 - pow(t, 2.0);
+        static_alpha = 1.0 - pow(t, 2.0);
+        chromatic_t = t;
+    } else if post_fade_elapsed >= SURVIVOR_INTRO_STATIC_SECONDS && post_fade_elapsed < SURVIVOR_INTRO_STATIC_SECONDS * 2.0 {
+        t := clamp((post_fade_elapsed - SURVIVOR_INTRO_STATIC_SECONDS) / SURVIVOR_INTRO_STATIC_SECONDS, 0.0, 1.0);
+        chromatic_t = 1.0 - t;
     }
 
-    if alpha <= 0.0 {
+    if static_alpha <= 0.0 && chromatic_t <= 0.0 {
+        return;
+    }
+
+    if chromatic_t > 0.0 {
+        chromatic := Post_Processing.Chromatic_Aberration_Config{
+            channel_offsets = v3{
+                lerp(0.0, SURVIVOR_INTRO_CHROMATIC_TARGET.x, chromatic_t),
+                lerp(0.0, SURVIVOR_INTRO_CHROMATIC_TARGET.y, chromatic_t),
+                lerp(0.0, SURVIVOR_INTRO_CHROMATIC_TARGET.z, chromatic_t)
+            },
+            focal_point = v2{0.5, 0.5}
+        };
+        Post_Processing.chromatic_aberration(chromatic);
+    }
+
+    if static_alpha <= 0.0 {
         return;
     }
 
@@ -88,7 +118,7 @@ draw_survivor_intro_static_ui :: proc(player: Player) {
     defer UI.pop_layer();
 
     screen := UI.get_screen_rect();
-    UI.quad(screen, core_globals.white_sprite, v4{0.02, 0.025, 0.03, 0.42 * alpha});
+    UI.quad(screen, core_globals.white_sprite, v4{0.02, 0.025, 0.03, 0.42 * static_alpha});
 
     stripe_height := 4.0;
     stripe_gap := 14.0;
@@ -99,7 +129,7 @@ draw_survivor_intro_static_ui :: proc(player: Player) {
             min = v2{screen.min.x, y},
             max = v2{screen.max.x, y + stripe_height}
         };
-        UI.quad(stripe_rect, core_globals.white_sprite, v4{1.0, 1.0, 1.0, 0.16 * alpha});
+        UI.quad(stripe_rect, core_globals.white_sprite, v4{1.0, 1.0, 1.0, 0.16 * static_alpha});
         y += stripe_gap;
     }
 
@@ -109,7 +139,7 @@ draw_survivor_intro_static_ui :: proc(player: Player) {
         block_h := rng_range_float(ref rng, 3.0, 12.0);
         block_x := rng_range_float(ref rng, screen.min.x, screen.max.x - block_w);
         block_y := rng_range_float(ref rng, screen.min.y, screen.max.y - block_h);
-        block_alpha := rng_range_float(ref rng, 0.08, 0.26) * alpha;
+        block_alpha := rng_range_float(ref rng, 0.08, 0.26) * static_alpha;
         block_rect := Rect{
             min = v2{block_x, block_y},
             max = v2{block_x + block_w, block_y + block_h}

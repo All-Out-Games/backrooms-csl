@@ -276,7 +276,7 @@ draw_escape_door_hint_arrow :: proc(player: Player) {
 
     for door: component_iterator(Exit_Door) {
         if #alive(door.entity) {
-            player.DrawArrowToPosition(door.entity.world_position, "ExitDoorOpenIcon.png", "", true, 56.0);
+            player.DrawArrowToPosition(door.entity.world_position, "UI/ExitArrow.png", "", true, 56.0);
             return;
         }
     }

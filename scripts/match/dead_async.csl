@@ -1,6 +1,34 @@
 import "core:ao"
 
 ASYNC_CORPSE_LOOT_HOLD_SECONDS :: 1.0;
+ASYNC_CORPSE_COLOR_COUNT :: 19;
+
+get_random_async_corpse_color :: proc(seed_source: u64) -> Color_Replace_Color {
+    seed := seed_source * 1664525 + 1013904223;
+    color_idx := rng_range_int(ref seed, 0, ASYNC_CORPSE_COLOR_COUNT - 1);
+
+    switch color_idx {
+        case 0: return .RED;
+        case 1: return .CYAN;
+        case 2: return .GREEN;
+        case 3: return .YELLOW;
+        case 4: return .LIGHT_GREEN;
+        case 5: return .PINK;
+        case 6: return .ORANGE;
+        case 7: return .BLACK;
+        case 8: return .PURPLE;
+        case 9: return .LIGHT_GRAY;
+        case 10: return .BLACK2;
+        case 11: return .BLUE2;
+        case 12: return .BROWN1;
+        case 13: return .GREEN3;
+        case 14: return .ORANGE2;
+        case 15: return .PURPLE2;
+        case 16: return .PURPLE3;
+        case 17: return .RED2;
+        default: return .WHITE1;
+    }
+}
 
 DeadAsync :: class : Interactable {
     looted: bool;
@@ -10,6 +38,16 @@ DeadAsync :: class : Interactable {
         this.set_text("Loot Corpse");
         this.required_hold_time = ASYNC_CORPSE_LOOT_HOLD_SECONDS;
         looted = false;
+        apply_random_crewchsia_color();
+    }
+
+    apply_random_crewchsia_color :: method() {
+        animator := entity.get_component(Spine_Animator);
+        if animator == null {
+            return;
+        }
+
+        animator.set_color_replace_color(get_random_async_corpse_color(entity.id));
     }
 
     can_use :: method(player: Player) -> bool {

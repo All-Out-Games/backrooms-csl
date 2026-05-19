@@ -32,7 +32,7 @@
   "component_type": "Internal_Component",
   "internal_component_type": "Keypad_Puzzle",
   "data": {
-    "radius": 1,
+    "radius": 1.2500000000000000,
     "prompt_offset": {
       "Y": 0.8000000119209290
     }

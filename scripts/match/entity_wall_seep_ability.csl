@@ -180,6 +180,7 @@ Entity_Wall_Seep_Ability :: class : Ability_Base {
         effect := new(Entity_Wall_Seep_Effect);
         effect.target_position = target_position;
         player.entity.set_active_effect(effect);
+        play_entity_vomit_sfx(player);
         current_cooldown = ENTITY_WALL_SEEP_COOLDOWN_SECONDS;
     }
 

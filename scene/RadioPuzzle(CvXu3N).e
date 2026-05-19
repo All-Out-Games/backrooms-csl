@@ -35,7 +35,7 @@
   "component_type": "Internal_Component",
   "internal_component_type": "Radio_Puzzle",
   "data": {
-    "radius": 1,
+    "radius": 1.5000000000000000,
     "prompt_offset": {
       "Y": 1
     }

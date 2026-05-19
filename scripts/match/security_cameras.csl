@@ -245,7 +245,7 @@ draw_security_camera_controls :: proc(player: Player, camera_count: s64) {
     shell.gap = 10;
     UIK.panel_begin(shell);
 
-    title_desc := UIK.title_area_desc("Security Cameras");
+    title_desc := UIK.title_area_desc(" ");
     title_desc.style = .NONE;
     exit_handle = UIK.title_area(title_desc);
 

@@ -310,6 +310,7 @@ Player :: class : Player_Base {
 
     ensure_entity_override_rig :: method() -> bool {
         if entity_override_state_machine != null {
+            entity_override_state_machine.debug_enabled = true;
             return #alive(override_rig) && override_rig.instance != null;
         }
 
@@ -327,6 +328,7 @@ Player :: class : Player_Base {
         override_rig.instance.refresh_skins();
 
         sm := State_Machine.create();
+        sm.debug_enabled = true;
         entity_override_state_machine = sm;
 
         layer := sm.create_layer("main", 0);
@@ -638,6 +640,9 @@ Player :: class : Player_Base {
 
         init_weapon_items();
         setup_reusable_weapons_player_state_machine(this);
+        if animator != null && animator.state_machine != null {
+            animator.state_machine.debug_enabled = true;
+        }
         if #alive(agent) {
             base_movement_speed = agent.movement_speed;
         }
@@ -734,6 +739,7 @@ Player :: class : Player_Base {
         lock_player_to_game_navmesh(this);
 
         if animator != null && animator.instance != null {
+            animator.state_machine.set_bool("round_dead", false);
             animator.state_machine.set_bool("ghost_form", false);
             animator.state_machine.set_bool("sprinting", false);
         }
@@ -1205,14 +1211,11 @@ Player :: class : Player_Base {
             active_effect := entity.get_active_effect();
             if this.is_round_entity() {
                 if active_effect == null {
-                    draw_ability_button(this, Entity_Bite_Ability, 0);
-                    draw_ability_button(this, Entity_Scream_Ability, 1);
-                    gm := get_game_manager();
-                    if #alive(gm) && gm.phase == .ACTIVE {
-                        draw_ability_button(this, Entity_Lurch_Ability, 2);
-                        draw_ability_button(this, Entity_Vomit_Ability, 3);
-                        draw_ability_button(this, Entity_Wall_Seep_Ability, 4);
-                    }
+                    draw_entity_ability_button(this, Entity_Bite_Ability, 0, "AbilityIcons/Bite.png");
+                    draw_entity_ability_button(this, Entity_Scream_Ability, 1, "AbilityIcons/Scream.png");
+                    draw_entity_ability_button(this, Entity_Vomit_Ability, 2, ENTITY_VOMIT_ICON_PATH);
+                    draw_entity_ability_button(this, Entity_Lurch_Ability, 3, "AbilityIcons/SprintIcon.png");
+                    draw_entity_ability_button(this, Entity_Wall_Seep_Ability, 4, "AbilityIcons/Scream.png");
                 }
                 if equipped_weapon_type != .NONE {
                     weapon_unequip(this, equipped_weapon_type);
@@ -1320,6 +1323,9 @@ Player :: class : Player_Base {
             return false;
         }
         if this.is_round_entity() && ability.#type == Sprint_Ability {
+            return false;
+        }
+        if this.is_round_entity() && !is_entity_ability_unlocked(ability) {
             return false;
         }
         return true;
@@ -2172,6 +2178,22 @@ Player :: class : Player_Base {
         }
     }
 
+}
+
+draw_entity_ability_button :: proc(player: Player, $T: typeid, index: int, unlocked_icon_path: string) {
+    for i: 0..player.abilities.count - 1 {
+        ability := player.abilities[i];
+        if ability.type == T {
+            if is_entity_ability_unlocked(ability) {
+                ability.icon = get_asset(Texture_Asset, unlocked_icon_path);
+            } else {
+                ability.icon = get_asset(Texture_Asset, ENTITY_LOCKED_ABILITY_ICON_PATH);
+            }
+            break;
+        }
+    }
+
+    draw_ability_button(player, T, index);
 }
 
 draw_ability_name_label :: proc(button_rect: Rect, label: string) {
