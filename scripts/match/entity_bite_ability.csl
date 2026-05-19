@@ -140,6 +140,25 @@ Downed_Scream_Effect :: class : Effect_Base {
     }
 }
 
+apply_entity_bite_to_survivor :: proc(target: Player) -> bool {
+    if target == null || !#alive(target.entity) {
+        return false;
+    }
+    if !target.is_round_survivor() {
+        return false;
+    }
+
+    if target.is_round_downed() {
+        death_effect := new(Entity_Death_Effect);
+        target.entity.set_active_effect(death_effect);
+        return true;
+    }
+
+    downed_effect := new(Entity_Downed_Effect);
+    target.entity.set_active_effect(downed_effect);
+    return true;
+}
+
 Entity_Bite_Effect :: class : Effect_Base {
     effect_start :: method() {
         player_specific.freeze_player = true;
@@ -162,14 +181,7 @@ Entity_Bite_Effect :: class : Effect_Base {
             return;
         }
 
-        if target.is_round_downed() {
-            death_effect := new(Entity_Death_Effect);
-            target.entity.set_active_effect(death_effect);
-            return;
-        }
-
-        downed_effect := new(Entity_Downed_Effect);
-        target.entity.set_active_effect(downed_effect);
+        apply_entity_bite_to_survivor(target);
     }
 }
 
