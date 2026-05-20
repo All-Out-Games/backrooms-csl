@@ -182,6 +182,15 @@ ENTITY_OVERRIDE_RIG_PATH :: "Animations/Bacteria/imposter_monster.spine";
 ENTITY_OVERRIDE_SCALE := v2.{1, 1};
 ENTITY_OVERRIDE_OFFSET := v2.{0.0, -0.30};
 
+VIEWFINDER_COLOR_FILTER := v3.{0.32, 0.95, 1.0};
+VIEWFINDER_SATURATION :: -0.55;
+VIEWFINDER_CONTRAST :: 2.45;
+VIEWFINDER_FILM_GRAIN_STRENGTH :: 0.16;
+VIEWFINDER_FILM_GRAIN_NOISE_SCALE :: 36.0;
+VIEWFINDER_CHROMATIC_OFFSET := v3.{-0.004, 0.0, 0.004};
+VIEWFINDER_VIGNETTE_RADIUS :: 0.9;
+VIEWFINDER_VIGNETTE_SOFTNESS :: 0.24;
+
 // Translucent highlighted silhouette for the player spine (see res/shaders/spine_silhouette_highlight.aosl).
 create_player_spine_silhouette_material :: proc() -> Material {
     shader := get_asset(Shader_Asset, "shaders/spine_silhouette_highlight.aosl");
@@ -260,6 +269,7 @@ Player :: class : Player_Base {
     held_item_entity: Entity;
     held_item_sprite: Sprite_Renderer;
     held_item_weapon_type: Weapon_Type;
+    viewfinder_active: bool;
     boomwheel_cannon: Boomwheel_Cannon; // only needed if using Boomwheel
 
     base_movement_speed: float;
@@ -567,6 +577,30 @@ Player :: class : Player_Base {
         }
     }
 
+    sync_camera_item_mouse_ik :: method() {
+        if equipped_weapon_type != .CAMERA {
+            return;
+        }
+        if round_dead || round_downed || this.is_round_entity() {
+            this.set_mouse_ik_enabled(false);
+            return;
+        }
+
+        this.set_mouse_ik_enabled(true);
+        aim_dir := last_aim_direction;
+        if this.is_local() {
+            aim_offset := get_mouse_world_position() - entity.world_position;
+            if length_squared(aim_offset) > 0.0001 {
+                aim_dir = normalize(aim_offset);
+                last_aim_direction = aim_dir;
+            }
+        }
+        if length_squared(aim_dir) <= 0.0001 {
+            aim_dir = v2{1.0, 0.0};
+        }
+        this.set_aim_target(entity.world_position + aim_dir * 5.0);
+    }
+
     ao_start :: method() {
         entity_opt_in = false;
         active_tasks = List(Task_Base).{};
@@ -614,6 +648,7 @@ Player :: class : Player_Base {
         playerWins = Save.get_int(this, PLAYER_WINS_SAVE_KEY, 0);
         this.sync_player_wins_leaderboard();
         held_item_weapon_type = .NONE;
+        viewfinder_active = false;
         this.update_local_voice_chat_range_cache();
 
         wt := entity.add_component(Weapon_Target);
@@ -1010,6 +1045,11 @@ Player :: class : Player_Base {
 
         if equipped_weapon_type == .NONE {
             this.set_mouse_ik_enabled(false);
+        } else if equipped_weapon_type == .CAMERA {
+            this.sync_camera_item_mouse_ik();
+        }
+        if this.is_local() {
+            sync_all_viewfinder_only_visibility();
         }
 
         active_effect := entity.get_active_effect();
@@ -1164,6 +1204,9 @@ Player :: class : Player_Base {
         if this.is_local() && (this.is_round_entity() || security_cameras_open) {
             this.apply_entity_local_post_processing();
         }
+        if this.is_local() && viewfinder_active && equipped_weapon_type == .CAMERA {
+            this.apply_viewfinder_post_processing();
+        }
 
         if is_local_or_server() {
             task_info_was_open := task_help_open;
@@ -1237,6 +1280,11 @@ Player :: class : Player_Base {
                         case .SPREAD:      { draw_ability_button(this, Spread_Shot_Ability, 0); }
                         case .LOBBED:      { draw_ability_button(this, Lobbed_Shot_Ability, 0); }
                         case .BEAM:        { draw_ability_button(this, Beam_Ability, 0); }
+                        case .NONE: {
+                            if equipped_weapon_type == .CAMERA {
+                                draw_ability_button(this, Viewfinder_Ability, 0);
+                            }
+                        }
                         case .SPECIAL: {
                             if equipped_weapon_type == .STIM {
                                 draw_ability_button(this, Stim_Boost_Ability, 0);
@@ -1421,6 +1469,33 @@ Player :: class : Player_Base {
             noise_scale = lerp(ENTITY_FILM_GRAIN_NOISE_SCALE, 1.0, alpha)
         };
         Post_Processing.film_grain(flashbang_grain);
+    }
+
+    apply_viewfinder_post_processing :: proc(using this: Player) {
+        color_grade := Post_Processing.Color_Grade_Config{
+            color_filter = VIEWFINDER_COLOR_FILTER,
+            saturation = VIEWFINDER_SATURATION,
+            contrast = VIEWFINDER_CONTRAST
+        };
+        Post_Processing.color_grade(color_grade);
+
+        chromatic := Post_Processing.Chromatic_Aberration_Config{
+            channel_offsets = VIEWFINDER_CHROMATIC_OFFSET,
+            focal_point = v2{0.5, 0.5}
+        };
+        Post_Processing.chromatic_aberration(chromatic);
+
+        film_grain := Post_Processing.Film_Grain_Config{
+            strength = VIEWFINDER_FILM_GRAIN_STRENGTH,
+            noise_scale = VIEWFINDER_FILM_GRAIN_NOISE_SCALE
+        };
+        Post_Processing.film_grain(film_grain);
+
+        vignette := Post_Processing.Vignette_Config{
+            radius = VIEWFINDER_VIGNETTE_RADIUS,
+            softness = VIEWFINDER_VIGNETTE_SOFTNESS
+        };
+        Post_Processing.vignette(vignette);
     }
 
     draw_entity_flashbang_blackout_overlay :: proc(using this: Player) {

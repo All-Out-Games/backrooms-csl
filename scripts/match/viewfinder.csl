@@ -1,0 +1,125 @@
+is_local_viewfinder_active :: proc() -> bool {
+    local_player := get_local_player();
+    if !#alive(local_player) {
+        return false;
+    }
+    return local_player.viewfinder_active && local_player.equipped_weapon_type == .CAMERA;
+}
+
+collect_viewfinder_only_visual_components :: proc(target: Entity, components: ref [..]Component, original_enabled: ref [..]bool) {
+    if !#alive(target) {
+        return;
+    }
+
+    component := target.get_first_component();
+    while component != null {
+        if component.#type == Sprite_Renderer || component.#type == Spine_Animator || component.#type == Light {
+            components.append(component);
+            original_enabled.append(component.get_enabled());
+        }
+        component = component.get_next_component_on_entity();
+    }
+
+    child := target.get_first_child();
+    while child != null {
+        collect_viewfinder_only_visual_components(child, ref components, ref original_enabled);
+        child = child.get_next_sibling();
+    }
+}
+
+ViewfinderOnly :: class : Component {
+    visible_to_local_player: bool;
+    visuals_initialized: bool;
+    visual_components: [..]Component;
+    visual_original_enabled: [..]bool;
+
+    ao_start :: method() {
+        visible_to_local_player = true;
+        this.ensure_visuals_initialized();
+        this.sync_visibility();
+    }
+
+    ao_update :: method(dt: float) {
+        this.sync_visibility();
+    }
+
+    ao_end :: method() {
+        this.apply_visual_visibility(true);
+        visual_components.clear();
+        visual_original_enabled.clear();
+    }
+
+    ensure_visuals_initialized :: method() {
+        if visuals_initialized {
+            return;
+        }
+
+        visuals_initialized = true;
+        visual_components.clear();
+        visual_original_enabled.clear();
+        collect_viewfinder_only_visual_components(entity, ref visual_components, ref visual_original_enabled);
+    }
+
+    apply_visual_visibility :: method(visible: bool) {
+        this.ensure_visuals_initialized();
+
+        i: s64 = 0;
+        while i < visual_components.count {
+            component := visual_components[i];
+            if #alive(component) {
+                should_enable := visible && visual_original_enabled[i];
+                component.set_enabled(should_enable);
+            }
+            i += 1;
+        }
+    }
+
+    sync_visibility :: method() {
+        this.ensure_visuals_initialized();
+        should_show := is_local_viewfinder_active();
+        if should_show == visible_to_local_player {
+            return;
+        }
+
+        visible_to_local_player = should_show;
+        this.apply_visual_visibility(should_show);
+    }
+}
+
+sync_all_viewfinder_only_visibility :: proc() {
+    for viewfinder_only: component_iterator(ViewfinderOnly) {
+        viewfinder_only.sync_visibility();
+    }
+}
+
+Viewfinder_Ability :: class : Ability_Base {
+    on_init :: method() {
+        name = "Viewfinder";
+        icon = get_asset(Texture_Asset, "camera_grip.png");
+    }
+
+    can_use :: method() -> bool {
+        p := player.(Player);
+        if p == null {
+            return false;
+        }
+        return p.equipped_weapon_type == .CAMERA;
+    }
+
+    on_update :: method(params: ref Ability_Update_Params) {
+        if !params.clicked || !params.can_use {
+            return;
+        }
+
+        p := player.(Player);
+        if p == null {
+            return;
+        }
+        p.viewfinder_active = !p.viewfinder_active;
+        sync_all_viewfinder_only_visibility();
+    }
+
+    on_draw_button :: proc(instance: Viewfinder_Ability, rect: Rect) {
+        draw_ability_name_label(rect, "View");
+    }
+}

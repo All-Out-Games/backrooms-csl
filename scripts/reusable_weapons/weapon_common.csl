@@ -19,6 +19,15 @@ weapon_equip :: proc(player: Player, wt: Weapon_Type) {
         player.animator.state_machine.set_bool(config.use_ik_var, true);
     }
 
+    if wt == .CAMERA {
+        player.set_mouse_ik_enabled(true);
+        aim_dir := player.last_aim_direction;
+        if length_squared(aim_dir) <= 0.0001 {
+            aim_dir = v2{1.0, 0.0};
+        }
+        player.set_aim_target(player.entity.world_position + aim_dir * 5.0);
+    }
+
     // Boomwheel: create cannon entity from scratch (not from prefab)
     if wt == .BOOMWHEEL {
         cannon_entity := Scene.create_entity();
@@ -93,6 +102,14 @@ weapon_unequip :: proc(player: Player, wt: Weapon_Type) {
     // Disable IK variable
     if config.use_ik_var != "" {
         player.animator.state_machine.set_bool(config.use_ik_var, false);
+    }
+
+    if wt == .CAMERA {
+        player.viewfinder_active = false;
+        player.set_mouse_ik_enabled(false);
+        if player.is_local() {
+            sync_all_viewfinder_only_visibility();
+        }
     }
 
     // Disable weapon skin

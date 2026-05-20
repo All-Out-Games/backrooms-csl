@@ -1,4 +1,4 @@
-WEAPON_COUNT :: 30;
+WEAPON_COUNT :: 31;
 AMMO_TYPE_COUNT :: 10;
 
 g_weapon_item_defs: [WEAPON_COUNT]Item_Definition;
@@ -43,6 +43,7 @@ weapon_type_to_index :: proc(wt: Weapon_Type) -> s64 {
         case .FLASHBANG:              return 27;
         case .NOISEMAKER:             return 28;
         case .STIM:                   return 29;
+        case .CAMERA:                 return 30;
     }
     return -1;
 }
@@ -173,6 +174,7 @@ init_weapon_items :: proc() {
     register_weapon(.FLASHBANG);
     register_weapon(.NOISEMAKER);
     register_weapon(.STIM);
+    register_weapon(.CAMERA);
 
     // Load fire sounds for each weapon
     load_fire_sounds();
@@ -340,6 +342,7 @@ get_weapon_type_for_item :: proc(item_def: Item_Definition) -> Weapon_Type {
                 case 27: return .FLASHBANG;
                 case 28: return .NOISEMAKER;
                 case 29: return .STIM;
+                case 30: return .CAMERA;
             }
         }
         i += 1;

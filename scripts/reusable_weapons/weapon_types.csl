@@ -30,9 +30,11 @@ Weapon_Type :: enum {
     FLASHBANG;
     NOISEMAKER;
     STIM;
+    CAMERA;
 }
 
 Fire_Mode :: enum {
+    NONE;
     CONTINUOUS;
     SINGLE_SHOT;
     SPREAD;

@@ -5,21 +5,20 @@ playercharacter.png
 	bounds: 2566, 374, 122, 95
 	offsets: 1, 1, 124, 97
 2.0.1_additions/eyes/crying/lid_watery_R
-	bounds: 3369, 384, 136, 67
+	bounds: 3029, 378, 136, 67
 	offsets: 1, 0, 138, 68
 2.0.1_additions/eyes/crying/lighteye_watery_L
-	bounds: 2890, 375, 122, 78
+	bounds: 3369, 373, 122, 78
 	offsets: 1, 1, 124, 80
 2.0.1_additions/eyes/crying/lighteye_watery_R
-	bounds: 2890, 375, 122, 78
+	bounds: 3369, 373, 122, 78
 	offsets: 1, 1, 124, 80
 2.0.1_additions/eyes/crying/tear_watery_L
-	bounds: 3015, 330, 79, 56
+	bounds: 3986, 343, 79, 56
 	offsets: 1, 1, 81, 58
 2.0.1_additions/eyes/crying/tear_watery_R
-	bounds: 3661, 362, 64, 51
+	bounds: 2819, 333, 64, 51
 	offsets: 1, 1, 66, 53
-	rotate: 90
 2.0.1_additions/eyes/lid_rage_L
 	bounds: 3300, 530, 161, 160
 	offsets: 1, 1, 163, 162
@@ -32,7 +31,7 @@ playercharacter.png
 	offsets: 1, 1, 237, 130
 	rotate: 90
 2.0.1_additions/mouths/mouth_closed_teeth_pain
-	bounds: 3015, 389, 127, 56
+	bounds: 3494, 370, 127, 56
 2.0.1_additions/mouths/mouth_concentration
 	bounds: 3178, 381, 188, 70
 	offsets: 1, 1, 190, 72
@@ -81,19 +80,19 @@ base_colours/crewchsia/body_base
 	bounds: 2587, 470, 184, 221
 	offsets: 84, 62, 358, 359
 base_colours/crewchsia/eyeball_L
-	bounds: 3508, 345, 82, 81
+	bounds: 3624, 345, 82, 81
 	offsets: 1, 1, 84, 83
 base_colours/crewchsia/eyeball_R
 	bounds: 2261, 352, 80, 80
 	offsets: 1, 1, 82, 82
 base_colours/crewchsia/eyelids/lid_angry
-	bounds: 3097, 329, 75, 57
+	bounds: 2741, 327, 75, 57
 	offsets: 1, 1, 77, 59
 base_colours/crewchsia/eyelids/lid_blink
 	bounds: 2471, 351, 82, 81
 	offsets: 1, 1, 84, 83
 base_colours/crewchsia/eyelids/lid_happy
-	bounds: 2789, 340, 79, 44
+	bounds: 3266, 334, 79, 44
 	offsets: 2, 1, 82, 46
 base_colours/crewchsia/eyelids/lid_sad
 	bounds: 3989, 493, 81, 95
@@ -101,19 +100,19 @@ base_colours/crewchsia/eyelids/lid_sad
 base_colours/crewchsia/finger_L
 	bounds: 2345, 654, 38, 37
 base_colours/crewchsia/hand_L_fist
-	bounds: 1959, 346, 72, 70
+	bounds: 2026, 346, 72, 70
 	offsets: 1, 1, 74, 72
 base_colours/crewchsia/hand_L_palm
-	bounds: 1884, 346, 72, 70
+	bounds: 1951, 346, 72, 70
 	offsets: 1, 1, 74, 72
 base_colours/crewchsia/hand_R_fist
-	bounds: 3847, 347, 71, 68
+	bounds: 3912, 347, 71, 68
 	offsets: 1, 1, 73, 70
 base_colours/crewchsia/leg_L
-	bounds: 2034, 330, 64, 86
+	bounds: 3847, 329, 64, 86
 	offsets: 37, 28, 138, 143
 base_colours/crewchsia/leg_R
-	bounds: 3593, 334, 66, 92
+	bounds: 1882, 324, 66, 92
 	offsets: 37, 29, 138, 143
 base_colours/crewchsia/mouth_flat
 	bounds: 2558, 671, 59, 20
@@ -122,10 +121,11 @@ base_colours/crewchsia/mouth_sleep_closed
 	bounds: 2150, 468, 34, 29
 	offsets: 1, 1, 36, 31
 base_colours/crewchsia/mouth_sleep_open
-	bounds: 3921, 352, 101, 47
+	bounds: 2691, 367, 101, 47
 	offsets: 1, 1, 103, 49
+	rotate: 90
 base_colours/crewchsia/mouth_teethygrin
-	bounds: 2691, 342, 95, 42
+	bounds: 3168, 336, 95, 42
 	offsets: 1, 1, 97, 44
 base_colours/crewchsia/pupil_L
 	bounds: 2384, 656, 35, 35
@@ -136,6 +136,10 @@ base_colours/crewchsia/pupil_R
 base_colours/crewchsia/thumb_L
 	bounds: 2150, 651, 37, 40
 	offsets: 1, 1, 39, 42
+camera_grip
+	bounds: 2890, 368, 85, 136
+	offsets: 1, 1, 87, 138
+	rotate: 90
 hand_pointing
 	bounds: 2772, 496, 195, 155
 	offsets: 1, 1, 197, 157
@@ -157,7 +161,7 @@ shadow
 	offsets: 6, 5, 244, 128
 	rotate: 90
 sparkles/flashbang_sparkle
-	bounds: 4025, 339, 52, 60
+	bounds: 3709, 317, 52, 60
 	offsets: 2, 0, 56, 60
 sparkles/goldpickup_sparkle
 	bounds: 1285, 368, 313, 323

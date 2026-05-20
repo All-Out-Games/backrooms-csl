@@ -564,6 +564,21 @@ get_weapon_config :: proc(wt: Weapon_Type) -> Weapon_Config {
             config.shoot_trigger = "";
             config.use_ik_var = "use_1h_ik";
         }
+        case .CAMERA: {
+            config.fire_mode = .NONE;
+            config.hand_type = .ONE_HAND;
+            config.fire_rate = 0.0;
+            config.base_damage = 0.0;
+            config.ammo_per_shot = 0;
+            config.weapon_skin = "HeldCamera";
+            config.weapon_icon_path = "camera_grip.png";
+            config.item_id = "camera";
+            config.item_name = "Camera";
+            config.ammo_type_index = -1;
+            config.ammo_first_pickup = -1;
+            config.shoot_trigger = "";
+            config.use_ik_var = "use_1h_ik";
+        }
     }
 
     return config;
