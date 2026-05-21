@@ -1,0 +1,58 @@
+import "core:ao"
+
+WORKSHOP_PROMPT :: "Repair Camera";
+WORKSHOP_MISSING_CAMERA_MESSAGE :: "Bring a Broken Camera to fix it!";
+
+workshop_player_has_active_task :: proc(player: Player) -> bool {
+	if player == null {
+		return false;
+	}
+
+	i := 0;
+	while i < player.active_tasks.elements.count {
+		task := player.active_tasks.elements[i];
+		if task != null && task.started && !task.completed {
+			return true;
+		}
+		i += 1;
+	}
+	return false;
+}
+
+Workshop :: class : Interactable {
+	ao_start :: method() {
+		this.set_listener(this);
+		this.set_text(WORKSHOP_PROMPT);
+		required_hold_time = 0.0;
+		priority = 10;
+	}
+
+	can_use :: method(player: Player) -> bool {
+		if player == null {
+			return false;
+		}
+		if player.is_round_dead() || player.is_round_downed() || player.is_round_entity() {
+			return false;
+		}
+		gm := get_game_manager();
+		if !#alive(gm) || (gm.phase != .SURVIVOR_HEAD_START && gm.phase != .ACTIVE) {
+			return false;
+		}
+		if workshop_player_has_active_task(player) {
+			return false;
+		}
+		return player.is_round_survivor();
+	}
+
+	on_interact :: method(player: Player) {
+		if !can_use(player) {
+			return;
+		}
+		if !player_inventory_has_item_id(player, BROKEN_CAMERA_ITEM_ID) {
+			Notifier.notify(player, WORKSHOP_MISSING_CAMERA_MESSAGE);
+			return;
+		}
+
+		start_workshop_repair_laptop(player);
+	}
+}

@@ -176,20 +176,23 @@ HELD_ITEM_BONE_NAME :: "Finger_R2";
 HELD_ITEM_SCALE := v2.{0.35, 0.35};
 HELD_ITEM_RENDER_LAYER :: 1;
 
-ENTITY_OVERRIDE_RIG_PATH :: "Animations/Bacteria/imposter_monster.spine";
-// `imposter_monster.spine` is authored much larger than the reusable player rig,
-// so start with a reduced scale and a small downward offset.
+ENTITY_OVERRIDE_RIG_PATH :: "Animations/Bacteria/Backrooms_Monster.spine";
+// The Entity override spine is authored larger than the reusable player rig,
+// so keep it on its own scale and small downward offset.
 ENTITY_OVERRIDE_SCALE := v2.{1, 1};
 ENTITY_OVERRIDE_OFFSET := v2.{0.0, -0.30};
 
-VIEWFINDER_COLOR_FILTER := v3.{0.32, 0.95, 1.0};
-VIEWFINDER_SATURATION :: -0.55;
-VIEWFINDER_CONTRAST :: 2.45;
+VIEWFINDER_COLOR_FILTER := v3.{0.9, 0.9, 0.9};
+VIEWFINDER_SATURATION :: 1;
+VIEWFINDER_CONTRAST :: 1.1;
 VIEWFINDER_FILM_GRAIN_STRENGTH :: 0.16;
 VIEWFINDER_FILM_GRAIN_NOISE_SCALE :: 36.0;
 VIEWFINDER_CHROMATIC_OFFSET := v3.{-0.004, 0.0, 0.004};
-VIEWFINDER_VIGNETTE_RADIUS :: 0.9;
-VIEWFINDER_VIGNETTE_SOFTNESS :: 0.24;
+VIEWFINDER_OVERLAY_TEXTURE_PATH :: "UI/Recording Camera.png";
+VIEWFINDER_OVERLAY_BATTERY_TEXTURE_PATH :: "UI/Battery Bar.png";
+VIEWFINDER_OVERLAY_LAYER :: 5000;
+VIEWFINDER_OVERLAY_SCREEN_FRACTION :: 0.7;
+VIEWFINDER_BATTERY_BLINK_SECONDS :: 0.5;
 
 // Translucent highlighted silhouette for the player spine (see res/shaders/spine_silhouette_highlight.aosl).
 create_player_spine_silhouette_material :: proc() -> Material {
@@ -256,6 +259,8 @@ Player :: class : Player_Base {
     task_list_inited: bool;
     task_list_open: bool;
     task_help_open: bool;
+    chat_mode_inited: bool;
+    chat_mode_last_applied: Chat.Mode;
     vitals_modal_open: bool;
     security_cameras_open: bool;
     security_camera_index: s64;
@@ -607,6 +612,7 @@ Player :: class : Player_Base {
         task_list_inited = false;
         task_list_open = true;
         task_help_open = false;
+        chat_mode_inited = false;
         vitals_modal_open = false;
         security_cameras_open = false;
         security_camera_index = 0;
@@ -736,6 +742,20 @@ Player :: class : Player_Base {
 
     is_round_downed :: method() -> bool {
         return round_downed && !round_dead;
+    }
+
+    update_chat_mode :: proc(using this: Player) {
+        desired := Chat.Mode.DEFAULT;
+        // In-game: bubble-only chat for alive players (ghosts stay in default chat).
+        if this.is_round_entity() || this.is_round_survivor() {
+            desired = Chat.Mode.BUBBLE_ONLY;
+        }
+
+        if chat_mode_inited && desired == chat_mode_last_applied return;
+
+        Chat.set_mode(desired);
+        chat_mode_last_applied = desired;
+        chat_mode_inited = true;
     }
 
     clear_round_downed_state :: method(reset_animation: bool = false) {
@@ -1188,6 +1208,7 @@ Player :: class : Player_Base {
         }
 
         if this.is_local_or_server() && this.is_local() {
+            this.update_chat_mode();
             this.update_local_vision_light();
         }
         this.tick_entity_local_view_reveal_state(dt);
@@ -1212,6 +1233,7 @@ Player :: class : Player_Base {
             task_info_was_open := task_help_open;
             if task_info_was_open {
                 draw_task_list_ui(this);
+                this.draw_viewfinder_screen_overlay();
                 return;
             }
 
@@ -1225,7 +1247,9 @@ Player :: class : Player_Base {
             draw_match_timer_ui(this);
             draw_match_end_ui(this);
             draw_task_list_ui(this);
+            update_tasks(this);
             if task_info_was_open || task_help_open {
+                this.draw_viewfinder_screen_overlay();
                 return;
             }
             draw_vitals_modal_ui(this);
@@ -1316,6 +1340,7 @@ Player :: class : Player_Base {
             this.draw_entity_flashbang_blackout_overlay();
         }
 
+        this.draw_viewfinder_screen_overlay();
     }
 
     ao_end :: method() {
@@ -1394,6 +1419,14 @@ Player :: class : Player_Base {
         if this.is_round_entity() {
             listener := interactable.listener;
             if #alive(listener) && listener.#type == Dropped_Item {
+                return false;
+            }
+        }
+
+        listener := interactable.listener;
+        if #alive(listener) && listener.#type == Dropped_Item {
+            dropped_item := listener.(Dropped_Item);
+            if is_blocked_broken_camera_pickup(this, dropped_item) {
                 return false;
             }
         }
@@ -1490,12 +1523,40 @@ Player :: class : Player_Base {
             noise_scale = VIEWFINDER_FILM_GRAIN_NOISE_SCALE
         };
         Post_Processing.film_grain(film_grain);
+    }
 
-        vignette := Post_Processing.Vignette_Config{
-            radius = VIEWFINDER_VIGNETTE_RADIUS,
-            softness = VIEWFINDER_VIGNETTE_SOFTNESS
-        };
-        Post_Processing.vignette(vignette);
+    draw_viewfinder_screen_overlay :: proc(using this: Player) {
+        if !this.is_local() || !viewfinder_active || equipped_weapon_type != .CAMERA {
+            return;
+        }
+
+        overlay := get_asset(Texture_Asset, VIEWFINDER_OVERLAY_TEXTURE_PATH);
+        if overlay == null {
+            return;
+        }
+
+        UI.push_screen_draw_context();
+        defer UI.pop_draw_context();
+
+        UI.push_layer(VIEWFINDER_OVERLAY_LAYER);
+        defer UI.pop_layer();
+
+        screen := UI.get_screen_rect().center_rect();
+        screen = screen.grow(378, 672, 378, 672);
+        UI.quad(screen, overlay, v4{1.0, 1.0, 1.0, 1.0});
+
+        battery := get_asset(Texture_Asset, VIEWFINDER_OVERLAY_BATTERY_TEXTURE_PATH);
+        if battery == null {
+            return;
+        }
+        batteryRect := screen.bottom_center_rect().offset(265, 78).grow(30);
+        UI.quad(batteryRect, battery, v4{1.0, 1.0, 1.0, 1.0});
+        // Second battery bar (should flash)
+        batteryRect = batteryRect.offset(65, 0);
+        blink_phase := get_time() % (VIEWFINDER_BATTERY_BLINK_SECONDS * 2.0);
+        if blink_phase < VIEWFINDER_BATTERY_BLINK_SECONDS {
+            UI.quad(batteryRect, battery, v4{1.0, 1.0, 1.0, 1.0});
+        }
     }
 
     draw_entity_flashbang_blackout_overlay :: proc(using this: Player) {

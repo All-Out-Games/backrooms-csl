@@ -7,6 +7,40 @@ GHOST_ITEM_PING_PATH_MIN_ADVANCE :: 0.08;
 GHOST_ITEM_PING_PATH_REACHED_DISTANCE :: 0.35;
 GHOST_ITEM_PING_PATH_PROBE_SPEED :: 900.0;
 GHOST_ITEM_PING_PROMPT :: "Ping Item";
+BROKEN_CAMERA_ITEM_ID :: "broken_camera";
+CAMERA_ITEM_ID :: "camera";
+
+player_inventory_has_item_id :: proc(player: Player, item_id: string) -> bool {
+    if player == null || item_id.count == 0 {
+        return false;
+    }
+
+    i: s64 = 0;
+    while i < player.default_inventory.capacity {
+        item := player.default_inventory.get_item(i);
+        if #alive(item) {
+            defn := item.get_definition();
+            if defn != null && defn.get_id() == item_id {
+                return true;
+            }
+        }
+        i += 1;
+    }
+    return false;
+}
+
+is_blocked_broken_camera_pickup :: proc(player: Player, dropped_item: Dropped_Item) -> bool {
+    if player == null || !#alive(dropped_item) || !#alive(dropped_item.item) {
+        return false;
+    }
+
+    defn := dropped_item.item.get_definition();
+    if defn == null || defn.get_id() != BROKEN_CAMERA_ITEM_ID {
+        return false;
+    }
+
+    return player_inventory_has_item_id(player, BROKEN_CAMERA_ITEM_ID) || player_inventory_has_item_id(player, CAMERA_ITEM_ID);
+}
 
 is_round_dead_survivor_ghost :: proc(player: Player) -> bool {
     if player == null || !player.is_round_dead() {
@@ -275,6 +309,9 @@ Ghost_Item_Ping_Interactable :: class : Component {
         if player == null || player.is_round_entity() || player.is_round_dead() || player.is_round_downed() {
             return false;
         }
+        if is_blocked_broken_camera_pickup(player, dropped_item) {
+            return false;
+        }
 
         return dropped_item.can_use(player);
     }
@@ -300,6 +337,9 @@ Ghost_Item_Ping_Interactable :: class : Component {
             return;
         }
 
+        if is_blocked_broken_camera_pickup(player, dropped_item) {
+            return;
+        }
         dropped_item.on_interact(player);
     }
 }

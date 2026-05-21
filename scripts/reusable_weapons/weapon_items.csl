@@ -1,8 +1,10 @@
 WEAPON_COUNT :: 31;
 AMMO_TYPE_COUNT :: 10;
+UTILITY_ITEM_COUNT :: 9;
 
 g_weapon_item_defs: [WEAPON_COUNT]Item_Definition;
 g_ammo_item_defs: [AMMO_TYPE_COUNT]Item_Definition;
+g_utility_item_defs: [UTILITY_ITEM_COUNT]Item_Definition;
 g_weapon_items_initialized: bool;
 
 // Fire sounds: up to 10 variants per weapon
@@ -50,6 +52,13 @@ weapon_type_to_index :: proc(wt: Weapon_Type) -> s64 {
 
 // Ammo type info
 Ammo_Info :: struct {
+    id: string;
+    name: string;
+    icon_path: string;
+    stack_size: s64;
+}
+
+Utility_Item_Info :: struct {
     id: string;
     name: string;
     icon_path: string;
@@ -123,6 +132,67 @@ get_ammo_info :: proc(index: s64) -> Ammo_Info {
     return info;
 }
 
+get_utility_item_info :: proc(index: s64) -> Utility_Item_Info {
+    info: Utility_Item_Info;
+    switch index {
+        case 0: {
+            info.id = "broken_camera";
+            info.name = "Broken Camera";
+            info.icon_path = "AbilityIcons/BrokenCamera.png";
+            info.stack_size = 1;
+        }
+        case 1: {
+            info.id = "tape_vhs_yellow";
+            info.name = "Yellow VHS Tape";
+            info.icon_path = "tapes/vhs_yellow.png";
+            info.stack_size = 1;
+        }
+        case 2: {
+            info.id = "tape_vhs_black";
+            info.name = "Black VHS Tape";
+            info.icon_path = "tapes/vhs_black.png";
+            info.stack_size = 1;
+        }
+        case 3: {
+            info.id = "tape_vhs_white";
+            info.name = "White VHS Tape";
+            info.icon_path = "tapes/vhs_white.png";
+            info.stack_size = 1;
+        }
+        case 4: {
+            info.id = "tape_vhs_red";
+            info.name = "Red VHS Tape";
+            info.icon_path = "tapes/vhs_red.png";
+            info.stack_size = 1;
+        }
+        case 5: {
+            info.id = "tape_vhs_orange";
+            info.name = "Orange VHS Tape";
+            info.icon_path = "tapes/vhs_orange.png";
+            info.stack_size = 1;
+        }
+        case 6: {
+            info.id = "tape_vhs_pink";
+            info.name = "Pink VHS Tape";
+            info.icon_path = "tapes/vhs_pink.png";
+            info.stack_size = 1;
+        }
+        case 7: {
+            info.id = "tape_vhs_blue";
+            info.name = "Blue VHS Tape";
+            info.icon_path = "tapes/vhs_blue.png";
+            info.stack_size = 1;
+        }
+        case 8: {
+            info.id = "tape_vhs_green";
+            info.name = "Green VHS Tape";
+            info.icon_path = "tapes/vhs_green.png";
+            info.stack_size = 1;
+        }
+    }
+    return info;
+}
+
 init_weapon_items :: proc() {
     if g_weapon_items_initialized return;
     g_weapon_items_initialized = true;
@@ -140,6 +210,20 @@ init_weapon_items :: proc() {
         desc.icon = ammo_icon;
         desc.stack_size = info.stack_size;
         g_ammo_item_defs[i] = Items.register_item_definition(desc);
+        i += 1;
+    }
+
+    // Register non-weapon round items
+    i = 0;
+    while i < UTILITY_ITEM_COUNT {
+        info := get_utility_item_info(i);
+        icon := get_asset(Texture_Asset, info.icon_path);
+        desc: Item_Definition_Desc;
+        desc.id = info.id;
+        desc.name = info.name;
+        desc.icon = icon;
+        desc.stack_size = info.stack_size;
+        g_utility_item_defs[i] = Items.register_item_definition(desc);
         i += 1;
     }
 
@@ -379,6 +463,15 @@ get_registered_item_def_by_id :: proc(item_id: string) -> Item_Definition {
     i = 0;
     while i < AMMO_TYPE_COUNT {
         item_def := g_ammo_item_defs[i];
+        if item_def != null && item_def.get_id() == item_id {
+            return item_def;
+        }
+        i += 1;
+    }
+
+    i = 0;
+    while i < UTILITY_ITEM_COUNT {
+        item_def := g_utility_item_defs[i];
         if item_def != null && item_def.get_id() == item_id {
             return item_def;
         }

@@ -1,0 +1,765 @@
+import "core:ao"
+
+// Waiting-lobby minigame. Starts after the lobby is short on players for a bit,
+// and stays up until a real round is imminent.
+LOBBY_MINIGAME_ENTER_WAIT_SECONDS :: 10.0;
+LOBBY_MINIGAME_ENTER_PLAYER_COUNT :: 5;
+LOBBY_MINIGAME_STOP_START_TIMER_SECONDS :: 10.0;
+LOBBY_MINIGAME_SPAWN_SHIELD_SECONDS :: 2.0;
+LOBBY_MINIGAME_RESPAWN_SECONDS :: 3.0;
+LOBBY_MINIGAME_RESPAWN_REASON :: "lobby_minigame_respawn";
+LOBBY_MINIGAME_SHAKE_SECONDS :: 0.28;
+LOBBY_MINIGAME_INTRO_SECONDS :: 2.6;
+LOBBY_MINIGAME_INTRO_SLIDE_IN :: 0.45;
+LOBBY_MINIGAME_INTRO_HOLD_END :: 1.9;
+
+lobby_minigame_active: bool;
+lobby_minigame_wait_since: float;
+lobby_minigame_started_at: float;
+
+// All per-player minigame state lives on this effect. It's added to every
+// player while the minigame is running and removed when it stops, so players
+// don't carry extra fields/timers around the rest of the time.
+Lobby_Minigame_Effect :: class : Effect_Base {
+	score: int;
+	tags_taken: int;
+	shield_until: float;
+	shield_active: bool;
+	roll_until: float;
+	roll_direction: v2;
+	respawn_until: float;
+	respawn_locked: bool;
+	shake_start: float;
+	shake_until: float;
+	shake_intensity: float;
+	camera_shaking: bool;
+	intro_sfx_started_at: float;
+
+	effect_start :: method() {
+		shield_until = get_time() + LOBBY_MINIGAME_SPAWN_SHIELD_SECONDS;
+		if player == null return;
+		player.revive();
+		player.player_state = Player_State.PASSIVE;
+		player.remove_ghost_reason("spectator");
+		if player.baseline_movement_speed_saved {
+			player.agent.movement_speed = player.baseline_movement_speed;
+		}
+		player.agent.set_navmesh_to_lock_to(world_references.main_navmesh);
+		player.apply_voice_chat_masks_for_current_state();
+	}
+
+	effect_update :: method(dt: float) {
+		if player == null return;
+		if game_state != Game_State.LOBBY || !lobby_minigame_active return;
+
+		if get_time() < respawn_until {
+			this.set_respawn_lock(true);
+			return;
+		}
+		this.set_respawn_lock(false);
+
+		if get_time() < roll_until {
+			player.entity.add_local_position(roll_direction * 13.0 * dt);
+		}
+	}
+
+	effect_late_update :: method(dt: float) {
+		if player == null return;
+		if !player.is_local() return;
+		if game_state != Game_State.LOBBY || !lobby_minigame_active return;
+		this.apply_local_screenshake();
+		this.draw_world();
+		this.draw_intro();
+		this.draw_leaderboard();
+	}
+
+	effect_end :: method(interrupt: bool) {
+		if player == null return;
+		this.set_respawn_lock(false);
+		if camera_shaking {
+			player.camera.follow_player = true;
+			camera_shaking = false;
+		}
+		rr_player_clear_gun_state(player);
+		player.apply_voice_chat_masks_for_current_state();
+	}
+
+	set_respawn_lock :: method(locked: bool) {
+		if respawn_locked == locked return;
+		if locked {
+			player.add_ghost_reason(LOBBY_MINIGAME_RESPAWN_REASON);
+		} else {
+			player.remove_ghost_reason(LOBBY_MINIGAME_RESPAWN_REASON);
+		}
+		respawn_locked = locked;
+	}
+
+	has_shield :: method() -> bool {
+		return shield_active || get_time() < shield_until;
+	}
+
+	can_act :: method() -> bool {
+		return get_time() >= respawn_until;
+	}
+
+	shake :: method(intensity: float) {
+		now := get_time();
+		shake_start = now;
+		shake_until = now + LOBBY_MINIGAME_SHAKE_SECONDS;
+		shake_intensity = max(shake_intensity, intensity);
+	}
+
+	apply_local_screenshake :: method() {
+		now := get_time();
+		if now >= shake_until {
+			if camera_shaking {
+				player.camera.follow_player = true;
+				camera_shaking = false;
+				shake_intensity = 0.0;
+			}
+			return;
+		}
+
+		duration := shake_until - shake_start;
+		if duration <= 0.0 duration = LOBBY_MINIGAME_SHAKE_SECONDS;
+		remaining := (shake_until - now) / duration;
+		amp := shake_intensity * remaining;
+		shake_x := sin(now * 75.0) * amp;
+		shake_y := cos(now * 91.0) * amp * 0.75;
+		player.camera.follow_player = false;
+		if player.camera_default_size_saved {
+			player.camera.size = player.camera_default_size;
+		}
+		player.camera.position = player.entity.world_position + v2.{shake_x, shake_y};
+		camera_shaking = true;
+	}
+
+	draw_world :: method() {
+		UI.push_world_draw_context();
+		defer UI.pop_draw_context();
+		UI.push_layer(9999);
+		defer UI.pop_layer();
+		shield_tex := get_asset(Texture_Asset, "minigame/Bubble Shield_16bc73.png");
+		now := get_time();
+		for i: 0..players.elements.count-1 {
+			p := players.elements[i];
+			if p == null continue;
+			if !#alive(p.entity) continue;
+			mg := rr_get_lobby_minigame_effect(p);
+			if mg == null continue;
+			if now < mg.respawn_until continue;
+			if !mg.has_shield() continue;
+
+			pos := p.entity.world_position + v2.{0.0, 0.35};
+			shield_rect := Rect{pos, pos}.grow(1.05, 1.05, 1.05, 1.05);
+			alpha: float;
+			if mg.shield_active {
+				alpha = 0.7 + sin(now * 8.0) * 0.12;
+			} else {
+				// Post-respawn shield: blink, accelerating as it's about to expire.
+				// Use phase integrated over elapsed-since-shield-started (not absolute
+				// time) so the pattern is identical on every death — otherwise the
+				// chain rule of now * freq(now) makes the apparent rate grow without bound.
+				remaining := mg.shield_until - now;
+				if remaining < 0.0 remaining = 0.0;
+				elapsed := LOBBY_MINIGAME_SPAWN_SHIELD_SECONDS - remaining;
+				if elapsed < 0.0 elapsed = 0.0;
+				START_FREQ :: 1.5;
+				END_FREQ   :: 7.0;
+				ramp := (END_FREQ - START_FREQ) / LOBBY_MINIGAME_SPAWN_SHIELD_SECONDS;
+				phase := 2.0 * PI * (START_FREQ * elapsed + 0.5 * ramp * elapsed * elapsed);
+				alpha = 0.45 + sin(phase) * 0.4;
+			}
+			if shield_tex != null {
+				UI.quad(shield_rect, shield_tex, v4.{0.25, 0.75, 1.0, alpha});
+			} else {
+				UI.quad(shield_rect, core_globals.white_sprite, v4.{0.25, 0.65, 1.0, alpha * 0.32});
+			}
+		}
+	}
+
+	draw_intro :: method() {
+		if lobby_minigame_started_at <= 0.0 return;
+
+		elapsed := get_time() - lobby_minigame_started_at;
+		if elapsed < 0.0 return;
+		if elapsed >= LOBBY_MINIGAME_INTRO_SECONDS return;
+
+		// One-shot intro whoosh on the first frame the local viewer sees the intro.
+		if intro_sfx_started_at != lobby_minigame_started_at {
+			intro_sfx_started_at = lobby_minigame_started_at;
+			whoosh := get_asset(SFX_Asset, "sfx/Whoosh_1e3125.wav");
+			if whoosh != null {
+				desc := SFX.default_sfx_desc();
+				desc.volume = 0.35;
+				desc.speed_perturb = 0.05;
+				SFX.play(whoosh, desc);
+			}
+			zap := get_asset(SFX_Asset, "minigame/zap_19674e.wav");
+			if zap != null {
+				desc := SFX.default_sfx_desc();
+				desc.volume = 0.18;
+				desc.delay = 0.45;
+				desc.speed_perturb = 0.08;
+				SFX.play(zap, desc);
+			}
+		}
+
+		alpha: float = 1.0;
+		slide_x: float = 0.0;
+		title_scale: float = 1.0;
+
+		if elapsed < LOBBY_MINIGAME_INTRO_SLIDE_IN {
+			ease := Ease.out_cubic(elapsed / LOBBY_MINIGAME_INTRO_SLIDE_IN);
+			alpha = ease;
+			slide_x = (1.0 - ease) * -480.0;
+			title_scale = 0.55 + ease * 0.45;
+		} else if elapsed > LOBBY_MINIGAME_INTRO_HOLD_END {
+			ease := Ease.in_quad((elapsed - LOBBY_MINIGAME_INTRO_HOLD_END) / (LOBBY_MINIGAME_INTRO_SECONDS - LOBBY_MINIGAME_INTRO_HOLD_END));
+			alpha = 1.0 - ease;
+			slide_x = ease * 520.0;
+			title_scale = 1.0 + ease * 0.3;
+		}
+
+		now := get_time();
+		screen := UI.get_safe_screen_rect();
+		center := screen.center();
+
+		bob_y := sin(now * 4.5) * 6.0 * alpha;
+		title_pos := v2.{center.x + slide_x, center.y + bob_y + 40.0};
+
+		// --- Glow halo behind text ---
+		glow_tex := get_asset(Texture_Asset, "sprites/Shapes/radial_gradient.png");
+		pulse := 0.55 + sin(now * 6.0) * 0.18;
+		if glow_tex != null {
+			outer := Rect{title_pos, title_pos}.grow(520, 280, 520, 280);
+			UI.quad(outer, glow_tex, v4.{1.0, 0.55, 0.15, alpha * pulse * 0.32});
+			mid := Rect{title_pos, title_pos}.grow(380, 200, 380, 200);
+			UI.quad(mid, glow_tex, v4.{1.0, 0.35, 0.55, alpha * pulse * 0.30});
+			hot := Rect{title_pos, title_pos}.grow(220, 120, 220, 120);
+			UI.quad(hot, glow_tex, v4.{1.0, 0.95, 0.55, alpha * pulse * 0.55});
+		}
+
+		// --- Floating asset orbits ---
+		for i: 0..5 {
+			base_angle := i.(float) * (2.0 * PI / 6.0);
+			appear := Ease.out_quad(clamp((elapsed - i.(float) * 0.05) / 0.4, 0.0, 1.0));
+
+			path: string;
+			tint: v4;
+			size: float = 60.0;
+			if i == 0 {
+				path = "minigame/Bubble Shield_16bc73.png";
+				tint = v4.{0.35, 0.85, 1.0, 1.0};
+				size = 80.0;
+			} else if i == 1 {
+				path = "minigame/Shield Blue Icon_0c7a3a.png";
+				tint = v4.{1.0, 0.95, 0.7, 1.0};
+				size = 56.0;
+			} else if i == 2 {
+				path = "minigame/Shattered Bubble Shield_88c76e.png";
+				tint = v4.{1.0, 0.45, 0.65, 1.0};
+				size = 72.0;
+			} else if i == 3 {
+				path = "ui/voting/shoot_weapon_icon.png";
+				tint = v4.{1.0, 0.85, 0.25, 1.0};
+				size = 64.0;
+			} else if i == 4 {
+				path = "minigame/Bubble Shield_16bc73.png";
+				tint = v4.{0.55, 1.0, 0.65, 1.0};
+				size = 64.0;
+			} else {
+				path = "sprites/icons/ggg/crawl_speedup.png";
+				tint = v4.{0.85, 0.6, 1.0, 1.0};
+				size = 60.0;
+			}
+			rr_lobby_minigame_draw_intro_orbit_sprite(title_pos, path, tint, base_angle, 380.0, 130.0, size, alpha, appear, now);
+		}
+
+		// --- Subtitle ribbon (above title) ---
+		sub_pos := v2.{title_pos.x, title_pos.y + 90.0};
+		sub_rect := Rect{sub_pos, sub_pos}.grow(280, 26, 280, 26);
+		sub_ts := UI.default_text_settings();
+		sub_ts.size = 26;
+		sub_ts.color = v4.{1.0, 0.95, 0.6, alpha};
+		sub_ts.halign = .CENTER;
+		sub_ts.valign = .CENTER;
+		sub_ts.do_outline = true;
+		sub_ts.outline_thickness = 4;
+		sub_ts.outline_color = v4.{0, 0, 0, alpha};
+		UI.text(sub_rect, sub_ts, "WHILE YOU WAIT...");
+
+		// --- Title text ---
+		title_r := sin(now * 2.5) * 0.25 + 0.75;
+		title_g := sin(now * 2.5 + 2.094) * 0.25 + 0.65;
+		title_b := sin(now * 2.5 + 4.189) * 0.20 + 0.30;
+		title_size := 96.0 * title_scale;
+		if title_size < 8.0 title_size = 8.0;
+		outline_thickness := 8.0 * title_scale;
+		if outline_thickness < 1.0 outline_thickness = 1.0;
+
+		title_rect := Rect{title_pos, title_pos}.grow(560, 90, 560, 90);
+		title_ts := UI.default_text_settings();
+		title_ts.size = title_size;
+		title_ts.color = v4.{title_r, title_g, title_b, alpha};
+		title_ts.halign = .CENTER;
+		title_ts.valign = .CENTER;
+		title_ts.do_outline = true;
+		title_ts.outline_thickness = outline_thickness;
+		title_ts.outline_color = v4.{0, 0, 0, alpha};
+		title_ts.spacing_multiplier = 1.1;
+		UI.text(title_rect, title_ts, "BLASTER PANIC!");
+	}
+
+	draw_leaderboard :: method() {
+		if players.elements.count <= 0 return;
+
+		hud_bounds := UI.get_safe_screen_rect().top_left_rect().grow_right(360).grow_bottom(280).offset(15, -15);
+		UIK.begin(UIK.window(hud_bounds));
+
+		shell := UIK.panel_modal(.BLACK);
+		shell.width = UIK.flex(1);
+		shell.height = UIK.fit();
+		shell.padding = v4.{10, 8, 10, 8};
+		shell.gap = 4;
+		UIK.panel_begin(shell);
+
+		title_desc := UIK.text_title();
+		title_desc.size_multiplier = 0.55;
+		title_desc.override_flags |= UIK.Text_Override_SIZE_MULT;
+		UIK.text("BLASTER PANIC!", title_desc);
+		UIK.spacer(UIK.pixels(1), UIK.pixels(4));
+
+		row_text := UIK.text_body();
+		UIK.text_set_size_mult(&row_text, 0.7);
+		UIK.text_set_word_wrap(&row_text, false);
+		UIK.text_set_valign(&row_text, .CENTER);
+
+		viewer_text := row_text;
+		viewer_text.color = v4.{1.0, 0.85, 0.2, 1.0};
+		viewer_text.override_flags |= UIK.Text_Override_COLOR;
+
+		// Pick top-5 without allocating: each pass finds the next-best player ranked
+		// strictly below the previous pick under the (score desc, entity.id asc) ordering.
+		have_prev := false;
+		prev_score := 0;
+		prev_id: u64 = 0;
+		shown := 0;
+		while shown < 5 {
+			best: Player = null;
+			best_score := 0;
+			for i: 0..players.elements.count-1 {
+				p := players.elements[i];
+				if p == null continue;
+				mg := rr_get_lobby_minigame_effect(p);
+				if mg == null continue;
+
+				if have_prev {
+					already_shown := (mg.score > prev_score) || (mg.score == prev_score && p.entity.id <= prev_id);
+					if already_shown continue;
+				}
+
+				if best == null || mg.score > best_score || (mg.score == best_score && p.entity.id < best.entity.id) {
+					best = p;
+					best_score = mg.score;
+				}
+			}
+			if best == null break;
+			prev_score = best_score;
+			prev_id = best.entity.id;
+			have_prev = true;
+
+			row := UIK.panel_styled(.BUTTON_BASIC_BLACK);
+			row.axis = .HORIZONTAL;
+			row.width = UIK.flex(1);
+			row.height = UIK.pixels(30);
+			row.padding = v4.{2, 20, 2, 20};
+			row.cross_align = .CENTER;
+			UIK.panel_begin(row);
+
+			name := best.get_username();
+			if name.count > 12 {
+				name = format_string("%...", .{string_substring(name, 0, 12)});
+			}
+			text_style := row_text;
+			if best == player {
+				text_style = viewer_text;
+			}
+			UIK.text(format_string("#%  %", .{shown + 1, name}), text_style);
+			UIK.spacer(UIK.flex(1), UIK.pixels(1));
+			UIK.text(format_string("%", .{best_score}), text_style);
+
+			UIK.panel_end();
+			shown += 1;
+		}
+
+		UIK.panel_end();
+		UIK.end();
+
+		if get_time() < respawn_until {
+			secs := (respawn_until - get_time()).(int) + 1;
+			screen := UI.get_safe_screen_rect();
+			hud_rect := screen.bottom_center_rect().offset(0, 240).grow(160, 24, 160, 24);
+			hud_ts := UI.default_text_settings();
+			hud_ts.size = 26;
+			hud_ts.color = v4.{1.0, 0.85, 0.3, 1.0};
+			hud_ts.halign = .CENTER;
+			hud_ts.valign = .CENTER;
+			hud_ts.do_outline = true;
+			hud_ts.outline_thickness = 3;
+			hud_ts.outline_color = v4.{0, 0, 0, 1};
+			UI.text(hud_rect, hud_ts, "Respawning %", .{secs});
+		}
+	}
+}
+
+rr_get_lobby_minigame_effect :: proc(player: Player) -> Lobby_Minigame_Effect {
+	if player == null return null;
+	if !#alive(player.entity) return null;
+	e, _ := get_effect(player.entity, Lobby_Minigame_Effect);
+	return e;
+}
+
+rr_lobby_minigame_ensure_effect_on_all_players :: proc() {
+	for i: 0..players.elements.count-1 {
+		p := players.elements[i];
+		if p == null continue;
+		if !#alive(p.entity) continue;
+		if rr_get_lobby_minigame_effect(p) != null continue;
+		add_passive_effect(p.entity, new(Lobby_Minigame_Effect));
+	}
+}
+
+rr_lobby_minigame_start :: proc() {
+	if lobby_minigame_active return;
+	lobby_minigame_active = true;
+	lobby_minigame_started_at = get_time();
+	rr_lobby_minigame_ensure_effect_on_all_players();
+}
+
+rr_lobby_minigame_stop :: proc() {
+	if !lobby_minigame_active return;
+	lobby_minigame_active = false;
+	lobby_minigame_started_at = 0.0;
+	lobby_minigame_wait_since = 0.0;
+	for i: 0..players.elements.count-1 {
+		p := players.elements[i];
+		if p == null continue;
+		if !#alive(p.entity) continue;
+		remove_effect(p.entity, Lobby_Minigame_Effect, false);
+	}
+
+	// Destroy any in-flight pop VFX so their entities/components don't linger into the round.
+	for vfx: component_iterator(Lobby_Minigame_Pop_VFX) {
+		if vfx == null continue;
+		if !#alive(vfx.entity) continue;
+		vfx.entity.destroy();
+	}
+}
+
+rr_lobby_minigame_should_keep_running :: proc() -> bool {
+	if game_state != Game_State.LOBBY return false;
+	if waiting_for_restart return false;
+	return rr_lobby_seconds_until_round_start() > LOBBY_MINIGAME_STOP_START_TIMER_SECONDS;
+}
+
+rr_lobby_minigame_update_state :: proc(current_time: float, player_count: int) {
+	if lobby_minigame_active {
+		if !rr_lobby_minigame_should_keep_running() {
+			rr_lobby_minigame_stop();
+			return;
+		}
+		// Late joiners get the effect on their first frame in the minigame.
+		rr_lobby_minigame_ensure_effect_on_all_players();
+		return;
+	}
+
+	if waiting_for_restart || player_count >= LOBBY_MINIGAME_ENTER_PLAYER_COUNT {
+		lobby_minigame_wait_since = 0.0;
+		return;
+	}
+
+	if lobby_minigame_wait_since <= 0.0 {
+		lobby_minigame_wait_since = current_time;
+	}
+
+	if current_time - lobby_minigame_wait_since >= LOBBY_MINIGAME_ENTER_WAIT_SECONDS {
+		rr_lobby_minigame_start();
+	}
+}
+
+Lobby_Minigame_Pop_VFX :: class : Component {
+	start_time: float;
+	lifetime: float;
+	start_scale: float;
+	end_scale: float;
+	color: v4;
+
+	ao_start :: proc(using this: Lobby_Minigame_Pop_VFX) {
+		start_time = get_time();
+		if lifetime <= 0.0 lifetime = 0.45;
+		if start_scale <= 0.0 start_scale = 0.3;
+		if end_scale <= 0.0 end_scale = 1.6;
+		if color.w <= 0.0 color = v4.{1.0, 1.0, 1.0, 1.0};
+	}
+
+	ao_update :: proc(using this: Lobby_Minigame_Pop_VFX, dt: float) {
+		t := (get_time() - start_time) / lifetime;
+		if t >= 1.0 {
+			entity.destroy();
+			return;
+		}
+		scale := lerp(start_scale, end_scale, Ease.out_cubic(t));
+		entity.set_local_scale(v2.{scale, scale});
+		sr := entity.get_component(Sprite_Renderer);
+		if sr != null {
+			sr.color = v4.{color.x, color.y, color.z, color.w * (1.0 - t)};
+		}
+	}
+}
+
+rr_lobby_minigame_spawn_pop_vfx :: proc(pos: v2, texture_path: string, color: v4, start_scale: float, end_scale: float) {
+	tex := get_asset(Texture_Asset, texture_path);
+	if tex == null return;
+	e := Scene.create_entity();
+	e.set_local_position(pos);
+	e.set_local_scale(v2.{start_scale, start_scale});
+	sr := e.add_component(Sprite_Renderer);
+	sr.set_texture(tex);
+	sr.layer = -2;
+	sr.color = color;
+	vfx := e.add_component(Lobby_Minigame_Pop_VFX);
+	vfx.lifetime = 0.45;
+	vfx.start_scale = start_scale;
+	vfx.end_scale = end_scale;
+	vfx.color = color;
+}
+
+rr_lobby_minigame_burst :: proc(pos: v2, shield_pop: bool) {
+	if shield_pop {
+		rr_lobby_minigame_spawn_pop_vfx(pos, "minigame/Bubble Shield_16bc73.png", v4.{0.2, 0.75, 1.0, 0.85}, 0.35, 2.1);
+		rr_lobby_minigame_spawn_pop_vfx(pos + v2.{0.0, 0.25}, "minigame/Shattered Bubble Shield_88c76e.png", v4.{0.5, 0.95, 1.0, 0.95}, 0.25, 1.2);
+	} else {
+		rr_lobby_minigame_spawn_pop_vfx(pos, "minigame/Shattered Bubble Shield_88c76e.png", v4.{1.0, 0.85, 0.12, 1.0}, 0.35, 1.8);
+		rr_lobby_minigame_spawn_pop_vfx(pos + v2.{0.15, 0.18}, "minigame/Bubble Shield_16bc73.png", v4.{1.0, 0.2, 0.65, 0.75}, 0.25, 2.4);
+	}
+}
+
+// Only the attacker and target should feel the hit — bystanders shouldn't have their
+// cameras shaken every time anyone in the lobby gets tagged.
+rr_lobby_minigame_add_hit_screenshake :: proc(attacker: Player, target: Player, intensity: float) {
+	a := rr_get_lobby_minigame_effect(attacker);
+	if a != null a.shake(intensity);
+	t := rr_get_lobby_minigame_effect(target);
+	if t != null t.shake(intensity);
+}
+
+rr_lobby_minigame_player_can_act :: proc(player: Player) -> bool {
+	if game_state != Game_State.LOBBY return false;
+	if !lobby_minigame_active return false;
+	mg := rr_get_lobby_minigame_effect(player);
+	if mg == null return false;
+	return mg.can_act();
+}
+
+rr_lobby_minigame_player_has_shield :: proc(player: Player) -> bool {
+	if !lobby_minigame_active return false;
+	if game_state != Game_State.LOBBY return false;
+	mg := rr_get_lobby_minigame_effect(player);
+	if mg == null return false;
+	return mg.has_shield();
+}
+
+rr_lobby_minigame_play_sfx_at :: proc(path: string, pos: v2, volume: float, speed_perturb: float) {
+	desc := SFX.default_sfx_desc();
+	desc.set_position(pos);
+	desc.volume = volume;
+	desc.speed_perturb = speed_perturb;
+	rr_play_sfx(path, desc);
+}
+
+rr_lobby_minigame_handle_projectile_hit :: proc(attacker: Player, target: Player, hit_pos: v2) {
+	if attacker == null return;
+	if target == null return;
+	if attacker == target return;
+	if game_state != Game_State.LOBBY || !lobby_minigame_active return;
+	a_mg := rr_get_lobby_minigame_effect(attacker);
+	t_mg := rr_get_lobby_minigame_effect(target);
+	if a_mg == null || t_mg == null return;
+	if get_time() < t_mg.respawn_until return;
+
+	if t_mg.has_shield() {
+		t_mg.shield_until = 0.0;
+		t_mg.shield_active = false;
+		rr_lobby_minigame_burst(hit_pos, true);
+		rr_lobby_minigame_add_hit_screenshake(attacker, target, 0.05);
+		rr_lobby_minigame_play_sfx_at("minigame/shield_block_390d4b.wav", hit_pos, 0.125, 0.12);
+		rr_lobby_minigame_play_sfx_at("minigame/bubble_pop_92af67.wav", hit_pos, 0.08, 0.2);
+		return;
+	}
+
+	a_mg.score += 1;
+	t_mg.tags_taken += 1;
+	t_mg.respawn_until = get_time() + LOBBY_MINIGAME_RESPAWN_SECONDS;
+	t_mg.shield_until = t_mg.respawn_until + LOBBY_MINIGAME_SPAWN_SHIELD_SECONDS;
+	t_mg.shield_active = false;
+	rr_lobby_minigame_burst(hit_pos, false);
+	rr_lobby_minigame_add_hit_screenshake(attacker, target, 0.09);
+	world_references.teleport_near_lobby(target);
+	rr_lobby_minigame_spawn_pop_vfx(target.entity.world_position, "minigame/Bubble Shield_16bc73.png", v4.{0.35, 1.0, 0.45, 0.75}, 0.4, 1.9);
+	target.set_trigger("RESET");
+
+	rr_lobby_minigame_play_sfx_at("minigame/bonk_staff_77864c.wav", hit_pos, 0.1625, 0.08);
+	rr_lobby_minigame_play_sfx_at("minigame/imposter_slap_a3182b.wav", hit_pos, 0.08, 0.12);
+	rr_lobby_minigame_play_sfx_at("sfx/transform_poof_2da056.wav", target.entity.world_position, 0.1125, 0.18);
+}
+
+// Renders the start animation that slides/fades the title in with floating
+// minigame icons orbiting a glowing halo. Plays a one-shot whoosh on first frame.
+rr_lobby_minigame_draw_intro_orbit_sprite :: proc(center: v2, texture_path: string, tint: v4, base_angle: float, radius_x: float, radius_y: float, base_size: float, alpha: float, appear: float, t: float) {
+	tex := get_asset(Texture_Asset, texture_path);
+	if tex == null return;
+	wobble_x := sin(t * 2.0 + base_angle) * 30.0;
+	wobble_y := cos(t * 1.7 + base_angle * 1.3) * 18.0;
+	rx := radius_x + wobble_x;
+	ry := radius_y + wobble_y;
+	ang := t * 1.4 + base_angle;
+	ox := cos(ang) * rx;
+	oy := sin(ang) * ry;
+	size := base_size + sin(t * 5.0 + base_angle) * 8.0;
+	pos := v2.{center.x + ox, center.y + oy};
+	rect := Rect{pos, pos}.grow(size, size, size, size);
+	a := tint.w * alpha * appear;
+	UI.quad(rect, tex, v4.{tint.x, tint.y, tint.z, a});
+}
+
+Lobby_Minigame_Shoot_Ability :: class : Ability_Base {
+	NAME :: "Shoot";
+
+	on_init :: proc(instance: Lobby_Minigame_Shoot_Ability) {
+		instance.name = NAME;
+		instance.icon = get_asset(Texture_Asset, "ui/voting/shoot_weapon_icon.png");
+		instance.is_aimed_ability = true;
+	}
+
+	can_use :: method() -> bool {
+		if game_state != Game_State.LOBBY return false;
+		if !lobby_minigame_active return false;
+		if !rr_lobby_minigame_player_can_act(player) return false;
+		return true;
+	}
+
+	on_update :: method(params: ref Ability_Update_Params) {
+		if !params.can_use {
+			rr_player_clear_gun_state(player);
+			return;
+		}
+		rr_set_player_gun_skin(player, "weapons/hand_gun");
+		activation := Ability_Utilities.full_update_targeted_aimed_ability(player, this, ref params);
+
+		targeting := player.active_ability == this.(Ability_Base);
+		if targeting {
+			player.set_mouse_ik_enabled(true);
+			player.set_aim_target(player.entity.world_position + player.last_aim_direction * 5.0);
+		} else {
+			player.set_mouse_ik_enabled(false);
+		}
+
+		if activation.activate {
+			player.set_facing_right(activation.direction.x > 0);
+			player.set_trigger("shoot_gun");
+			player.set_aim_target(player.entity.world_position + activation.direction * 5.0);
+			proj := shoot_projectile(player.entity.world_position, activation.direction * 15.0, 1, 0.55, player.entity);
+			if proj != null {
+				projectile := proj.get_component(RR_Projectile);
+				if projectile != null {
+					projectile.lobby_minigame = true;
+					projectile.hit_radius = 0.45;
+				}
+			}
+			sfx := SFX.default_sfx_desc();
+			sfx.set_position(player.entity.world_position);
+			sfx.volume = 0.095;
+			sfx.volume_perturb = 0.03;
+			sfx.speed_perturb = 0.12;
+			rr_play_sfx("sfx/shoot.wav", sfx);
+			rr_lobby_minigame_play_sfx_at("minigame/zap_19674e.wav", player.entity.world_position, 0.05, 0.18);
+			current_cooldown = 0.35;
+		}
+	}
+
+	on_draw_button :: proc(instance: Lobby_Minigame_Shoot_Ability, rect: Rect) {
+		draw_ability_name_label(rect, NAME);
+	}
+}
+
+Lobby_Minigame_Roll_Ability :: class : Ability_Base {
+	NAME :: "Roll";
+
+	on_init :: proc(instance: Lobby_Minigame_Roll_Ability) {
+		instance.name = NAME;
+		instance.icon = get_asset(Texture_Asset, "sprites/icons/ggg/crawl_speedup.png");
+		instance.is_aimed_ability = true;
+	}
+
+	can_use :: method() -> bool {
+		if game_state != Game_State.LOBBY return false;
+		if !lobby_minigame_active return false;
+		if !rr_lobby_minigame_player_can_act(player) return false;
+		mg := rr_get_lobby_minigame_effect(player);
+		if mg == null return false;
+		if get_time() < mg.roll_until return false;
+		return true;
+	}
+
+	on_update :: method(params: ref Ability_Update_Params) {
+		if !params.can_use return;
+		mg := rr_get_lobby_minigame_effect(player);
+		if mg == null return;
+		activation := Ability_Utilities.full_update_targeted_aimed_ability(player, this, ref params);
+		if activation.activate {
+			mg.roll_direction = activation.direction;
+			mg.roll_until = get_time() + 0.45;
+			player.set_trigger("dodge_roll");
+			rr_lobby_minigame_spawn_pop_vfx(player.entity.world_position, "minigame/Bubble Shield_16bc73.png", v4.{0.25, 1.0, 0.55, 0.65}, 0.25, 1.4);
+			rr_lobby_minigame_play_sfx_at("sfx/transform_poof_2da056.wav", player.entity.world_position, 0.08, 0.18);
+			current_cooldown = 1.1;
+		}
+	}
+
+	on_draw_button :: proc(instance: Lobby_Minigame_Roll_Ability, rect: Rect) {
+		draw_ability_name_label(rect, NAME);
+	}
+}
+
+Lobby_Minigame_Shield_Ability :: class : Ability_Base {
+	NAME :: "Shield";
+
+	on_init :: proc(instance: Lobby_Minigame_Shield_Ability) {
+		instance.name = NAME;
+		instance.icon = get_asset(Texture_Asset, "minigame/Shield Blue Icon_0c7a3a.png");
+	}
+
+	can_use :: method() -> bool {
+		if game_state != Game_State.LOBBY return false;
+		if !lobby_minigame_active return false;
+		if !rr_lobby_minigame_player_can_act(player) return false;
+		if rr_lobby_minigame_player_has_shield(player) return false;
+		return true;
+	}
+
+	on_update :: method(params: ref Ability_Update_Params) {
+		if params.clicked && params.can_use {
+			mg := rr_get_lobby_minigame_effect(player);
+			if mg == null return;
+			mg.shield_active = true;
+			rr_lobby_minigame_burst(player.entity.world_position, true);
+			rr_lobby_minigame_play_sfx_at("minigame/shield_block_390d4b.wav", player.entity.world_position, 0.0875, 0.08);
+			rr_lobby_minigame_play_sfx_at("minigame/bubble_pop_92af67.wav", player.entity.world_position, 0.07, 0.14);
+		}
+	}
+
+	on_draw_button :: proc(instance: Lobby_Minigame_Shield_Ability, rect: Rect) {
+		draw_ability_name_label(rect, NAME);
+	}
+}

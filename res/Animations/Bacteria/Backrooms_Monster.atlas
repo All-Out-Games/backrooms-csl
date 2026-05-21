@@ -1,0 +1,107 @@
+Backrooms_Monster.png
+	size: 2640, 192
+	filter: Linear, Linear
+	scale: 0.5
+ArmL_A
+	bounds: 2286, 92, 43, 96
+ArmL_B
+	bounds: 2421, 121, 28, 67
+Black Vomit/VomitSpatter
+	bounds: 1705, 37, 151, 89
+	rotate: 90
+Black Vomit/VomitStream
+	bounds: 2056, 96, 92, 85
+	rotate: 90
+Body1
+	bounds: 1059, 27, 125, 161
+Body2
+	bounds: 931, 27, 125, 161
+Body3
+	bounds: 803, 27, 125, 161
+Body4
+	bounds: 528, 20, 168, 163
+	rotate: 90
+Corruption BreathCloud/Breath_A
+	bounds: 2379, 130, 58, 39
+	rotate: 90
+Corruption BreathCloud/Breath_C
+	bounds: 2144, 100, 88, 82
+	rotate: 90
+FingerL_A
+	bounds: 1274, 173, 15, 33
+	rotate: 90
+FingerL_B
+	bounds: 2468, 160, 28, 59
+	rotate: 90
+FingerL_C
+	bounds: 2452, 134, 54, 45
+	rotate: 90
+FingerL_D
+	bounds: 803, 143, 45, 16
+	rotate: 90
+FingerR_A
+	bounds: 2563, 161, 27, 24
+	offsets: 0, 1, 27, 25
+	rotate: 90
+FingerR_B
+	bounds: 2530, 132, 31, 56
+FingerR_C
+	bounds: 3, 165, 23, 64
+	rotate: 90
+FingerR_D
+	bounds: 2590, 147, 41, 27
+	rotate: 90
+HandL_A
+	bounds: 2229, 101, 54, 87
+HandL_B
+	bounds: 2332, 120, 44, 68
+Head1
+	bounds: 1608, 11, 177, 95
+	rotate: 90
+Head2
+	bounds: 1504, 7, 181, 101
+	rotate: 90
+Head3
+	bounds: 1187, 5, 183, 101
+	rotate: 90
+Head4
+	bounds: 372, 14, 174, 153
+	rotate: 90
+Head_Bite1
+	bounds: 189, 7, 180, 181
+Head_Scream1
+	bounds: 189, 7, 180, 181
+Head_Bite2
+	bounds: 1291, 95, 211, 93
+Head_Scream2
+	bounds: 3, 6, 183, 182
+LegL_A
+	bounds: 189, 151, 37, 82
+	rotate: 90
+LegL_B
+	bounds: 480, 154, 34, 44
+	rotate: 90
+LegR_B
+	bounds: 480, 154, 34, 44
+	rotate: 90
+LegR_A
+	bounds: 615, 151, 37, 74
+	rotate: 90
+PalmL
+	bounds: 1588, 166, 20, 22
+PalmR
+	bounds: 2620, 162, 16, 26
+Scream Lines/Scream_1
+	bounds: 1897, 74, 114, 93
+	offsets: 1, 0, 116, 93
+	rotate: 90
+Scream Lines/Scream_2
+	bounds: 1797, 77, 111, 97
+	offsets: 1, 0, 112, 98
+	rotate: 90
+Shadow
+	bounds: 1993, 34, 154, 60
+	rotate: 90
+Teleport Gank Pool/TeleportGankPool
+	bounds: 693, 3, 185, 107
+	rotate: 90

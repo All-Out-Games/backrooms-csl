@@ -1,0 +1,356 @@
+import "core:ao"
+
+Door :: class : Component {
+    force_locked: bool @ao_serialize;
+    collider_entity: Entity @ao_serialize;
+    spine_animator: Spine_Animator @ao_serialize;
+
+    spacing: float @ao_serialize;
+
+    is_open: bool;
+
+    // Cache the base bone positions so we can re-apply spacing every frame
+    // without accumulating offsets.
+    spacing_upper_base: v2;
+    spacing_lower_base: v2;
+    spacing_bases_cached: bool;
+
+    ao_start :: proc(using this: Door) {
+        collider_entity.set_local_enabled(force_locked);
+        this.setup_spine_animator();
+    }
+
+    ao_update :: proc(using this: Door, dt: float) {
+        // Re-apply spacing offset every frame so Spine animations don't override it.
+        if spacing > 0 && spine_animator != null {
+            spine_animator.awaken();
+            if spine_animator.instance != null {
+                if !spacing_bases_cached {
+                    spacing_upper_base = spine_animator.instance.get_bone_local_position("vertical_upper_root");
+                    spacing_lower_base = spine_animator.instance.get_bone_local_position("vertical_lower_root");
+                    spacing_bases_cached = true;
+                }
+                spine_animator.instance.set_bone_local_position("vertical_upper_root", spacing_upper_base + v2.{0.0, spacing});
+                spine_animator.instance.set_bone_local_position("vertical_lower_root", spacing_lower_base + v2.{0.0, -spacing});
+            }
+        }
+    }
+
+    setup_spine_animator :: method() {
+        // Animations in the door rigs:
+        // - closed_idle (loop)
+        // - opening (oneshot) -> open_idle (loop)
+        // - closing (oneshot) -> closed_idle (loop)
+        //
+        // Triggers:
+        // - open_door  => opening
+        // - close_door => closing
+        if spine_animator == null {
+            return;
+        }
+
+        spine_animator.awaken();
+        if spine_animator.instance == null {
+            return;
+        }
+
+        // Cache base bone positions for spacing (applied every frame in ao_update).
+        if spacing > 0 {
+            spacing_upper_base = spine_animator.instance.get_bone_local_position("vertical_upper_root");
+            spacing_lower_base = spine_animator.instance.get_bone_local_position("vertical_lower_root");
+            spacing_bases_cached = true;
+            spine_animator.instance.set_bone_local_position("vertical_upper_root", spacing_upper_base + v2.{0.0, spacing});
+            spine_animator.instance.set_bone_local_position("vertical_lower_root", spacing_lower_base + v2.{0.0, -spacing});
+        }
+
+        state_machine := State_Machine.create();
+        open_trigger := state_machine.create_variable("open_door", .TRIGGER);
+        close_trigger := state_machine.create_variable("close_door", .TRIGGER);
+
+        layer := state_machine.create_layer("main", 0);
+
+        closed_idle := layer.create_state("closed_idle", true);
+        opening := layer.create_state("opening", false);
+        open_idle := layer.create_state("open_idle", true);
+        closing := layer.create_state("closing", false);
+
+        // Pick initial state based on starting lock state.
+        if force_locked {
+            is_open = false;
+            layer.set_initial_state(closed_idle);
+        } else {
+            is_open = true;
+            layer.set_initial_state(open_idle);
+        }
+
+        // closed_idle -> opening -> open_idle
+        closed_to_opening := layer.create_transition(closed_idle, opening, false);
+        closed_to_opening.create_trigger_condition(open_trigger);
+
+        opening_to_open_idle := layer.create_transition(opening, open_idle, true);
+
+        // open_idle -> closing -> closed_idle
+        open_idle_to_closing := layer.create_transition(open_idle, closing, false);
+        open_idle_to_closing.create_trigger_condition(close_trigger);
+
+        closing_to_closed_idle := layer.create_transition(closing, closed_idle, true);
+
+        // Attach to spine (transfer ownership to the Spine_Instance).
+        spine_animator.instance.set_state_machine(state_machine, true);
+    }
+
+    open_door :: proc(using this: Door) {
+        force_locked = false;
+        collider_entity.set_local_enabled(force_locked);
+        is_open = true;
+
+        if spine_animator != null {
+            spine_animator.awaken();
+            if spine_animator.instance != null && spine_animator.instance.state_machine != null {
+                spine_animator.instance.state_machine.set_trigger("open_door");
+            } else if spine_animator.instance != null {
+                spine_animator.instance.set_animation("opening", false, 0);
+            }
+        }
+    }
+
+    close_door :: proc(using this: Door) {
+        force_locked = true;
+        collider_entity.set_local_enabled(force_locked);
+        is_open = false;
+
+        if spine_animator != null {
+            spine_animator.awaken();
+            if spine_animator.instance != null && spine_animator.instance.state_machine != null {
+                spine_animator.instance.state_machine.set_trigger("close_door");
+            } else if spine_animator.instance != null {
+                spine_animator.instance.set_animation("closing", false, 0);
+            }
+        }
+    }
+}
+
+// --- Door Unlock Interactable (1 per player, moves to nearest closed door) ---
+DOOR_UNLOCK_HOLD_TIME :: 3.0;
+DOOR_UNLOCK_INTERACT_RADIUS :: 3.0;
+DOOR_UNLOCK_SEARCH_RADIUS :: 6.0;
+
+Door_Unlock_Interactable :: class : Interactable {
+	owner_player: Player;
+	target_door: Door;
+
+	ao_start :: method() {
+		this.set_listener(this);
+		this.set_text("Open Door");
+		this.set_hold_text("Opening...");
+		radius = DOOR_UNLOCK_INTERACT_RADIUS;
+		required_hold_time = DOOR_UNLOCK_HOLD_TIME;
+		prompt_offset = v2.{0, 1.5};
+		priority = 20;
+	}
+
+	can_use :: method(player: Player) -> bool {
+		if player == null return false;
+		if game_state != Game_State.INGAME return false;
+		if player.player_state != Player_State.ALIVE return false;
+		// Only the owning player can use this interactable.
+		if owner_player == null return false;
+		if player != owner_player return false;
+		if target_door == null return false;
+		if !#alive(target_door.entity) return false;
+		if target_door.is_open return false;
+		return true;
+	}
+
+	on_interact :: method(player: Player) {
+		if target_door == null return;
+		if !#alive(target_door.entity) return;
+		if target_door.is_open return;
+
+		target_door.open_door();
+		rebuild_game_world_navmesh();
+	}
+}
+
+world_references: World_References;
+
+World_References :: class : Component {
+    lobby_spawn: Entity @ao_serialize;
+    voting_spawn: Entity @ao_serialize;
+    corpse_prefab: Prefab_Asset;
+    main_navmesh: Navmesh @ao_serialize;
+    ghost_navmesh: Navmesh @ao_serialize;
+    map_min: Entity @ao_serialize;
+    map_max: Entity @ao_serialize;
+    rr_comms_lever_entity: Entity @ao_serialize;
+    sabotage_generator_interactable: Interactable @ao_serialize;
+
+    ao_start :: proc(using this: World_References) {
+        corpse_prefab = get_asset(Prefab_Asset, "prefabs/Corpse.prefab");
+        world_references = this;
+    }
+
+    teleport_near_lobby :: proc(using this: World_References, player: Player) {
+        rng := rng_seed(player.entity.id);
+        random_offset :=  v2.{rng_range_float(ref rng, -2.0, 2.0), rng_range_float(ref rng, -2.0,2.0)};
+        player.entity.set_local_position(lobby_spawn.world_position + random_offset);
+    }
+
+    teleport_to_voting :: proc(using this: World_References, player: Player) {
+        // Find player index in the players array
+        player_index := 0.0;
+        for i: 0..players.elements.count-1 {
+            if players.elements[i] == player {
+                player_index = i.(f32);
+                break;
+            }
+        }
+        
+        // Calculate position in circle around voting spawn
+        total_players := players.elements.count.(f32);
+        if total_players == 0.0 { total_players = 1.0; }
+        radius := 3.0;
+        angle := (player_index / total_players) * 2.0 * PI;
+        offset := v2.{cos(angle) * radius, sin(angle) * radius};
+        
+        nav_point: v2;
+        triangle_hint: s64;
+        try_find_closest_point_on_navmesh(voting_spawn.world_position + offset, ref nav_point, ref triangle_hint);
+        player.entity.set_local_position(voting_spawn.world_position + offset);
+    }
+
+    spawn_corpse :: proc(using this: World_References, player: Player, killer_player_entity_id: u64) {
+        corpse := Scene.instantiate(corpse_prefab);
+        corpse.set_local_position(player.entity.world_position);
+        corpse.set_local_rotation(player.entity.world_rotation);
+        corpse.set_local_scale(player.entity.world_scale);
+
+        corpse_component := corpse.get_component(Corpse);
+        if corpse_component != null {
+            corpse_component.has_been_reported = false;
+            corpse_component.owner_player_entity_id = player.entity.id;
+			corpse_component.killer_player_entity_id = killer_player_entity_id;
+			corpse_component.has_dna_been_sampled = false;
+			corpse_component.pyro_has_been_burned = false;
+			corpse_component.pirate_map_taken = false;
+			corpse_component.hacker_identity_stolen = false;
+			corpse_component.ggg_is_wrapped = false;
+			corpse_component.mimicer_disguised_kill = false;
+			// Drag-body system (traitors can move corpses around).
+			corpse_component.dragged_by_player_entity_id = 0;
+			corpse_component.death_anim = "Death_No_HP"; // overwritten below once we pick the final anim
+        }
+
+		// Reporting is an in-world interactable on the corpse (replaces Report_Ability).
+		corpse.add_component(Report_Corpse_Interactable);
+		corpse.add_component(Unwrap_Corpse_Interactable);
+		// Mimicer can corrupt any corpse into a Void Pillar.
+		corpse.add_component(Mimicer_Corrupt_Interactable);
+
+        spine_Animator := corpse.get_component(Spine_Animator);
+        if spine_Animator != null && spine_Animator.instance != null && player.animator != null && player.animator.instance != null {
+            death_anim := "Death_No_HP";
+
+            // Apply LOS/shadow mask so corpses don't show through fog-of-war.
+            rr_apply_shadow_mask(spine_Animator.instance);
+
+            spine_Animator.instance.disable_all_skins();
+            player_skins := player.animator.instance.get_skins();
+            for i: 0..player_skins.count-1 {
+                spine_Animator.instance.enable_skin(player_skins[i]);
+            }
+            spine_Animator.instance.refresh_skins();
+
+            // Set color AFTER refresh_skins so the skin rebuild doesn't reset it.
+            spine_Animator.instance.set_color_replace_color(player.avatar_color);
+
+			// Hitman kill-specific corpse deaths (animations are integrated into the player rig).
+			killer := get_player_by_entity_id(killer_player_entity_id);
+			if killer != null && killer.player_role == Player_Role.HITMAN {
+				hm := killer.entity.get_component(Hitman_Module);
+				if hm != null {
+					switch hm.last_kill_style {
+						case .NECK_SNAP: death_anim = "004RAND_hitman/Kill_Neck_Snapped";
+						case .SNIPER:    death_anim = "004RAND_hitman/Shot_By_Sniper";
+						case .NONE:      death_anim = "Death_No_HP";
+					}
+				}
+			}
+
+			// GGG kills always wrap the victim in chocolate foil (both forms).
+			killer_gm: GGG_Module = null;
+			if killer != null {
+				killer_gm = killer.entity.get_component(GGG_Module);
+			}
+			if killer != null && killer.player_role == Player_Role.GOO_GOO_GAGA && killer_gm != null {
+				if corpse_component != null {
+					// Save original death anim before overriding, so unwrap can restore it.
+					corpse_component.ggg_pre_wrap_death_anim = death_anim;
+					corpse_component.ggg_is_wrapped = true;
+				}
+				death_anim = "004RAND_GOOGOOGAGA/Death_Tinfoil";
+			}
+
+			// Big Charlie Bone Snap death animation.
+			if killer != null && killer.player_role == Player_Role.BIG_CHARLIE {
+				death_anim = "004RAND_BIGCHARLIE/Dead_Bone_Snap";
+			}
+
+			// Lily death animation.
+			if killer != null && killer.player_role == Player_Role.LILY_LOVEBRAIDS {
+				death_anim = "004RAND_LILY/Death_Lovebraids";
+			}
+
+            spine_Animator.instance.set_animation(death_anim, false, 0);
+
+			// If victim had eyes stolen, play the no-eyes overlay on the corpse too (track 1).
+			if player.lily_no_eyes {
+				spine_Animator.instance.set_animation("004RAND_LILY/No_Eyes_AL", true, 1);
+			}
+
+            spine_Animator.awaken();
+
+			// Store the chosen animation so we can restore it after drag-drop.
+			if corpse_component != null {
+				corpse_component.death_anim = death_anim;
+			}
+        }
+    }
+
+	// Collect all Sprite_Renderers in the descendants of any entity named "Props".
+	// (Does not include Sprite_Renderers on the "Props" entity itself.)
+	find_props_child_entities :: proc(using this: World_References, results: ref [..]Entity, clear_first: bool = true) {
+		if clear_first {
+			results.clear();
+		}
+		for e: entity_iterator() {
+			if e == null continue;
+			if !#alive(e) continue;
+			if !e.compare_name("Props") continue;
+
+			this.append_entities_in_descendants(e, ref results);
+		}
+	}
+
+	append_entities_in_descendants :: proc(using this: World_References, root: Entity, results: ref [..]Entity) {
+		if root == null return;
+		if !#alive(root) return;
+
+		// Iterative DFS over children to avoid recursion depth issues.
+		stack: [..]Entity;
+
+		// Seed stack with root's direct children (so we don't include root itself).
+		child := root.get_first_child();
+		while child != null {
+			stack.append(child);
+			child = child.get_next_sibling();
+		}
+
+		while stack.count > 0 {
+			cur := stack.pop();
+			if cur == null continue;
+			if !#alive(cur) continue;
+			results.append(cur);
+		}
+	}
+}

@@ -36,12 +36,14 @@
     "RoundItemIds": [
       "flashbang",
       "noisemaker",
-      "stim"
+      "stim",
+      "broken_camera"
     ],
     "RoundItemWeights": [
       2,
       1,
-      2
+      2,
+      1
     ],
     "MinRoundItemSpawnCount": 22,
     "MaxRoundItemSpawnCount": 25,

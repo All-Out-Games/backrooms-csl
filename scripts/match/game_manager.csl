@@ -679,6 +679,7 @@ Game_Manager :: class : Component {
     ReconnectWiresSpawns: Entity @ao_serialize;
     RadioSpawns: Entity @ao_serialize;
     EntitySpawns: Entity @ao_serialize;
+    BrokenCameraSpawns: Entity @ao_serialize;
     ItemSpawns: Entity @ao_serialize;
     AsyncSpawns: Entity @ao_serialize;
     EndOfGameWarp: Entity @ao_serialize;
@@ -718,6 +719,7 @@ Game_Manager :: class : Component {
     round_start_positions_applied: bool;
     round_start_transition_finished: bool;
     task_zone_task_id: string;
+    round_tapes_collected: [8]bool;
 
     ao_start :: method() {
         if #alive(game_manager_singleton) {
@@ -751,6 +753,7 @@ Game_Manager :: class : Component {
         round_start_positions_applied = false;
         round_start_transition_finished = false;
         task_zone_task_id = "";
+        reset_round_tapes_collected();
         match_rng = rng_root_seed();
         if !#alive(EndOfGameWarp) {
             EndOfGameWarp = Scene.get_entity_by_name("EndOfGameWarp");
@@ -1285,6 +1288,79 @@ Game_Manager :: class : Component {
         return spawn_weighted_round_item_at_position(spawn_ref.world_position);
     }
 
+    spawn_broken_camera_item_at_reference :: method(spawn_ref: Entity) -> Dropped_Item {
+        if !#alive(spawn_ref) {
+            return null;
+        }
+
+        init_weapon_items();
+        broken_camera_def := get_registered_item_def_by_id(BROKEN_CAMERA_ITEM_ID);
+        if broken_camera_def == null {
+            return null;
+        }
+
+        item := Items.create_item_instance(broken_camera_def, 1);
+        dropped_item := Dropped_Item.spawn(spawn_ref.world_position, item);
+        if !#alive(dropped_item) {
+            if #alive(item) {
+                Items.destroy_item_instance(item);
+            }
+            return null;
+        }
+
+        install_ghost_item_ping_listener(dropped_item);
+        if dropped_item.sprite != null {
+            dropped_item.sprite.mask_in_shadow = true;
+        }
+        if dropped_item.starburst != null {
+            dropped_item.starburst.mask_in_shadow = true;
+        }
+        if dropped_item.shadow != null {
+            dropped_item.shadow.mask_in_shadow = true;
+        }
+        dropped_item.despawn_time_start = get_time() + (ROUND_ITEM_DESPAWN_TOTAL_SECONDS - ROUND_ITEM_ENGINE_DESPAWN_WINDOW_SECONDS);
+        return dropped_item;
+    }
+
+    spawn_broken_camera_items_for_match :: method() {
+        if !#alive(BrokenCameraSpawns) {
+            BrokenCameraSpawns = Scene.get_entity_by_name("BrokenCameraSpawns");
+        }
+
+        broken_camera_spawns: [..]Entity;
+        collect_child_entity_references(BrokenCameraSpawns, ref broken_camera_spawns);
+
+        valid_spawns: [..]Entity;
+        for i: 0..broken_camera_spawns.count - 1 {
+            spawn_ref := broken_camera_spawns[i];
+            if !#alive(spawn_ref) {
+                continue;
+            }
+
+            already_added := false;
+            for j: 0..valid_spawns.count - 1 {
+                if valid_spawns[j] == spawn_ref {
+                    already_added = true;
+                    break;
+                }
+            }
+
+            if !already_added {
+                valid_spawns.append(spawn_ref);
+            }
+        }
+
+        for i: 0..valid_spawns.count - 1 {
+            dropped_item := spawn_broken_camera_item_at_reference(valid_spawns[i]);
+            if #alive(dropped_item) {
+                spawned_round_items.append(dropped_item);
+            }
+        }
+
+        broken_camera_spawns.clear();
+        valid_spawns.clear();
+    }
+
     spawn_async_corpse_loot :: method(position: v2) -> bool {
         dropped_item := spawn_weighted_round_item_at_position(position);
         if !#alive(dropped_item) {
@@ -1555,6 +1631,12 @@ Game_Manager :: class : Component {
         }
     }
 
+    reset_round_tapes_collected :: method() {
+        for i: 0..7 {
+            round_tapes_collected[i] = false;
+        }
+    }
+
     reset_generator_for_round :: method(round_seed_key: u64) {
         if !#alive(GeneratorEntity) {
             return;
@@ -1651,6 +1733,7 @@ Game_Manager :: class : Component {
         result = .NONE;
         hide_task_zone();
         clear_all_footstep_echoes();
+        reset_round_tapes_collected();
 
         now := get_time();
         next_role_selection_ends_at := now + ROLE_SELECTION_SECONDS;
@@ -1678,6 +1761,7 @@ Game_Manager :: class : Component {
             }
         }
         spawn_round_items_for_match();
+        spawn_broken_camera_items_for_match();
         spawn_async_entities_for_match();
         players.clear();
         pool.clear();

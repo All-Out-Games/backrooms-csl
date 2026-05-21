@@ -2,6 +2,12 @@ TASK_ID_TUNE_RADIO        :: "tune_radio";
 TASK_ID_ENTER_KEYCODE     :: "enter_keycode";
 TASK_ID_RESTART_GENERATOR :: "restart_generator";
 TASK_ID_RECONNECT_WIRE    :: "reconnect_wire";
+TASK_ID_REPAIR_LAPTOP     :: "repair_laptop";
+
+// --- Task SFX helpers copied with the Repair Laptop task ---
+RR_TASK_SFX_TILE_CLICK   :: "task_click_tile_8ba441.wav";
+RR_TASK_SFX_SUCCESS      :: "task_success_df0cb6.wav";
+RR_UI_BUTTON_CLICK_SOUND_PATH :: "mouse_click_cee011.wav";
 
 TASK_PANEL_WIDTH         :: 320.0;
 TASK_LIST_WIDTH          :: 300.0;
@@ -24,6 +30,17 @@ TASK_TEX_PROGRESS_BACK    :: "UI/task list/task_progress_back.png";
 TASK_TEX_PROGRESS_FILL    :: "UI/task list/task_progress_fill.png";
 TASK_TEX_PROGRESS_SEGMENT :: "UI/task list/task_progress_segment.png";
 TASK_TEX_PROGRESS_EXIT    :: "ExitDoorOpenIcon.png";
+TASK_TAPE_COUNT :: 8;
+TASK_TAPE_UNCOLLECTED_TINT := v4.{0.75, 0.75, 0.75, 0.65};
+TASK_TAPE_COLLECTED_TINT := v4.{1.0, 1.0, 1.0, 1.0};
+TASK_TAPE_ITEM_YELLOW :: "tape_vhs_yellow";
+TASK_TAPE_ITEM_BLACK :: "tape_vhs_black";
+TASK_TAPE_ITEM_WHITE :: "tape_vhs_white";
+TASK_TAPE_ITEM_RED :: "tape_vhs_red";
+TASK_TAPE_ITEM_ORANGE :: "tape_vhs_orange";
+TASK_TAPE_ITEM_PINK :: "tape_vhs_pink";
+TASK_TAPE_ITEM_BLUE :: "tape_vhs_blue";
+TASK_TAPE_ITEM_GREEN :: "tape_vhs_green";
 TASK_CLOSE_BUTTON_HALF_WIDTH   :: 120.0;
 TASK_CLOSE_BUTTON_HALF_HEIGHT  :: 24.0;
 TASK_CLOSE_BUTTON_BOTTOM_PAD   :: 10.0;
@@ -32,6 +49,67 @@ Task_Base :: class {
     id: string;
     started: bool;
     completed: bool;
+    // Incremented every time the task is (re)started. Used by task minigames to
+    // detect a new attempt even though `start_attempt` isn't dynamically dispatched.
+    attempt_id: int;
+
+    start_attempt :: proc(using this: Task_Base, player: Player) {
+        if started {
+            return;
+        }
+        attempt_id += 1;
+        started = true;
+
+        // Local-only start SFX (avoid double-play on host/server).
+        if player != null && player.is_local() {
+            sfx := SFX.default_sfx_desc();
+            sfx.set_position(player.entity.world_position);
+            sfx.volume = 0.5;
+            sfx.volume_perturb = 0.05;
+            sfx.speed_perturb = 0.08;
+            // Global SFX mix: everything at 25% volume.
+            sfx.volume *= 0.25;
+            sfx.volume_perturb *= 0.25;
+            rr_play_sfx(RR_UI_BUTTON_CLICK_SOUND_PATH, sfx);
+        }
+    }
+
+    complete_attempt :: proc(using this: Task_Base, player: Player, success: bool) {
+        log(format_string("Task % completed: %", .{this.id, success}));
+        if completed {
+            return;
+        }
+        if success {
+            completed = true;
+            // Local-only completion SFX (avoid double-play on host/server).
+            if player != null && player.is_local() {
+                sfx := SFX.default_sfx_desc();
+                sfx.set_position(player.entity.world_position);
+                // Half as loud as before.
+                sfx.volume = 0.425;
+                sfx.volume_perturb = 0.1;
+                sfx.speed_perturb = 0.05;
+                // Global SFX mix: everything at 25% volume.
+                sfx.volume *= 0.25;
+                sfx.volume_perturb *= 0.25;
+                rr_play_sfx(RR_TASK_SFX_SUCCESS, sfx);
+            }
+        } else {
+            Notifier.notify(player, "You failed the task!");
+        }
+    }
+
+    // Called when we need to forcibly close a task. Default behavior is to allow
+    // the task to be started again later.
+    cancel_attempt :: proc(using this: Task_Base, player: Player) {
+        if !started {
+            return;
+        }
+        if completed {
+            return;
+        }
+        started = false;
+    }
 }
 
 Task_Help_Entry :: struct {
@@ -41,6 +119,12 @@ Task_Help_Entry :: struct {
 }
 
 create_task :: proc(task_id: string) -> Task_Base {
+    if task_id == TASK_ID_REPAIR_LAPTOP {
+        task := new(Task_Repair_Laptop);
+        task.id = task_id;
+        return task;
+    }
+
     task := new(Task_Base);
     task.id = task_id;
     return task;
@@ -92,6 +176,9 @@ is_task_required_for_progress :: proc(task: Task_Base) -> bool {
     if task == null {
         return false;
     }
+    if task.id == TASK_ID_REPAIR_LAPTOP {
+        return false;
+    }
     return true;
 }
 
@@ -107,6 +194,9 @@ is_task_unlocked_for_player :: proc(player: Player, task_id: string) -> bool {
     }
     if task_id == TASK_ID_RECONNECT_WIRE {
         return is_task_completed(player, TASK_ID_RESTART_GENERATOR);
+    }
+    if task_id == TASK_ID_REPAIR_LAPTOP {
+        return true;
     }
     return false;
 }
@@ -188,6 +278,7 @@ get_task_display_name :: proc(task_id: string) -> string {
         case TASK_ID_ENTER_KEYCODE:     return "Enter Keycode";
         case TASK_ID_RESTART_GENERATOR: return "Restart Generator";
         case TASK_ID_RECONNECT_WIRE:    return "Reconnect Wires";
+        case TASK_ID_REPAIR_LAPTOP:     return "Repair Laptop";
     }
     return "Unknown Task";
 }
@@ -205,6 +296,9 @@ get_task_description :: proc(task_id: string) -> string {
         }
         case TASK_ID_RECONNECT_WIRE: {
             return "Repair a severed circuit running power to the exit door.";
+        }
+        case TASK_ID_REPAIR_LAPTOP: {
+            return "Drag each piece back into its correct slot on the laptop.";
         }
     }
     return "";
@@ -230,6 +324,655 @@ assign_default_survivor_tasks :: proc(player: Player) {
     append(ref player.active_tasks, create_task(TASK_ID_ENTER_KEYCODE));
     append(ref player.active_tasks, create_task(TASK_ID_RESTART_GENERATOR));
     append(ref player.active_tasks, create_task(TASK_ID_RECONNECT_WIRE));
+}
+
+rr_play_sfx :: proc(path: string, desc: SFX_Desc) -> u64 {
+    asset := get_asset(SFX_Asset, path);
+    if asset == null return 0;
+    return SFX.play(asset, desc);
+}
+
+rr_ui_apply_button_click_sound :: proc(bs: ref Button_Settings) {
+    bs.click_sound = get_asset(SFX_Asset, RR_UI_BUTTON_CLICK_SOUND_PATH);
+    bs.click_sound_desc.speed = 1.0;
+}
+
+rr_task_sfx :: proc(player: Player, path: string, volume: float) {
+    if player == null return;
+    if !player.is_local() return;
+    sfx := SFX.default_sfx_desc();
+    sfx.set_position(player.entity.world_position);
+    sfx.volume = volume;
+    sfx.volume_perturb = 0.05;
+    sfx.speed_perturb = 0.08;
+    // Global SFX mix: everything at 25% volume.
+    sfx.volume *= 0.25;
+    sfx.volume_perturb *= 0.25;
+    rr_play_sfx(path, sfx);
+}
+
+get_tape_index_for_item_id :: proc(item_id: string) -> s64 {
+    switch item_id {
+        case TASK_TAPE_ITEM_YELLOW: return 0;
+        case TASK_TAPE_ITEM_BLACK: return 1;
+        case TASK_TAPE_ITEM_WHITE: return 2;
+        case TASK_TAPE_ITEM_RED: return 3;
+        case TASK_TAPE_ITEM_ORANGE: return 4;
+        case TASK_TAPE_ITEM_PINK: return 5;
+        case TASK_TAPE_ITEM_BLUE: return 6;
+        case TASK_TAPE_ITEM_GREEN: return 7;
+    }
+    return -1;
+}
+
+collect_tape_inventory_items :: proc(player: Player) {
+    if player == null {
+        return;
+    }
+
+    gm := get_game_manager();
+    if !#alive(gm) {
+        return;
+    }
+
+    i: s64 = 0;
+    while i < player.default_inventory.capacity {
+        item := player.default_inventory.get_item(i);
+        if !#alive(item) {
+            i += 1;
+            continue;
+        }
+
+        defn := item.get_definition();
+        if defn == null {
+            i += 1;
+            continue;
+        }
+
+        tape_index := get_tape_index_for_item_id(defn.get_id());
+        if tape_index < 0 {
+            i += 1;
+            continue;
+        }
+
+        gm.round_tapes_collected[tape_index] = true;
+        Items.destroy_item_instance(item);
+        continue;
+    }
+}
+
+// Standard close button for task minigames.
+// Returns true if the task was closed/cancelled this frame.
+draw_task_close_button :: proc(window_rect: Rect, player: Player, task: Task_Base) -> bool {
+    // Size scales with the task window so it stays readable across resolutions.
+    size := window_rect.height() * 0.065;
+    if size < 34.0 { size = 34.0; }
+    if size > 54.0 { size = 54.0; }
+
+    pad := size * 0.30;
+    btn := window_rect.top_right_rect().offset(-pad - size * 0.5, -pad - size * 0.5).grow(size * 0.5);
+
+    UI.push_id("task_close_%", .{task.id});
+    defer UI.pop_id();
+
+    bs: Button_Settings = .{};
+    rr_ui_apply_button_click_sound(ref bs);
+    interact := UI.button(btn, bs, .{}, "");
+
+    // Draw a red circular-ish button (using white texture) plus an X.
+    UI.quad(btn, get_asset(Texture_Asset, "$AO/white.png"), v4.{0.78, 0.10, 0.12, 0.95});
+
+    ts := UI.default_text_settings();
+    ts.size = size * 0.72;
+    ts.color = v4.{1, 1, 1, 1};
+    ts.halign = .CENTER;
+    ts.valign = .CENTER;
+    ts.do_outline = true;
+    ts.outline_thickness = 3;
+    ts.outline_color = v4.{0, 0, 0, 0.9};
+    UI.text(btn, ts, "X");
+
+    if interact.clicked {
+        task.cancel_attempt(player);
+        return true;
+    }
+    return false;
+}
+
+update_tasks :: proc(player: Player) {
+    gm := get_game_manager();
+    if !#alive(gm) {
+        return;
+    }
+    if gm.phase != .SURVIVOR_HEAD_START && gm.phase != .ACTIVE {
+        if player.is_local_or_server() {
+            for i: 0..player.active_tasks.elements.count - 1 {
+                task := player.active_tasks.elements[i];
+                if task != null && task.started && !task.completed {
+                    task.cancel_attempt(player);
+                }
+            }
+        }
+        return;
+    }
+    if !player.is_round_survivor() || player.is_round_dead() {
+        if player.is_local_or_server() {
+            for i: 0..player.active_tasks.elements.count - 1 {
+                task := player.active_tasks.elements[i];
+                if task != null && task.started && !task.completed {
+                    task.cancel_attempt(player);
+                }
+            }
+        }
+        return;
+    }
+
+    collect_tape_inventory_items(player);
+
+    // Task UIs should render above the progress bar / task list.
+    UI.push_layer(9700);
+    defer UI.pop_layer();
+
+    i := 0;
+    while i < player.active_tasks.elements.count {
+        task := player.active_tasks.elements[i];
+        if task == null {
+            i += 1;
+            continue;
+        }
+        switch task.#type {
+            case Task_Repair_Laptop: task.(Task_Repair_Laptop).update_task(player);
+        }
+        i += 1;
+    }
+}
+
+// Normal tasks
+Task_Repair_Laptop :: class : Task_Base {
+	// Layout / interaction state
+	seen_attempt_id: int;
+	layout_initialized: bool;
+	dragging_idx: int; // -1 = none, else PART_*
+	drag_offset: v2;   // mouse_pos - part_center at drag start
+	part_pos: [3]v2;   // screen-space centers (same coordinate space as UI mouse)
+	part_placed: [3]bool;
+	success_time: float; // >0 when solved, before we finalize completion
+	workshop_repair: bool;
+	workshop_reward_given: bool;
+
+	// Textures
+	table_texture: Texture_Asset;
+	laptop_texture: Texture_Asset;
+	highest_parts_texture: Texture_Asset;
+	cpu_texture: Texture_Asset;
+	ram_texture: Texture_Asset;
+	battery_texture: Texture_Asset;
+
+	PART_CPU :: 0;
+	PART_RAM :: 1;
+	PART_BATTERY :: 2;
+
+	// Reduce post-success linger before auto-close.
+	SUCCESS_DISPLAY_TIME :: 0.6;
+
+	start_attempt :: proc(using this: Task_Repair_Laptop, player: Player) {
+		if started {
+			return;
+		}
+		attempt_id += 1;
+		started = true;
+		seen_attempt_id = attempt_id;
+		layout_initialized = false;
+		dragging_idx = -1;
+		drag_offset = v2.{0.0, 0.0};
+		for i: 0..2 {
+			part_pos[i] = v2.{0.0, 0.0};
+			part_placed[i] = false;
+		}
+		success_time = 0.0;
+	}
+
+	cancel_attempt :: proc(using this: Task_Repair_Laptop, player: Player) {
+		if !started return;
+		if completed return;
+		started = false;
+		layout_initialized = false;
+		dragging_idx = -1;
+		drag_offset = v2.{0.0, 0.0};
+		for i: 0..2 {
+			part_pos[i] = v2.{0.0, 0.0};
+			part_placed[i] = false;
+		}
+		success_time = 0.0;
+		if workshop_repair {
+			remove_workshop_repair_task(player, this);
+		}
+	}
+
+	init_textures :: proc(using this: Task_Repair_Laptop) {
+		table_texture = get_asset(Texture_Asset, "sprites/tasks/repair_laptop/Banned_Laptoptable solo.png");
+		laptop_texture = get_asset(Texture_Asset, "sprites/tasks/repair_laptop/Banned_Laptop solo.png");
+		highest_parts_texture = get_asset(Texture_Asset, "sprites/tasks/repair_laptop/Banned_highest parts.png");
+
+		cpu_texture = get_asset(Texture_Asset, "sprites/tasks/repair_laptop/Banned_CPU.png");
+		ram_texture = get_asset(Texture_Asset, "sprites/tasks/repair_laptop/Banned_ram.png");
+		battery_texture = get_asset(Texture_Asset, "sprites/tasks/repair_laptop/Banned_Laptop Battery.png");
+	}
+
+	get_part_texture :: proc(using this: Task_Repair_Laptop, idx: int) -> Texture_Asset {
+		switch idx {
+			case PART_CPU: return cpu_texture;
+			case PART_RAM: return ram_texture;
+			case PART_BATTERY: return battery_texture;
+			default: return null;
+		}
+	}
+
+	get_target_rect :: proc(using this: Task_Repair_Laptop, idx: int, laptop_rect: Rect) -> Rect {
+		// These rects are authored as percentages of the laptop image, matching template 2.
+		switch idx {
+			case PART_CPU: {
+				return laptop_rect.subrect(0.47, 0.55, 0.69, 0.85);
+			}
+			case PART_RAM: {
+				return laptop_rect.subrect(0.24, 0.38, 0.44, 0.54);
+			}
+			case PART_BATTERY: {
+				return laptop_rect.subrect(0.30, 0.05, 0.86, 0.3);
+			}
+			default: {
+				return laptop_rect.subrect(0.0, 0.0, 0.0, 0.0);
+			}
+		}
+	}
+
+	is_point_in_rect :: proc(p: v2, r: Rect) -> bool {
+		if p.x < r.min.x return false;
+		if p.x > r.max.x return false;
+		if p.y < r.min.y return false;
+		if p.y > r.max.y return false;
+		return true;
+	}
+
+	draw_debug_rect_outline :: proc(r: Rect, thickness: float, color: v4) {
+		tex := get_asset(Texture_Asset, "$AO/white.png");
+		// Top / bottom
+		top := Rect.{v2.{r.min.x, r.max.y - thickness}, v2.{r.max.x, r.max.y}};
+		bot := Rect.{v2.{r.min.x, r.min.y}, v2.{r.max.x, r.min.y + thickness}};
+		// Left / right
+		left := Rect.{v2.{r.min.x, r.min.y}, v2.{r.min.x + thickness, r.max.y}};
+		right := Rect.{v2.{r.max.x - thickness, r.min.y}, v2.{r.max.x, r.max.y}};
+
+		UI.quad(top, tex, color);
+		UI.quad(bot, tex, color);
+		UI.quad(left, tex, color);
+		UI.quad(right, tex, color);
+	}
+
+	draw_debug_target_rects :: proc(using this: Task_Repair_Laptop, laptop_rect: Rect) {
+		th := max(2.0, laptop_rect.height() * 0.006);
+
+		ts := UI.default_text_settings();
+		ts.size = max(14.0, laptop_rect.height() * 0.04);
+		ts.color = v4.{1, 1, 1, 1};
+		ts.halign = .CENTER;
+		ts.valign = .CENTER;
+		ts.do_outline = true;
+		ts.outline_thickness = 2;
+		ts.outline_color = v4.{0, 0, 0, 1};
+
+		// CPU
+		rcpu := get_target_rect(this, PART_CPU, laptop_rect);
+		draw_debug_rect_outline(rcpu, th, v4.{1.0, 0.2, 0.2, 0.95});
+		UI.text(rcpu, ts, "CPU");
+
+		// RAM
+		rram := get_target_rect(this, PART_RAM, laptop_rect);
+		draw_debug_rect_outline(rram, th, v4.{0.2, 0.9, 0.2, 0.95});
+		UI.text(rram, ts, "RAM");
+
+		// BATTERY
+		rbat := get_target_rect(this, PART_BATTERY, laptop_rect);
+		draw_debug_rect_outline(rbat, th, v4.{0.25, 0.55, 1.0, 0.95});
+		UI.text(rbat, ts, "BAT");
+	}
+
+	draw_part :: proc(using this: Task_Repair_Laptop, idx: int, rect: Rect, is_dragging: bool) -> Interact_Result {
+		UI.push_id("rl_part_%", .{idx});
+		defer UI.pop_id();
+
+		btn_bs: Button_Settings = .{};
+		rr_ui_apply_button_click_sound(ref btn_bs);
+		interact := UI.button(rect, btn_bs, .{}, "");
+
+		tex := get_part_texture(this, idx);
+
+		// Optional drop shadow when dragging.
+		if is_dragging {
+			shadow := rect.offset_unscaled(6, -6);
+			UI.quad(shadow, get_asset(Texture_Asset, "$AO/white.png"), v4.{0, 0, 0, 0.25});
+		}
+
+		if tex != null {
+			UI.quad(rect, tex, .{1, 1, 1, 1});
+		}
+		return interact;
+	}
+
+	update_task :: proc(using this: Task_Repair_Laptop, player: Player) {
+		if !started return;
+		if completed return;
+		if !player.is_local_or_server() return;
+
+		// IMPORTANT: `start_attempt()` is not dynamically dispatched (it is called on `Task_Base`),
+		// so we must self-initialize per attempt here. Otherwise fields like `dragging_idx` default
+		// to 0 (CPU) and the CPU appears "pre-dragged" and blocks other parts.
+		if seen_attempt_id != attempt_id {
+			seen_attempt_id = attempt_id;
+			layout_initialized = false;
+			dragging_idx = -1;
+			drag_offset = v2.{0.0, 0.0};
+			for i: 0..2 {
+				part_pos[i] = v2.{0.0, 0.0};
+				part_placed[i] = false;
+			}
+			success_time = 0.0;
+		}
+
+		if table_texture == null {
+			init_textures(this);
+		}
+
+		// Dim the game behind the minigame.
+		screen := UI.get_screen_rect();
+		dim := get_asset(Texture_Asset, "$AO/white.png");
+		UI.quad(screen, dim, .{0.0, 0.0, 0.0, 0.85});
+
+		// Window rect (keep the background aspect so art matches).
+		safe := UI.get_safe_screen_rect();
+		window := safe.center_rect().grow(320, 620, 320, 620);
+		if table_texture != null {
+			window = window.fit_aspect(table_texture.get_aspect(), .KEEP_BIGGER);
+		}
+
+		// Layout
+		art_rect := window;
+		// Place laptop near top, leaving table space below for loose parts.
+		laptop_rect := art_rect.subrect(0.10, 0.36, 0.90, 0.98).fit_aspect(laptop_texture.get_aspect(), .KEEP_HEIGHT);
+
+		// Initialize part spawn positions once (screen-space).
+		if !layout_initialized {
+			layout_initialized = true;
+
+			parts_area := art_rect.subrect(0.15, 0.05, 0.85, 0.34);
+			// Roughly matches template 1 layout.
+			part_pos[PART_RAM] = parts_area.subrect(0.00, 0.25, 0.35, 0.90).center();
+			part_pos[PART_CPU] = parts_area.subrect(0.30, 0.15, 0.62, 0.90).center();
+			part_pos[PART_BATTERY] = parts_area.subrect(0.55, 0.05, 1.00, 0.55).center();
+		}
+
+		// If we're in the success display phase, freeze interaction and finish after a delay.
+		if success_time > 0.0 {
+			elapsed := get_time() - success_time;
+			if elapsed >= SUCCESS_DISPLAY_TIME {
+				complete_attempt(this, player, true);
+				if workshop_repair {
+					complete_workshop_repair_laptop(player, this);
+				}
+				return;
+			}
+
+			// Draw the same scene, just with parts placed.
+			if table_texture != null {
+				UI.quad(art_rect, table_texture, .{1, 1, 1, 1});
+			}
+			if laptop_texture != null {
+				UI.quad(laptop_rect, laptop_texture, .{1, 1, 1, 1});
+			}
+
+			for i: 0..2 {
+				if !part_placed[i] continue;
+				target := get_target_rect(this, i, laptop_rect);
+				tex := get_part_texture(this, i);
+				if tex != null {
+					r := target.fit_aspect(tex.get_aspect(), .KEEP_BIGGER);
+					UI.quad(r, tex, .{1, 1, 1, 1});
+				}
+			}
+			if highest_parts_texture != null {
+				UI.quad(laptop_rect, highest_parts_texture, .{1, 1, 1, 1});
+			}
+			return;
+		}
+
+		// --- Draw base scene (background layering) ---
+		if table_texture != null {
+			UI.quad(art_rect, table_texture, .{1, 1, 1, 1});
+		}
+		if laptop_texture != null {
+			UI.quad(laptop_rect, laptop_texture, .{1, 1, 1, 1});
+		}
+
+		// Debug: visualize drop targets on the laptop.
+		draw_debug_target_rects(this, laptop_rect);
+
+		// Draw placed parts inside the laptop (below "highest parts").
+		for i: 0..2 {
+			if !part_placed[i] continue;
+			target := get_target_rect(this, i, laptop_rect);
+			tex := get_part_texture(this, i);
+			if tex != null {
+				r := target.fit_aspect(tex.get_aspect(), .KEEP_BIGGER);
+				UI.quad(r, tex, .{1, 1, 1, 1});
+			}
+		}
+
+		// Draw the overlay that should appear above components.
+		if highest_parts_texture != null {
+			UI.quad(laptop_rect, highest_parts_texture, .{1, 1, 1, 1});
+		}
+
+		// Close button (drawn after art so it renders on top).
+		if draw_task_close_button(window, player, this) {
+			return;
+		}
+
+		// Draw + interact with loose parts (drag & drop).
+		mouse_pos := get_mouse_screen_position();
+
+		// First pass: non-dragging parts.
+		for i: 0..2 {
+			if part_placed[i] continue;
+			if dragging_idx == i continue;
+
+			tex := get_part_texture(this, i);
+			if tex == null continue;
+
+			// Size parts relative to window height so it scales well.
+			h := art_rect.height() * 0.16;
+			if i == PART_RAM { h = art_rect.height() * 0.12; }
+			if i == PART_BATTERY { h = art_rect.height() * 0.14; }
+			w := h * tex.get_aspect();
+			half := v2.{w * 0.5, h * 0.5};
+			rect := Rect.{part_pos[i] - half, part_pos[i] + half};
+
+			interact := draw_part(this, i, rect, false);
+			mouse_pos = interact.mouse_position;
+
+			if interact.just_pressed && dragging_idx < 0 {
+				dragging_idx = i;
+				drag_offset = mouse_pos - part_pos[i];
+			}
+		}
+
+		// Second pass: dragging part on top.
+		if dragging_idx >= 0 && dragging_idx <= 2 && !part_placed[dragging_idx] {
+			i := dragging_idx;
+			tex := get_part_texture(this, i);
+			if tex != null {
+				h := art_rect.height() * 0.16;
+				if i == PART_RAM { h = art_rect.height() * 0.12; }
+				if i == PART_BATTERY { h = art_rect.height() * 0.14; }
+				w := h * tex.get_aspect();
+				half := v2.{w * 0.5, h * 0.5};
+				rect := Rect.{part_pos[i] - half, part_pos[i] + half};
+
+				interact := draw_part(this, i, rect, true);
+				mouse_pos = interact.mouse_position;
+
+				// While active, follow the pointer.
+				if interact.active {
+					part_pos[i] = mouse_pos - drag_offset;
+				}
+
+				// On release, snap if we're over the target.
+				if interact.released {
+					target := get_target_rect(this, i, laptop_rect);
+					if is_point_in_rect(part_pos[i], target) {
+						part_pos[i] = target.center();
+						part_placed[i] = true;
+						rr_task_sfx(player, RR_TASK_SFX_TILE_CLICK, 0.6);
+					}
+					dragging_idx = -1;
+				}
+			} else {
+				dragging_idx = -1;
+			}
+		}
+
+		// Completion check: once all parts are placed, show the completed template briefly.
+		all_placed := true;
+		for i: 0..2 {
+			if !part_placed[i] {
+				all_placed = false;
+				break;
+			}
+		}
+		if all_placed {
+			success_time = get_time();
+		}
+	}
+}
+
+find_player_inventory_item_id :: proc(player: Player, item_id: string) -> Item_Instance {
+	if player == null || item_id.count == 0 {
+		return null;
+	}
+
+	i: s64 = 0;
+	while i < player.default_inventory.capacity {
+		item := player.default_inventory.get_item(i);
+		if #alive(item) {
+			defn := item.get_definition();
+			if defn != null && defn.get_id() == item_id {
+				return item;
+			}
+		}
+		i += 1;
+	}
+	return null;
+}
+
+find_workshop_repair_task :: proc(player: Player) -> Task_Repair_Laptop {
+	if player == null {
+		return null;
+	}
+
+	i := 0;
+	while i < player.active_tasks.elements.count {
+		task := player.active_tasks.elements[i];
+		if task != null && task.#type == Task_Repair_Laptop {
+			repair_task := task.(Task_Repair_Laptop);
+			if repair_task.workshop_repair && !repair_task.completed {
+				return repair_task;
+			}
+		}
+		i += 1;
+	}
+	return null;
+}
+
+remove_workshop_repair_task :: proc(player: Player, repair_task: Task_Repair_Laptop) {
+	if player == null || repair_task == null {
+		return;
+	}
+
+	i := 0;
+	while i < player.active_tasks.elements.count {
+		task := player.active_tasks.elements[i];
+		if task != null && task.#type == Task_Repair_Laptop {
+			current_repair_task := task.(Task_Repair_Laptop);
+			if current_repair_task == repair_task {
+				last := player.active_tasks.elements.count - 1;
+				player.active_tasks.elements[i] = player.active_tasks.elements[last];
+				pop(ref player.active_tasks);
+				return;
+			}
+		}
+		i += 1;
+	}
+}
+
+complete_workshop_repair_laptop :: proc(player: Player, repair_task: Task_Repair_Laptop) {
+	if player == null || repair_task == null || repair_task.workshop_reward_given {
+		return;
+	}
+	repair_task.workshop_reward_given = true;
+
+	broken_camera := find_player_inventory_item_id(player, BROKEN_CAMERA_ITEM_ID);
+	if !#alive(broken_camera) {
+		Notifier.notify(player, "Broken Camera missing!");
+		remove_workshop_repair_task(player, repair_task);
+		return;
+	}
+
+	init_weapon_items();
+	camera_def := get_registered_item_def_by_id(CAMERA_ITEM_ID);
+	if camera_def == null {
+		remove_workshop_repair_task(player, repair_task);
+		return;
+	}
+
+	Items.destroy_item_instance(broken_camera, 1);
+
+	camera_item := Items.create_item_instance(camera_def, 1);
+	will_destroy_item: bool;
+	if !Items.can_move_item_to_inventory(camera_item, player.default_inventory, ref will_destroy_item) {
+		Items.destroy_item_instance(camera_item);
+		broken_camera_def := get_registered_item_def_by_id(BROKEN_CAMERA_ITEM_ID);
+		if broken_camera_def != null {
+			restored_item := Items.create_item_instance(broken_camera_def, 1);
+			restore_will_destroy: bool;
+			if Items.can_move_item_to_inventory(restored_item, player.default_inventory, ref restore_will_destroy) {
+				Items.move_item_to_inventory(restored_item, player.default_inventory);
+			} else {
+				Items.destroy_item_instance(restored_item);
+			}
+		}
+		Notifier.notify(player, "No room for Camera!");
+		remove_workshop_repair_task(player, repair_task);
+		return;
+	}
+
+	Items.move_item_to_inventory(camera_item, player.default_inventory);
+	Notifier.notify(player, "Camera fixed!");
+	remove_workshop_repair_task(player, repair_task);
+}
+
+start_workshop_repair_laptop :: proc(player: Player) {
+	if player == null {
+		return;
+	}
+
+	repair_task := find_workshop_repair_task(player);
+	if repair_task == null {
+		repair_task = new(Task_Repair_Laptop);
+		repair_task.id = TASK_ID_REPAIR_LAPTOP;
+		repair_task.workshop_repair = true;
+		append(ref player.active_tasks, repair_task);
+	}
+
+	repair_task.start_attempt(player);
 }
 
 draw_task_nine_slice_panel :: proc(rect: Rect, tex: Texture_Asset, slice_px: float) {
@@ -513,84 +1256,55 @@ draw_task_progress_bar :: proc(player: Player, screen: Rect) {
         return;
     }
 
-    completed_tasks := total_tasks - remaining_tasks;
-    if completed_tasks < 0 {
-        completed_tasks = 0;
-    }
-
-    progress01 := clamp(completed_tasks.(float) / total_tasks.(float), 0.0, 1.0);
-    progress_pct := (progress01 * 100.0).(int);
-    player_total_tasks := get_player_required_task_count(player);
-
-    PROGRESS_W :: 380.0;
-    PROGRESS_H :: 40.0;
-    PROGRESS_SLICE_PX :: 18.0;
+    TAPE_BAR_W :: 620.0;
+    TAPE_BAR_H :: 46.0;
+    TAPE_GAP :: 8.0;
     TOP_MARGIN :: 35.0;
 
-    progress_rect := screen.top_rect().center_rect().offset(0.0, -TOP_MARGIN).grow(0.0, PROGRESS_W * 0.5, PROGRESS_H, PROGRESS_W * 0.5);
+    progress_rect := screen.top_rect().center_rect().offset(0.0, -TOP_MARGIN).grow(0.0, TAPE_BAR_W * 0.5, TAPE_BAR_H, TAPE_BAR_W * 0.5);
+    tape_paths: [TASK_TAPE_COUNT]string = {
+        "tapes/vhs_yellow.png",
+        "tapes/vhs_black.png",
+        "tapes/vhs_white.png",
+        "tapes/vhs_red.png",
+        "tapes/vhs_orange.png",
+        "tapes/vhs_pink.png",
+        "tapes/vhs_blue.png",
+        "tapes/vhs_green.png"
+    };
 
-    progress_back := get_asset(Texture_Asset, TASK_TEX_PROGRESS_BACK);
-    progress_fill := get_asset(Texture_Asset, TASK_TEX_PROGRESS_FILL);
-    progress_segment := get_asset(Texture_Asset, TASK_TEX_PROGRESS_SEGMENT);
+    gm := get_game_manager();
 
-    draw_task_nine_slice_panel(progress_rect, progress_back, PROGRESS_SLICE_PX);
+    UIK.begin(UIK.window(progress_rect));
+    tape_row := UIK.layout_row(UIK.flex(1), UIK.flex(1), TAPE_GAP);
+    tape_row.show_background = false;
+    tape_row.padding = v4.{0, 0, 0, 0};
+    tape_row.cross_align = .CENTER;
+    UIK.panel_begin(tape_row);
 
-    fill_rect := progress_rect.inset(3.0, 3.0, 3.0, 3.0);
-    if progress01 > 0.0 && progress_fill != null {
-        fill_subrect := fill_rect.subrect(0.0, 0.0, progress01, 1.0);
-        UI.quad(fill_subrect, progress_fill, v4.{1, 1, 1, 1});
-    }
-
-    if player_total_tasks > 1 && progress_segment != null {
-        seg_w := max(2.0, fill_rect.height() * (8.0 / 96.0));
-        for s: 1..player_total_tasks - 1 {
-            segment_t := s.(float) / player_total_tasks.(float);
-            if progress01 >= segment_t {
-                x := lerp(fill_rect.min.x, fill_rect.max.x, segment_t);
-                seg_rect := Rect{v2.{x - (seg_w * 0.5), fill_rect.min.y}, v2.{x + (seg_w * 0.5), fill_rect.max.y}};
-                UI.quad(seg_rect, progress_segment, v4.{1, 1, 1, 1});
-            }
+    for i: 0..TASK_TAPE_COUNT - 1 {
+        tape := get_asset(Texture_Asset, tape_paths[i]);
+        if tape == null {
+            continue;
         }
+
+        tint := TASK_TAPE_UNCOLLECTED_TINT;
+        if #alive(gm) && gm.round_tapes_collected[i] {
+            tint = TASK_TAPE_COLLECTED_TINT;
+        }
+
+        tape_slot := UIK.layout_centered(UIK.flex(1), UIK.flex(1));
+        tape_slot.show_background = false;
+        UIK.panel_begin(tape_slot);
+        UIK.image_fitted(tape, UIK.image_desc(.CONTAIN), tint);
+        UIK.panel_end();
     }
 
-    exit_icon := get_asset(Texture_Asset, TASK_TEX_PROGRESS_EXIT);
-    if exit_icon != null {
-        exit_rect := progress_rect.right_center_rect().offset(12.0, 0.0).grow(32.0);
-        exit_rect = exit_rect.fit_aspect(exit_icon.get_aspect(), .KEEP_HEIGHT);
-        UI.quad(exit_rect, exit_icon, v4.{1, 1, 1, 1});
-    }
-
-    label_ts := UI.default_text_settings();
-    label_ts.size = 26;
-    label_ts.spacing_multiplier = 1.1;
-    label_ts.color = v4.{1, 1, 1, 1};
-    label_ts.halign = .CENTER;
-    label_ts.valign = .BOTTOM;
-    label_ts.do_outline = true;
-    label_ts.outline_thickness = 6;
-    label_ts.outline_color = v4.{0, 0, 0, 1};
-    label_ts.do_autofit = true;
-    label_ts.autofit_min_size = 14;
-    label_ts.autofit_max_size = 26;
-    label_rect := progress_rect.top_rect().offset(0.0, -12.0).grow(24, 0, 0, 0);
-    UI.text(label_rect, label_ts, "ESCAPE");
-
-    pct_ts := UI.default_text_settings();
-    pct_ts.size = 24;
-    pct_ts.color = v4.{1, 1, 1, 1};
-    pct_ts.halign = .CENTER;
-    pct_ts.valign = .TOP;
-    pct_ts.do_outline = true;
-    pct_ts.outline_thickness = 6;
-    pct_ts.outline_color = v4.{0, 0, 0, 1};
-    pct_ts.do_autofit = true;
-    pct_ts.autofit_min_size = 14;
-    pct_ts.autofit_max_size = 24;
-    pct_rect := progress_rect.bottom_rect().offset(0.0, 0.0).grow(0, 0, 20, 0);
-    UI.text(pct_rect, pct_ts, format_string("%0%%", .{progress_pct}));
+    UIK.panel_end();
+    UIK.end();
 }
 
-draw_task_entry :: proc(entry_rect: Rect, task: Task_Base) {
+draw_task_entry :: proc(entry_rect: Rect, task: Task_Base, player: Player) {
     entry_content := entry_rect.inset(0.0, 6.0, 0.0, 6.0);
     checkbox_slot := entry_content.cut_left(24.0);
     checkbox_rect := checkbox_slot.center_rect().grow(TASK_CHECKBOX_HALF_SIZE);
@@ -613,6 +1327,29 @@ draw_task_entry :: proc(entry_rect: Rect, task: Task_Base) {
     task_ts.autofit_min_size = 14;
     task_ts.autofit_max_size = 24;
     UI.text(text_rect.inset(0, 4, 0, 4), task_ts, get_task_display_name(task.id));
+
+    if task.id == TASK_ID_REPAIR_LAPTOP && player != null && !task.started && !task.completed {
+        UI.push_id("start_repair_laptop_task");
+        defer UI.pop_id();
+
+        start_bs := UI.default_button_settings();
+        start_bs.sprite = core_globals.white_sprite;
+        start_bs.press_scaling = 1.0;
+        start_bs.color = v4.{0, 0, 0, 0};
+        start_bs.hovered_color = v4.{1, 1, 1, 0.08};
+        start_bs.pressed_color = v4.{1, 1, 1, 0.12};
+        start_bs.disabled_color = v4.{0, 0, 0, 0};
+        start_bs.background_color_multiplier = v4.{1, 1, 1, 1};
+        rr_ui_apply_button_click_sound(ref start_bs);
+
+        if UI.button(entry_rect, start_bs, .{}, "").clicked {
+            if task.#type == Task_Repair_Laptop {
+                task.(Task_Repair_Laptop).start_attempt(player);
+            } else {
+                task.start_attempt(player);
+            }
+        }
+    }
 }
 
 draw_task_list_ui :: proc(player: Player) {
@@ -698,7 +1435,7 @@ draw_task_list_ui :: proc(player: Player) {
         }
 
         entry_rect := list_content.cut_top(TASK_ENTRY_HEIGHT);
-        draw_task_entry(entry_rect, task);
+        draw_task_entry(entry_rect, task, player);
         if i < player.active_tasks.elements.count - 1 {
             list_content.cut_top(TASK_ENTRY_GAP);
         }
