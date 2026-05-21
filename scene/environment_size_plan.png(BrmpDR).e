@@ -24,6 +24,7 @@
     "texture": "sprites/environment_size_plan.png",
     "tint": {
       "W": 0.2455159425735474
-    }
+    },
+    "layer": -20
   }
 }

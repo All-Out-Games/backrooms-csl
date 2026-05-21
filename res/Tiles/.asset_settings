@@ -1,5 +1,17 @@
 [
   {
+    "id": "Tiles/Zone1/tile_floor_furniture_zone_squish.png",
+    "texture": {
+      "wrap_repeat": true
+    }
+  },
+  {
+    "id": "Tiles/Zone1/wall_furniture_store.png",
+    "texture": {
+      "wrap_repeat": true
+    }
+  },
+  {
     "id": "Tiles/Wallv3.png",
     "texture": {
       "wrap_repeat": true
