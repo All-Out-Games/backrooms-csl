@@ -1,5 +1,11 @@
 [
   {
+    "id": "Tiles/Zone1b/zone1_wall1_repeatable_large.png",
+    "texture": {
+      "wrap_repeat": true
+    }
+  },
+  {
     "id": "Tiles/Tiles_Zone2/Zone2Tile3.png",
     "texture": {
       "wrap_repeat": true
