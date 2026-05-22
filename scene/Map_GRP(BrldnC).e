@@ -13,6 +13,5 @@
     "X": 1,
     "Y": 1
   },
-  "locked": true,
   "previous_sibling": 2942145226
 }

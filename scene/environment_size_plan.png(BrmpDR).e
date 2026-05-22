@@ -12,6 +12,7 @@
     "X": 48,
     "Y": 48
   },
+  "locked": true,
   "next_sibling": 1799249834,
   "parent": 1804982722
 },
@@ -24,6 +25,7 @@
     "texture": "sprites/environment_size_plan.png",
     "tint": {
       "W": 0.2455159425735474
-    }
+    },
+    "layer": -15
   }
 }
