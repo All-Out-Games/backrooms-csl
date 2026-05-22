@@ -1,0 +1,421 @@
+import "core:ao"
+
+DANGER_PING_COOLDOWN_SECONDS :: 1.0;
+DANGER_PING_LIFETIME_SECONDS :: 3.0;
+DANGER_PING_RANGE :: 12.0;
+DANGER_PING_AOE_RADIUS :: 2.4;
+DANGER_PING_MIN_AIM_DISTANCE :: 0.15;
+DANGER_PING_PATH_SECONDS :: 3.0;
+DANGER_PING_PATH_MAX_POINTS :: 32;
+DANGER_PING_PATH_MIN_ADVANCE :: 0.08;
+DANGER_PING_PATH_REACHED_DISTANCE :: 0.35;
+DANGER_PING_PATH_PROBE_SPEED :: 900.0;
+DANGER_PING_ICON_PATH :: "warning-alert-icon_592ad7.png";
+DANGER_PING_PREFAB_PATH :: "WarningPing.prefab";
+
+is_alive_survivor_for_danger_ping :: proc(player: Player) -> bool {
+    if player == null || !#alive(player.entity) {
+        return false;
+    }
+    if !player.is_round_survivor() || player.is_round_dead() || player.is_round_downed() {
+        return false;
+    }
+    return true;
+}
+
+is_survivor_for_danger_ping_path :: proc(player: Player) -> bool {
+    if player == null || !#alive(player.entity) {
+        return false;
+    }
+    if !player.is_round_survivor() || player.is_round_dead() {
+        return false;
+    }
+    return true;
+}
+
+get_danger_ping_navmesh :: proc() -> Navmesh {
+    gm := get_game_manager();
+    if #alive(gm) {
+        return gm.get_navmesh_to_lock_to();
+    }
+    return find_scene_navmesh();
+}
+
+get_danger_ping_selected_position :: proc(player: Player, params: ref Ability_Update_Params, aim_direction: v2) -> v2 {
+    start_position := player.entity.world_position;
+
+    if player.device_kind == .PC {
+        offset := get_mouse_world_position() - start_position;
+        distance := length(offset);
+        if distance <= DANGER_PING_MIN_AIM_DISTANCE {
+            return start_position;
+        }
+        distance = min(distance, DANGER_PING_RANGE);
+        return start_position + normalize(offset) * distance;
+    }
+
+    drag_t := clamp(length(params.drag_offset), 0.0, 1.0);
+    distance := DANGER_PING_RANGE * drag_t;
+    return start_position + normalize(aim_direction) * distance;
+}
+
+resolve_danger_ping_target :: proc(player: Player, params: ref Ability_Update_Params, aim_direction: v2) -> v2, bool {
+    if player == null || !#alive(player.entity) {
+        return v2{0.0, 0.0}, false;
+    }
+
+    selected_position := get_danger_ping_selected_position(player, ref params, aim_direction);
+    navmesh := get_danger_ping_navmesh();
+    if !#alive(navmesh) {
+        return selected_position, true;
+    }
+
+    snapped_position: v2;
+    triangle_hint: s64 = 0;
+    if navmesh.try_find_closest_point_on_navmesh(selected_position, ref snapped_position, ref triangle_hint) {
+        return snapped_position, true;
+    }
+
+    return selected_position, false;
+}
+
+draw_danger_ping_target_preview :: proc(position: v2, valid: bool) {
+    UI.push_screen_draw_context();
+    defer UI.pop_draw_context();
+
+    UI.push_layer(-15);
+    defer UI.pop_layer();
+
+    center := world_to_screen(position);
+    edge := world_to_screen(position + v2{DANGER_PING_AOE_RADIUS, 0.0});
+    radius_px := length(edge - center);
+
+    color := v4{1.0, 0.08, 0.04, 0.78};
+    if !valid {
+        color = v4{0.65, 0.65, 0.65, 0.45};
+    }
+
+    UI.wire_circle(center, radius_px, 5.0, color, 56);
+    UI.wire_circle(center, radius_px * 0.72, 2.0, v4{1.0, 1.0, 1.0, color.w * 0.65}, 48);
+
+    icon := get_asset(Texture_Asset, DANGER_PING_ICON_PATH);
+    icon_rect := Rect{min=center + v2{-24.0, -24.0}, max=center + v2{24.0, 24.0}};
+    UI.quad(icon_rect.fit_aspect(icon.get_aspect(), .KEEP_BIGGER), icon, v4{1.0, 1.0, 1.0, color.w});
+}
+
+apply_warning_ping_visual_alpha :: proc(target: Entity, alpha: float) {
+    if !#alive(target) {
+        return;
+    }
+
+    component := target.get_first_component();
+    while component != null {
+        if component.#type == Sprite_Renderer {
+            sprite := component.(Sprite_Renderer);
+            c := sprite.color;
+            c.w = alpha;
+            sprite.color = c;
+        } else if component.#type == Spine_Animator {
+            spine := component.(Spine_Animator);
+            c := spine.color_multiplier;
+            c.w = alpha;
+            spine.color_multiplier = c;
+        } else if component.#type == Light {
+            light := component.(Light);
+            c := light.color;
+            c.w = alpha;
+            light.color = c;
+        }
+        component = component.get_next_component_on_entity();
+    }
+
+    child := target.get_first_child();
+    while child != null {
+        apply_warning_ping_visual_alpha(child, alpha);
+        child = child.get_next_sibling();
+    }
+}
+
+Warning_Ping_Fade_Out :: class : Component {
+    elapsed: float;
+    duration_seconds: float;
+
+    ao_start :: method() {
+        elapsed = 0.0;
+        if duration_seconds <= 0.0 {
+            duration_seconds = DANGER_PING_LIFETIME_SECONDS;
+        }
+        apply_warning_ping_visual_alpha(entity, 1.0);
+    }
+
+    ao_update :: method(dt: float) {
+        elapsed += dt;
+        t := elapsed / duration_seconds;
+        if t >= 1.0 {
+            apply_warning_ping_visual_alpha(entity, 0.0);
+            entity.destroy();
+            return;
+        }
+
+        alpha := 1.0 - t;
+        apply_warning_ping_visual_alpha(entity, alpha);
+    }
+}
+
+Danger_Ping_Nav_Path_Probe :: class : Component {
+    owner_user_id: string;
+    target_position: v2;
+    expires_at: float;
+    path_complete: bool;
+    points: [..]v2;
+
+    navmesh: Navmesh;
+    agent: Movement_Agent;
+
+    setup :: method(owner: Player, target: v2, path_navmesh: Navmesh, duration_seconds: float) {
+        if owner == null || !#alive(owner.entity) {
+            expires_at = get_time();
+            return;
+        }
+
+        owner_user_id = owner.get_user_id();
+        navmesh = path_navmesh;
+        expires_at = get_time() + duration_seconds;
+        path_complete = false;
+
+        start_position := owner.entity.world_position;
+        target_position = target;
+        if #alive(navmesh) {
+            start_hint: s64 = 0;
+            target_hint: s64 = 0;
+            snapped_start: v2;
+            snapped_target: v2;
+            if navmesh.try_find_closest_point_on_navmesh(start_position, ref snapped_start, ref start_hint) {
+                start_position = snapped_start;
+            }
+            if navmesh.try_find_closest_point_on_navmesh(target_position, ref snapped_target, ref target_hint) {
+                target_position = snapped_target;
+            }
+        }
+
+        points.clear();
+        points.append(start_position);
+
+        entity.set_local_position(start_position);
+        entity.mark_teleported();
+
+        agent = entity.get_component(Movement_Agent);
+        if agent != null && #alive(navmesh) {
+            agent.set_navmesh_to_lock_to(navmesh);
+        }
+    }
+
+    ao_start :: method() {
+        agent = entity.get_component(Movement_Agent);
+        if agent != null && #alive(navmesh) {
+            agent.set_navmesh_to_lock_to(navmesh);
+        }
+    }
+
+    ao_update :: method(dt: float) {
+        if get_time() >= expires_at {
+            entity.destroy();
+            return;
+        }
+        if path_complete {
+            return;
+        }
+        if points.count <= 0 {
+            points.append(entity.world_position);
+        }
+        if points.count >= DANGER_PING_PATH_MAX_POINTS {
+            path_complete = true;
+            return;
+        }
+        if agent == null {
+            agent = entity.get_component(Movement_Agent);
+        }
+        if agent == null {
+            path_complete = true;
+            return;
+        }
+        if #alive(navmesh) {
+            agent.set_navmesh_to_lock_to(navmesh);
+        }
+
+        current := entity.world_position;
+        to_target := target_position - current;
+        if length(to_target) <= DANGER_PING_PATH_REACHED_DISTANCE {
+            points.append(target_position);
+            path_complete = true;
+            return;
+        }
+
+        result := agent.set_path_target(target_position, DANGER_PING_PATH_PROBE_SPEED);
+        if !result.success {
+            return;
+        }
+
+        next_point := result.next_point;
+        if length(next_point - current) < DANGER_PING_PATH_MIN_ADVANCE {
+            next_point = current + result.move_direction * DANGER_PING_PATH_REACHED_DISTANCE;
+        }
+
+        if length(next_point - current) < DANGER_PING_PATH_MIN_ADVANCE {
+            path_complete = true;
+            return;
+        }
+
+        points.append(next_point);
+        entity.set_local_position(next_point);
+        entity.mark_teleported();
+    }
+}
+
+spawn_danger_ping_nav_path_probe :: proc(owner: Player, target_position: v2, navmesh: Navmesh, duration_seconds: float) {
+    if owner == null || !#alive(owner.entity) || !#alive(navmesh) {
+        return;
+    }
+
+    e := Scene.create_entity();
+    e.set_local_position(owner.entity.world_position);
+    e.mark_teleported();
+
+    e.add_component(Movement_Agent);
+    probe := e.add_component(Danger_Ping_Nav_Path_Probe);
+    probe.setup(owner, target_position, navmesh, duration_seconds);
+}
+
+ping_danger_for_alive_survivors :: proc(ping_position: v2) {
+    navmesh := get_danger_ping_navmesh();
+    if !#alive(navmesh) {
+        return;
+    }
+
+    for survivor: component_iterator(Player) {
+        if !is_survivor_for_danger_ping_path(survivor) {
+            continue;
+        }
+
+        spawn_danger_ping_nav_path_probe(survivor, ping_position, navmesh, DANGER_PING_PATH_SECONDS);
+    }
+}
+
+spawn_warning_ping :: proc(position: v2) {
+    prefab := get_asset(Prefab_Asset, DANGER_PING_PREFAB_PATH);
+    ping_entity := Scene.instantiate(prefab, position);
+    if !#alive(ping_entity) {
+        return;
+    }
+
+    fade := ping_entity.add_component(Warning_Ping_Fade_Out);
+    fade.duration_seconds = DANGER_PING_LIFETIME_SECONDS;
+}
+
+draw_danger_ping_nav_paths_ui :: proc(player: Player) {
+    if !player.is_local() || !is_survivor_for_danger_ping_path(player) {
+        return;
+    }
+
+    now := get_time();
+    UI.push_screen_draw_context();
+    defer UI.pop_draw_context();
+
+    UI.push_layer(850);
+    defer UI.pop_layer();
+
+    for probe: component_iterator(Danger_Ping_Nav_Path_Probe) {
+        if probe.owner_user_id != player.get_user_id() {
+            continue;
+        }
+        if now >= probe.expires_at {
+            continue;
+        }
+        if probe.points.count < 2 {
+            continue;
+        }
+
+        alpha := ENTITY_SCREAM_PATH_LINE_ALPHA;
+        remaining := probe.expires_at - now;
+        if remaining < 0.45 {
+            alpha *= clamp(remaining / 0.45, 0.0, 1.0);
+        }
+
+        i: s64 = 0;
+        while i < probe.points.count - 1 {
+            draw_entity_scream_nav_path_segment(probe.points[i], probe.points[i + 1], alpha);
+            i += 1;
+        }
+    }
+}
+
+draw_danger_ping_arrows_ui :: proc(player: Player) {
+    if !player.is_local() || !is_survivor_for_danger_ping_path(player) {
+        return;
+    }
+
+    for ping: component_iterator(Warning_Ping_Fade_Out) {
+        if !#alive(ping.entity) {
+            continue;
+        }
+
+        player.DrawArrowToPosition(ping.entity.world_position, DANGER_PING_ICON_PATH, "", true, 56.0);
+    }
+}
+
+Survivor_Danger_Ping_Ability :: class : Ability_Base {
+    on_init :: method() {
+        name = "Danger Ping";
+        icon = get_asset(Texture_Asset, DANGER_PING_ICON_PATH);
+        is_aimed_ability = true;
+    }
+
+    can_use :: method() -> bool {
+        if !is_alive_survivor_for_danger_ping(player) {
+            return false;
+        }
+
+        gm := get_game_manager();
+        if !#alive(gm) || gm.phase != .ACTIVE {
+            return false;
+        }
+
+        return player.entity.get_active_effect() == null;
+    }
+
+    on_update :: method(params: ref Ability_Update_Params) {
+        targeted := Ability_Utilities.update_targeted_ability(player, this, ref params);
+        if !targeted.targeting {
+            return;
+        }
+
+        aiming := Ability_Utilities.update_aiming_ability(player, ref params);
+        if aiming.cancel {
+            player.active_ability = null;
+            return;
+        }
+
+        target_position, found := resolve_danger_ping_target(player, ref params, aiming.aim_direction);
+        if aiming.aim {
+            player.last_aim_direction = aiming.aim_direction;
+            draw_danger_ping_target_preview(target_position, found);
+        }
+
+        if !aiming.activate {
+            return;
+        }
+
+        player.active_ability = null;
+        if !params.can_use || !found {
+            return;
+        }
+
+        spawn_warning_ping(target_position);
+        ping_danger_for_alive_survivors(target_position);
+        current_cooldown = DANGER_PING_COOLDOWN_SECONDS;
+    }
+
+    on_draw_button :: proc(instance: Survivor_Danger_Ping_Ability, rect: Rect) {
+        draw_ability_name_label(rect, "Danger");
+    }
+}

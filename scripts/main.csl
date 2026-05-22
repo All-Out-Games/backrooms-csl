@@ -1414,6 +1414,7 @@ Player :: class : Player_Base {
                 draw_ability_button(this, Sprint_Ability, 2);
                 if this.is_round_survivor() {
                     draw_ability_button(this, Survivor_Vitals_Ability, 3);
+                    draw_ability_button(this, Survivor_Danger_Ping_Ability, 4);
                 }
                 // Draw fire ability button based on equipped weapon
                 if equipped_weapon_type != .NONE {
@@ -1808,8 +1809,11 @@ Player :: class : Player_Base {
         if vitals_modal_open || sabotage_modal_open || jumpscare_target_modal_open || task_help_open || security_cameras_open {
             return true;
         }
-        if entity != null && entity.get_active_effect() != null {
-            return true;
+        if entity != null {
+            active_effect := entity.get_active_effect();
+            if active_effect != null && active_effect.#type != Jumpscared_Effect {
+                return true;
+            }
         }
         return false;
     }

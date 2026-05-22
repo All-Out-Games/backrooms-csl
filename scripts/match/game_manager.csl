@@ -8,7 +8,7 @@ INTRO_SPAWN_FADE_TO_BLACK_LEAD_SECONDS :: 1.85;
 INTRO_SPAWN_FADE_TO_BLACK_SECONDS :: 0.75;
 INTRO_SPAWN_BLACK_HOLD_SECONDS :: 1;
 INTRO_SPAWN_FADE_FROM_BLACK_SECONDS :: 0.45;
-MATCH_MAX_SECONDS :: 480.0; // ~8 minutes after survivors' head start ends
+MATCH_MAX_SECONDS :: 20.0; // ~8 minutes after survivors' head start ends
 ENTITY_ABILITY_UNLOCK_INTERVAL_SECONDS :: 120.0;
 ENTITY_ABILITY_UNLOCK_NOTIFICATION :: "The Monster grows stronger...";
 ENTITY_LOCKED_ABILITY_ICON_PATH :: "lock_0572b2.png";
@@ -582,6 +582,8 @@ draw_match_timer_ui :: proc(player: Player) {
     UIK.end();
     draw_entity_scream_nav_paths_ui(player);
     draw_ghost_item_ping_nav_paths_ui(player);
+    draw_danger_ping_nav_paths_ui(player);
+    draw_danger_ping_arrows_ui(player);
     draw_entity_scream_arrow_ui(player);
     draw_entity_target_ping_arrow_ui(player);
 }
