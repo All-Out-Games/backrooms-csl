@@ -26,7 +26,6 @@
     "ReconnectWiresEntity": 2937949974,
     "RadioPuzzle": 2938296857,
     "SurvivorSpawn": 2950830672,
-    "GeneratorSpawns": 2951698846,
     "ReconnectWiresSpawns": 2949722784,
     "RadioSpawns": 2951500453,
     "EntitySpawns": 2938623902,
@@ -36,14 +35,12 @@
     "RoundItemIds": [
       "flashbang",
       "noisemaker",
-      "stim",
-      "broken_camera"
+      "stim"
     ],
     "RoundItemWeights": [
       2,
       1,
-      2,
-      1
+      2
     ],
     "MinRoundItemSpawnCount": 22,
     "MaxRoundItemSpawnCount": 25,

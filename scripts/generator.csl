@@ -91,7 +91,7 @@ Generator :: class : Interactable {
         if player == null || !#alive(player.entity) {
             return false;
         }
-        if solved || in_use {
+        if in_use {
             return false;
         }
         if player.entity.get_active_effect() != null {
@@ -106,6 +106,12 @@ Generator :: class : Interactable {
             return false;
         }
         if gm.phase != .SURVIVOR_HEAD_START && gm.phase != .ACTIVE {
+            return false;
+        }
+        if gm.lights_out_active {
+            return !solved;
+        }
+        if solved {
             return false;
         }
         return is_task_unlocked_for_player(player, TASK_ID_RESTART_GENERATOR);
@@ -123,6 +129,15 @@ Generator :: class : Interactable {
 
     complete :: method(player: Player) {
         if solved {
+            return;
+        }
+
+        gm := get_game_manager();
+        if #alive(gm) && gm.lights_out_active {
+            solved = true;
+            in_use = false;
+            this.set_text(GENERATOR_COMPLETE_PROMPT);
+            gm.end_lights_out_sabotage(player);
             return;
         }
 

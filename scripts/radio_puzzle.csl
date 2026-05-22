@@ -269,6 +269,48 @@ draw_task_zone_hint_arrow :: proc(player: Player, task_id: string, texture_path:
     player.DrawArrowToPosition(zone.world_position, texture_path, "", false, 56.0);
 }
 
+get_closest_generator_station :: proc(player: Player) -> Generator {
+    if player == null || !#alive(player.entity) {
+        return null;
+    }
+
+    closest: Generator = null;
+    closest_distance_sq := 0.0;
+    for generator: component_iterator(Generator) {
+        if generator.solved || !#alive(generator.entity) {
+            continue;
+        }
+
+        offset := generator.entity.world_position - player.entity.world_position;
+        distance_sq := length_squared(offset);
+        if closest == null || distance_sq < closest_distance_sq {
+            closest = generator;
+            closest_distance_sq = distance_sq;
+        }
+    }
+
+    return closest;
+}
+
+draw_generator_hint_arrow :: proc(player: Player, hide_distance: float = TASK_ZONE_ARROW_HIDE_DISTANCE) {
+    if player == null || !#alive(player.entity) {
+        return;
+    }
+
+    generator := get_closest_generator_station(player);
+    if generator == null || !#alive(generator.entity) {
+        return;
+    }
+
+    generator_pos := generator.entity.world_position;
+    offset := generator_pos - player.entity.world_position;
+    if hide_distance > 0.0 && length_squared(offset) <= hide_distance * hide_distance {
+        return;
+    }
+
+    player.DrawArrowToPosition(generator_pos, "UI/GeneratorArrow.png", "", false, 56.0);
+}
+
 draw_escape_door_hint_arrow :: proc(player: Player) {
     if player == null {
         return;
@@ -289,37 +331,26 @@ draw_radio_hint_arrows :: proc(player: Player) {
     if !player.is_round_survivor() || player.is_round_dead() {
         return;
     }
-    if !is_task_completed(player, TASK_ID_TUNE_RADIO) {
+
+    gm := get_game_manager();
+    if #alive(gm) && gm.lights_out_active {
+        draw_generator_hint_arrow(player, 0.0);
         return;
     }
 
-    has_solved_radio := false;
-    for radio: component_iterator(Radio_Puzzle) {
-        if radio.solved {
-            has_solved_radio = true;
-            break;
+    if is_task_unlocked_for_player(player, TASK_ID_RESTART_GENERATOR) && !is_task_completed(player, TASK_ID_RESTART_GENERATOR) {
+        draw_generator_hint_arrow(player);
+        return;
+    }
+
+    if find_task(player, TASK_ID_RECONNECT_WIRE) != null {
+        if !is_task_completed(player, TASK_ID_RECONNECT_WIRE) {
+            draw_task_zone_hint_arrow(player, TASK_ID_RECONNECT_WIRE, WIRE_HINT_TEXTURE_PATH);
+            return;
         }
-    }
-    if !has_solved_radio {
-        return;
-    }
 
-    if !is_task_completed(player, TASK_ID_ENTER_KEYCODE) {
-        player.DrawArrowToPosition(get_keypad_hint_position(), "UI/KeypadArrow.png", "", false, 56.0);
-        return;
+        draw_escape_door_hint_arrow(player);
     }
-
-    if !is_task_completed(player, TASK_ID_RESTART_GENERATOR) {
-        draw_task_zone_hint_arrow(player, TASK_ID_RESTART_GENERATOR, "UI/GeneratorArrow.png");
-        return;
-    }
-
-    if !is_task_completed(player, TASK_ID_RECONNECT_WIRE) {
-        draw_task_zone_hint_arrow(player, TASK_ID_RECONNECT_WIRE, WIRE_HINT_TEXTURE_PATH);
-        return;
-    }
-
-    draw_escape_door_hint_arrow(player);
 }
 
 draw_radio_tuning_ui :: proc(player: Player, dt: float) {

@@ -48,6 +48,9 @@ ROUND_ITEM_ENGINE_DESPAWN_WINDOW_SECONDS :: 40.0; // Dropped_Item warns for 30s 
 SURVIVOR_ESCAPE_ENABLED :: true;
 TASK_ZONE_RANDOM_RADIUS :: 7.0;
 TASK_ZONE_ARROW_HIDE_DISTANCE :: 20.0;
+LIGHTS_OUT_SABOTAGE_COOLDOWN_SECONDS :: 120.0;
+SABOTAGE_START_COOLDOWN_FRACTION :: 0.5;
+JUMPSCARE_SABOTAGE_START_COOLDOWN_SECONDS :: 120.0;
 
 Match_Phase :: enum {
     LOBBY;
@@ -180,6 +183,53 @@ is_entity_ability_unlocked :: proc(ability: Ability_Base) -> bool {
     }
     return gm.unlocked_entity_ability_count >= step;
 }
+
+clear_player_ability_cooldowns :: proc(player: Player) {
+    if player == null {
+        return;
+    }
+
+    for ability: player.abilities {
+        ability.current_cooldown = 0.0;
+    }
+
+    if player.active_ability != null {
+        player.active_ability = null;
+    }
+}
+
+unlock :: proc(player: Player) {
+    gm := get_game_manager();
+    if !#alive(gm) {
+        Notifier.notify(player, "No match manager found.");
+        return;
+    }
+
+    entity_player := player;
+    if !#alive(entity_player) || !entity_player.is_round_entity() {
+        entity_player = null;
+        if gm.entity_user_id.count > 0 {
+            found_player, found := find_player_by_user_id(gm.entity_user_id);
+            if found && found_player.is_round_entity() {
+                entity_player = found_player;
+            }
+        }
+    }
+
+    if !#alive(entity_player) {
+        Notifier.notify(player, "No Entity player found.");
+        return;
+    }
+
+    gm.unlocked_entity_ability_count = 5;
+    gm.next_entity_ability_unlock_at = 0.0;
+    gm.lights_out_cooldown_ends_at = 0.0;
+
+    entity_player.jumpscare_cooldown_ends_at = 0.0;
+    clear_player_ability_cooldowns(entity_player);
+
+    Notifier.notify(player, "Entity abilities unlocked and cooldowns cleared.");
+} @chat_command
 
 count_players :: proc() -> s64 {
     n: s64 = 0;
@@ -558,7 +608,7 @@ draw_hunt_begin_banner_ui :: proc(player: Player) {
     alpha := lerp(1.0, 0.0, fade_t);
     slide_y := lerp(0.0, 24.0, t);
 
-    text := "Escape the Backrooms";
+    text := "Find the Beck Tapes!";
     if gm.is_entity_player(player) {
         text = "The Hunt Begins!";
     }
@@ -675,7 +725,6 @@ Game_Manager :: class : Component {
     TaskZoneEntity: Entity @ao_serialize;
     RadioPuzzle: Entity @ao_serialize;
     SurvivorSpawn: Entity @ao_serialize;
-    GeneratorSpawns: Entity @ao_serialize;
     ReconnectWiresSpawns: Entity @ao_serialize;
     RadioSpawns: Entity @ao_serialize;
     EntitySpawns: Entity @ao_serialize;
@@ -720,6 +769,12 @@ Game_Manager :: class : Component {
     round_start_transition_finished: bool;
     task_zone_task_id: string;
     round_tapes_collected: [8]bool;
+    lights_out_active: bool;
+    lights_out_cooldown_ends_at: float;
+    lights_out_generator_was_solved: bool;
+    lights_out_previous_task_zone_task_id: string;
+    lights_out_had_previous_task_zone: bool;
+    lights_out_previous_task_zone_position: v2;
 
     ao_start :: method() {
         if #alive(game_manager_singleton) {
@@ -753,6 +808,12 @@ Game_Manager :: class : Component {
         round_start_positions_applied = false;
         round_start_transition_finished = false;
         task_zone_task_id = "";
+        lights_out_active = false;
+        lights_out_cooldown_ends_at = 0.0;
+        lights_out_generator_was_solved = false;
+        lights_out_previous_task_zone_task_id = "";
+        lights_out_had_previous_task_zone = false;
+        lights_out_previous_task_zone_position = v2.{0.0, 0.0};
         reset_round_tapes_collected();
         match_rng = rng_root_seed();
         if !#alive(EndOfGameWarp) {
@@ -764,6 +825,7 @@ Game_Manager :: class : Component {
         clear_all_footstep_echoes();
         clear_spawned_round_items();
         clear_spawned_async_entities();
+        clear_all_corpses();
 
         reset_all_entity_opt_ins();
     }
@@ -773,6 +835,7 @@ Game_Manager :: class : Component {
         clear_all_footstep_echoes();
         clear_spawned_round_items();
         clear_spawned_async_entities();
+        clear_all_corpses();
         sync_entity_hearing_radius_visual(0.0);
         hide_task_zone();
         if game_manager_singleton == this {
@@ -974,7 +1037,7 @@ Game_Manager :: class : Component {
 
     place_task_zone_for_next_task :: method(task_id: string) {
         if task_id == TASK_ID_RESTART_GENERATOR {
-            place_task_zone_near(TASK_ID_RESTART_GENERATOR, GeneratorEntity);
+            hide_task_zone();
             return;
         }
 
@@ -1553,21 +1616,6 @@ Game_Manager :: class : Component {
         return null;
     }
 
-    teleport_generator_to_random_spawn :: method(excluded_spawn: Entity = null) -> bool {
-        if !#alive(GeneratorEntity) {
-            return false;
-        }
-
-        spawn := pick_random_spawn_from_parent(GeneratorSpawns, excluded_spawn);
-        if !#alive(spawn) {
-            return false;
-        }
-
-        GeneratorEntity.set_local_position(spawn.world_position);
-        GeneratorEntity.mark_teleported();
-        return true;
-    }
-
     get_reconnect_wires_entity :: method() -> Entity {
         if #alive(ReconnectWiresEntity) {
             return ReconnectWiresEntity;
@@ -1650,6 +1698,100 @@ Game_Manager :: class : Component {
         generator.reset_for_round(round_seed_key);
     }
 
+    get_generator_component :: method() -> Generator {
+        if !#alive(GeneratorEntity) {
+            return null;
+        }
+        return GeneratorEntity.get_component(Generator);
+    }
+
+    start_lights_out_sabotage :: method(caller: Player) -> bool {
+        if caller == null || !#alive(caller.entity) || !is_entity_player(caller) {
+            return false;
+        }
+        if phase != .SURVIVOR_HEAD_START && phase != .ACTIVE {
+            return false;
+        }
+        if lights_out_active {
+            return false;
+        }
+        if get_time() < lights_out_cooldown_ends_at {
+            return false;
+        }
+
+        generator := get_generator_component();
+        if generator == null {
+            return false;
+        }
+        if generator.in_use {
+            return false;
+        }
+
+        lights_out_previous_task_zone_task_id = task_zone_task_id;
+        lights_out_had_previous_task_zone = task_zone_task_id.count > 0;
+        if lights_out_had_previous_task_zone {
+            previous_zone := get_task_zone_entity();
+            if #alive(previous_zone) {
+                lights_out_previous_task_zone_position = previous_zone.world_position;
+            } else {
+                lights_out_had_previous_task_zone = false;
+            }
+        }
+        lights_out_active = true;
+        lights_out_cooldown_ends_at = get_time() + LIGHTS_OUT_SABOTAGE_COOLDOWN_SECONDS;
+        lights_out_generator_was_solved = generator.solved;
+
+        generator.reset_for_round((head_start_ends_at * 1000.0).(u64));
+        assign_lights_out_generator_tasks();
+        notify_survivors("Lights Out! Restart the generator.");
+        return true;
+    }
+
+    end_lights_out_sabotage :: method(player_who_completed: Player) {
+        if !lights_out_active {
+            return;
+        }
+
+        complete_lights_out_generator_tasks(player_who_completed);
+        lights_out_active = false;
+
+        generator := get_generator_component();
+        if generator != null {
+            if lights_out_generator_was_solved {
+                generator.solved = true;
+                generator.in_use = false;
+                generator.set_text(GENERATOR_COMPLETE_PROMPT);
+            } else {
+                generator.reset_for_round((head_start_ends_at * 1000.0).(u64));
+            }
+        }
+        lights_out_generator_was_solved = false;
+
+        if lights_out_had_previous_task_zone && lights_out_previous_task_zone_task_id.count > 0 {
+            zone := get_task_zone_entity();
+            if #alive(zone) {
+                zone.set_local_position(lights_out_previous_task_zone_position);
+                zone.mark_teleported();
+                zone.set_local_enabled(true);
+                task_zone_task_id = lights_out_previous_task_zone_task_id;
+            } else {
+                hide_task_zone();
+            }
+        } else {
+            hide_task_zone();
+        }
+        lights_out_previous_task_zone_task_id = "";
+        lights_out_had_previous_task_zone = false;
+        lights_out_previous_task_zone_position = v2.{0.0, 0.0};
+
+        remove_lights_out_generator_tasks();
+        if player_who_completed != null {
+            notify_survivors("% restored the lights.", {player_who_completed.get_username()});
+        } else {
+            notify_survivors("The lights are back on.");
+        }
+    }
+
     update_lobby_autostart :: method() {
         n := count_players();
 
@@ -1720,8 +1862,7 @@ Game_Manager :: class : Component {
             return false;
         }
 
-        generator_spawn := pick_random_spawn_from_parent(GeneratorSpawns, entity_spawn);
-        if !#alive(generator_spawn) {
+        if !#alive(GeneratorEntity) {
             entity_user_id = "";
             survivors_alive = 0;
             players.clear();
@@ -1729,21 +1870,26 @@ Game_Manager :: class : Component {
             return false;
         }
 
+        now := get_time();
         emergency_systems_online = false;
         result = .NONE;
         hide_task_zone();
+        lights_out_active = false;
+        lights_out_cooldown_ends_at = now + LIGHTS_OUT_SABOTAGE_COOLDOWN_SECONDS * SABOTAGE_START_COOLDOWN_FRACTION;
+        lights_out_generator_was_solved = false;
+        lights_out_previous_task_zone_task_id = "";
+        lights_out_had_previous_task_zone = false;
+        lights_out_previous_task_zone_position = v2.{0.0, 0.0};
         clear_all_footstep_echoes();
+        clear_all_corpses();
         reset_round_tapes_collected();
 
-        now := get_time();
         next_role_selection_ends_at := now + ROLE_SELECTION_SECONDS;
         intro_spawn_after_popup_seconds := INTRO_SPAWN_BLACK_HOLD_SECONDS + INTRO_SPAWN_FADE_FROM_BLACK_SECONDS;
         next_head_start_ends_at := next_role_selection_ends_at + intro_spawn_after_popup_seconds + HEAD_START_SECONDS;
         round_entity_spawn = entity_spawn;
         round_start_positions_applied = false;
         round_start_transition_finished = false;
-        GeneratorEntity.set_local_position(generator_spawn.world_position);
-        GeneratorEntity.mark_teleported();
         teleport_reconnect_wires_to_random_spawn();
         teleport_radio_puzzle_to_random_spawn();
         reset_generator_for_round((next_head_start_ends_at * 1000.0).(u64));
@@ -1752,6 +1898,10 @@ Game_Manager :: class : Component {
         for i: 0..players.count - 1 {
             clear_player_tasks(players[i]);
             players[i].vent_cooldown_ends_at = 0.0;
+            players[i].jumpscare_request_target_user_id = "";
+            players[i].jumpscare_request_id = 0;
+            players[i].jumpscare_processed_request_id = 0;
+            players[i].jumpscare_cooldown_ends_at = 0.0;
             players[i].add_freeze_reason(FREEZE_INTRO_POPUP);
             if #alive(players[i].agent) {
                 players[i].agent.velocity = v2{0.0, 0.0};
@@ -1767,6 +1917,7 @@ Game_Manager :: class : Component {
         pool.clear();
 
         if entity_player, ok := find_player_by_user_id(entity_user_id); ok {
+            entity_player.jumpscare_cooldown_ends_at = now + JUMPSCARE_SABOTAGE_START_COOLDOWN_SECONDS;
             entity_player.add_freeze_reason(FREEZE_ENTITY_HEAD_START);
         }
 
@@ -1888,10 +2039,17 @@ Game_Manager :: class : Component {
         clear_all_player_round_inventories();
         clear_spawned_round_items();
         clear_spawned_async_entities();
+        clear_all_corpses();
         reset_all_keypad_puzzles_for_round(0);
         reset_all_radio_puzzles_for_round(0);
         reset_generator_for_round(0);
         reset_all_wire_puzzles_for_round(0);
+        lights_out_active = false;
+        lights_out_cooldown_ends_at = 0.0;
+        lights_out_generator_was_solved = false;
+        lights_out_previous_task_zone_task_id = "";
+        lights_out_had_previous_task_zone = false;
+        lights_out_previous_task_zone_position = v2.{0.0, 0.0};
         phase = .LOBBY;
         set_matchmaking_priority_for_phase(phase);
         result = .NONE;
@@ -2004,6 +2162,7 @@ Game_Manager :: class : Component {
         clear_all_footstep_echoes();
         clear_spawned_round_items();
         clear_spawned_async_entities();
+        clear_all_corpses();
         phase = .ENDED;
         set_matchmaking_priority_for_phase(phase);
         result = .SURVIVORS_WIN;
@@ -2026,6 +2185,7 @@ Game_Manager :: class : Component {
         clear_all_footstep_echoes();
         clear_spawned_round_items();
         clear_spawned_async_entities();
+        clear_all_corpses();
         phase = .ENDED;
         set_matchmaking_priority_for_phase(phase);
         result = .ENTITY_WIN;
@@ -2073,6 +2233,28 @@ end :: proc(player: Player) {
 
     gm.end_match_survivors_win();
     log_info("end: % forced a Survivor win", {player.get_username()});
+} @chat_command
+
+fulldie :: proc(player: Player) {
+    gm := get_game_manager();
+    if !#alive(gm) {
+        log_info("fulldie: no game manager found", {});
+        return;
+    }
+
+    if gm.phase != .SURVIVOR_HEAD_START && gm.phase != .ACTIVE {
+        log_info("fulldie: unable to kill player from current state", {});
+        return;
+    }
+
+    if !player.is_round_survivor() || !#alive(player.entity) {
+        log_info("fulldie: % is not a living survivor", {player.get_username()});
+        return;
+    }
+
+    death_effect := new(Entity_Death_Effect);
+    player.entity.set_active_effect(death_effect);
+    log_info("fulldie: % forced their own full death", {player.get_username()});
 } @chat_command
 
 kill_all :: proc(player: Player) {

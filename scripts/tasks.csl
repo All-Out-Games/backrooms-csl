@@ -1,8 +1,10 @@
 TASK_ID_TUNE_RADIO        :: "tune_radio";
 TASK_ID_ENTER_KEYCODE     :: "enter_keycode";
 TASK_ID_RESTART_GENERATOR :: "restart_generator";
+TASK_ID_LIGHTS_OUT_GENERATOR :: "lights_out_generator";
 TASK_ID_RECONNECT_WIRE    :: "reconnect_wire";
 TASK_ID_REPAIR_LAPTOP     :: "repair_laptop";
+TASK_ID_FIX_CAMERA        :: "fix_camera";
 
 // --- Task SFX helpers copied with the Repair Laptop task ---
 RR_TASK_SFX_TILE_CLICK   :: "task_click_tile_8ba441.wav";
@@ -159,6 +161,22 @@ is_task_completed :: proc(player: Player, task_id: string) -> bool {
     return task.completed;
 }
 
+remove_task :: proc(player: Player, task_id: string) {
+    if player == null {
+        return;
+    }
+
+    i: s64 = 0;
+    while i < player.active_tasks.elements.count {
+        task := player.active_tasks.elements[i];
+        if task != null && task.id == task_id {
+            player.active_tasks.unordered_remove_by_index(i.(int));
+            continue;
+        }
+        i += 1;
+    }
+}
+
 set_task_completed :: proc(player: Player, task_id: string, completed: bool) -> bool {
     task := find_task(player, task_id);
     if task == null {
@@ -183,6 +201,9 @@ is_task_required_for_progress :: proc(task: Task_Base) -> bool {
 }
 
 is_task_unlocked_for_player :: proc(player: Player, task_id: string) -> bool {
+    if task_id == TASK_ID_FIX_CAMERA {
+        return true;
+    }
     if task_id == TASK_ID_TUNE_RADIO {
         return true;
     }
@@ -192,8 +213,12 @@ is_task_unlocked_for_player :: proc(player: Player, task_id: string) -> bool {
     if task_id == TASK_ID_RESTART_GENERATOR {
         return is_task_completed(player, TASK_ID_ENTER_KEYCODE);
     }
+    if task_id == TASK_ID_LIGHTS_OUT_GENERATOR {
+        gm := get_game_manager();
+        return #alive(gm) && gm.lights_out_active;
+    }
     if task_id == TASK_ID_RECONNECT_WIRE {
-        return is_task_completed(player, TASK_ID_RESTART_GENERATOR);
+        return is_task_completed(player, TASK_ID_FIX_CAMERA);
     }
     if task_id == TASK_ID_REPAIR_LAPTOP {
         return true;
@@ -263,6 +288,38 @@ complete_task_for_survivors :: proc(task_id: string) {
     }
 }
 
+assign_lights_out_generator_tasks :: proc() {
+    for player: component_iterator(Player) {
+        if !player.is_round_survivor() || player.is_round_entity() {
+            continue;
+        }
+
+        task := ensure_task_assigned(player, TASK_ID_LIGHTS_OUT_GENERATOR);
+        task.started = false;
+        task.completed = false;
+    }
+}
+
+remove_lights_out_generator_tasks :: proc() {
+    for player: component_iterator(Player) {
+        remove_task(player, TASK_ID_LIGHTS_OUT_GENERATOR);
+    }
+}
+
+complete_lights_out_generator_tasks :: proc(player_who_completed: Player) {
+    for player: component_iterator(Player) {
+        if !player.is_round_survivor() || player.is_round_entity() {
+            continue;
+        }
+
+        task := find_task(player, TASK_ID_LIGHTS_OUT_GENERATOR);
+        if task != null {
+            task.started = true;
+            task.complete_attempt(player, true);
+        }
+    }
+}
+
 notify_survivors :: proc(fmt: string, args: [^]any = {}) {
     for player: component_iterator(Player) {
         if !player.is_round_survivor() || player.is_round_entity() {
@@ -277,8 +334,10 @@ get_task_display_name :: proc(task_id: string) -> string {
         case TASK_ID_TUNE_RADIO:        return "Tune Radio";
         case TASK_ID_ENTER_KEYCODE:     return "Enter Keycode";
         case TASK_ID_RESTART_GENERATOR: return "Restart Generator";
-        case TASK_ID_RECONNECT_WIRE:    return "Reconnect Wires";
+        case TASK_ID_LIGHTS_OUT_GENERATOR: return "Restart Generator";
+        case TASK_ID_RECONNECT_WIRE:    return "Reroute Power to Blast Door";
         case TASK_ID_REPAIR_LAPTOP:     return "Repair Laptop";
+        case TASK_ID_FIX_CAMERA:        return "Find and Fix handheld Camera";
     }
     return "Unknown Task";
 }
@@ -294,11 +353,17 @@ get_task_description :: proc(task_id: string) -> string {
         case TASK_ID_RESTART_GENERATOR: {
             return "Restore power to the facility.";
         }
+        case TASK_ID_LIGHTS_OUT_GENERATOR: {
+            return "Restore power to end Lights Out.";
+        }
         case TASK_ID_RECONNECT_WIRE: {
-            return "Repair a severed circuit running power to the exit door.";
+            return "Repair the severed circuit that powers the blast door.";
         }
         case TASK_ID_REPAIR_LAPTOP: {
             return "Drag each piece back into its correct slot on the laptop.";
+        }
+        case TASK_ID_FIX_CAMERA: {
+            return "Find a broken handheld camera and repair it at the workshop.";
         }
     }
     return "";
@@ -320,10 +385,7 @@ assign_default_survivor_tasks :: proc(player: Player) {
     }
 
     clear_player_tasks(player);
-    append(ref player.active_tasks, create_task(TASK_ID_TUNE_RADIO));
-    append(ref player.active_tasks, create_task(TASK_ID_ENTER_KEYCODE));
-    append(ref player.active_tasks, create_task(TASK_ID_RESTART_GENERATOR));
-    append(ref player.active_tasks, create_task(TASK_ID_RECONNECT_WIRE));
+    append(ref player.active_tasks, create_task(TASK_ID_FIX_CAMERA));
 }
 
 rr_play_sfx :: proc(path: string, desc: SFX_Desc) -> u64 {
@@ -401,6 +463,34 @@ collect_tape_inventory_items :: proc(player: Player) {
     }
 }
 
+update_survivor_task_progression :: proc(player: Player) {
+    if player == null {
+        return;
+    }
+
+    camera_task := ensure_task_assigned(player, TASK_ID_FIX_CAMERA);
+    if !camera_task.completed && player_inventory_has_item_id(player, CAMERA_ITEM_ID) {
+        camera_task.started = true;
+        camera_task.complete_attempt(player, true);
+    }
+
+    if !camera_task.completed {
+        return;
+    }
+
+    wire_task := ensure_task_assigned(player, TASK_ID_RECONNECT_WIRE);
+    if is_wire_connected() && !wire_task.completed {
+        wire_task.started = true;
+        wire_task.complete_attempt(player, true);
+        return;
+    }
+
+    gm := get_game_manager();
+    if #alive(gm) && !wire_task.completed && !gm.is_task_zone_active_for(TASK_ID_RECONNECT_WIRE) {
+        gm.place_task_zone_for_next_task(TASK_ID_RECONNECT_WIRE);
+    }
+}
+
 // Standard close button for task minigames.
 // Returns true if the task was closed/cancelled this frame.
 draw_task_close_button :: proc(window_rect: Rect, player: Player, task: Task_Base) -> bool {
@@ -468,6 +558,7 @@ update_tasks :: proc(player: Player) {
     }
 
     collect_tape_inventory_items(player);
+    update_survivor_task_progression(player);
 
     // Task UIs should render above the progress bar / task list.
     UI.push_layer(9700);

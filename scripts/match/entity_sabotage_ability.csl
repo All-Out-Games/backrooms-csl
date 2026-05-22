@@ -1,0 +1,380 @@
+import "core:ao"
+
+ENTITY_SABOTAGE_ICON_PATH :: "sabotage_869077.png";
+ENTITY_SABOTAGE_LIGHTS_ICON_PATH :: "bulb_off_d8e1f5.png";
+ENTITY_SABOTAGE_JUMPSCARE_ICON_PATH :: "AbilityIcons/Bite.png";
+ENTITY_SABOTAGE_TOXIC_RAIN_ICON_PATH :: "oil_sludge_3_a58110.png";
+ENTITY_JUMPSCARE_EFFECT_SECONDS :: 10.0;
+ENTITY_JUMPSCARE_COOLDOWN_SECONDS :: 120.0;
+ENTITY_JUMPSCARE_MODAL_MAX_TARGETS :: 32;
+
+is_valid_jumpscare_target :: proc(player: Player) -> bool {
+    if player == null || !#alive(player.entity) {
+        return false;
+    }
+    if !player.is_round_survivor() || player.is_round_dead() || player.is_round_downed() {
+        return false;
+    }
+    return true;
+}
+
+Jumpscared_Effect :: class : Effect_Base {
+    effect_start :: method() {
+        player_specific.freeze_player = true;
+        set_duration(ENTITY_JUMPSCARE_EFFECT_SECONDS);
+
+        if player == null || !#alive(player.entity) {
+            return;
+        }
+        if #alive(player.agent) {
+            player.agent.velocity = v2{0.0, 0.0};
+        }
+        if player.animator != null && player.animator.state_machine != null {
+            player.animator.state_machine.set_bool("jumpscared", true);
+            player.animator.state_machine.set_trigger("jumpscare");
+        }
+    }
+
+    effect_update :: method(dt: float) {
+        if player == null || !#alive(player.entity) {
+            remove_effect(false);
+            return;
+        }
+        if !is_valid_jumpscare_target(player) {
+            remove_effect(false);
+            return;
+        }
+
+        player.reveal_for_entity_jumpscare_local_view(0.25);
+    }
+
+    effect_end :: method(interrupt: bool) {
+        if player == null || !#alive(player.entity) {
+            return;
+        }
+        if player.animator != null && player.animator.state_machine != null {
+            player.animator.state_machine.set_bool("jumpscared", false);
+            player.animator.state_machine.set_trigger("RESET");
+        }
+    }
+}
+
+apply_jumpscare_sabotage_to_survivor :: proc(entity_player: Player, target: Player) -> bool {
+    if entity_player == null || !#alive(entity_player.entity) || !entity_player.is_round_entity() {
+        return false;
+    }
+    if !is_valid_jumpscare_target(target) {
+        return false;
+    }
+    if get_time() < entity_player.jumpscare_cooldown_ends_at {
+        return false;
+    }
+
+    target.jumpscare_overlay_request_id = entity_player.jumpscare_processed_request_id;
+
+    effect := new(Jumpscared_Effect);
+    target.entity.set_active_effect(effect);
+
+    entity_player.jumpscare_cooldown_ends_at = get_time() + ENTITY_JUMPSCARE_COOLDOWN_SECONDS;
+    play_entity_scream_sfx(target);
+    ping_survivor_with_entity_scream(entity_player, target);
+    target.reveal_for_entity_jumpscare_local_view(ENTITY_JUMPSCARE_EFFECT_SECONDS);
+    return true;
+}
+
+queue_jumpscare_sabotage_request :: proc(entity_player: Player, target: Player) {
+    if entity_player == null || !#alive(entity_player.entity) || !entity_player.is_round_entity() {
+        return;
+    }
+    if !is_valid_jumpscare_target(target) {
+        return;
+    }
+    if get_time() < entity_player.jumpscare_cooldown_ends_at {
+        return;
+    }
+
+    entity_player.jumpscare_request_target_user_id = target.get_user_id();
+    entity_player.jumpscare_request_id += 1;
+}
+
+process_entity_jumpscare_sabotage_request :: proc(entity_player: Player) {
+    if entity_player == null || !#alive(entity_player.entity) || !entity_player.is_round_entity() {
+        return;
+    }
+    if entity_player.jumpscare_request_id <= entity_player.jumpscare_processed_request_id {
+        return;
+    }
+
+    entity_player.jumpscare_processed_request_id = entity_player.jumpscare_request_id;
+    if entity_player.jumpscare_request_target_user_id.count <= 0 {
+        return;
+    }
+    if get_time() < entity_player.jumpscare_cooldown_ends_at {
+        return;
+    }
+
+    gm := get_game_manager();
+    if !#alive(gm) || (gm.phase != .SURVIVOR_HEAD_START && gm.phase != .ACTIVE) {
+        return;
+    }
+
+    target, found := find_player_by_user_id(entity_player.jumpscare_request_target_user_id);
+    if !found {
+        return;
+    }
+
+    apply_jumpscare_sabotage_to_survivor(entity_player, target);
+}
+
+format_sabotage_cooldown :: proc(remaining_seconds: float) -> string {
+    if remaining_seconds < 0.0 {
+        remaining_seconds = 0.0;
+    }
+
+    total_seconds := (remaining_seconds + 0.999).(s64);
+    minutes := total_seconds / 60;
+    seconds := total_seconds % 60;
+    if seconds < 10 {
+        return format_string("%:0%", {minutes, seconds});
+    }
+    return format_string("%:%", {minutes, seconds});
+}
+
+draw_entity_sabotage_option_button :: proc(id: string, label: string, icon_path: string, disabled: bool = false, cooldown_label: string = "") -> UIK.Interact_Handle {
+    icon := get_asset(Texture_Asset, icon_path);
+    desc := UIK.widget_desc_button_default(.BUTTON_BASIC_GREY);
+    desc.panel.width = UIK.flex(1);
+    desc.panel.height = UIK.pixels(92);
+    desc.panel.axis = .HORIZONTAL;
+    desc.panel.cross_align = .CENTER;
+    desc.disabled = disabled;
+
+    handle := UIK.panel_begin_interactive(id, desc.panel, desc.disabled);
+
+    icon_slot := UIK.layout_centered(UIK.pixels(150), UIK.flex(1));
+    UIK.panel_begin(icon_slot);
+    if icon != null {
+        UIK.image_fitted(icon, UIK.image_desc(.CONTAIN));
+    }
+    UIK.panel_end();
+
+    label_slot := UIK.layout_centered(UIK.flex(1), UIK.flex(1));
+    UIK.panel_begin(label_slot);
+    label_text := UIK.text_button();
+    UIK.text_set_halign(&label_text, .CENTER);
+    UIK.text_set_word_wrap(&label_text, false);
+    UIK.text(label, label_text);
+    UIK.panel_end();
+
+    spacer := UIK.layout_centered(UIK.pixels(150), UIK.flex(1));
+    UIK.panel_begin(spacer);
+    if cooldown_label.count > 0 {
+        cooldown_text := UIK.text_body();
+        UIK.text_set_halign(&cooldown_text, .CENTER);
+        UIK.text(cooldown_label, cooldown_text);
+    }
+    UIK.panel_end();
+
+    UIK.panel_end();
+    return handle;
+}
+
+draw_entity_sabotage_modal_ui :: proc(player: Player) {
+    if player == null || !player.sabotage_modal_open {
+        return;
+    }
+    if !player.is_local_or_server() || !player.is_round_entity() {
+        player.sabotage_modal_open = false;
+        return;
+    }
+
+    gm := get_game_manager();
+    if !#alive(gm) || (gm.phase != .SURVIVOR_HEAD_START && gm.phase != .ACTIVE) {
+        player.sabotage_modal_open = false;
+        return;
+    }
+
+    UIK.begin(UIK.modal(UIK.rect_window_small().scale(1.25, 1.25), 15));
+
+    shell := UIK.panel_modal(.TRANSP_BLACK);
+    shell.gap = 10;
+    shell.padding = v4{16, 16, 16, 16};
+    UIK.panel_begin(shell);
+
+    title_desc := UIK.title_area_desc("Sabotage");
+    title_desc.icon = get_asset(Texture_Asset, ENTITY_SABOTAGE_ICON_PATH);
+    exit_handle := UIK.title_area(title_desc);
+
+    content := UIK.panel_interior(.INSET);
+    content.width = UIK.flex(1);
+    content.height = UIK.flex(1);
+    content.padding = v4{10, 10, 10, 10};
+    content.gap = 10;
+    content.main_align = .CENTER;
+    UIK.panel_begin(content);
+
+    lights_disabled := true;
+    lights_cooldown_label := "";
+    if #alive(gm) {
+        lights_disabled = gm.lights_out_active || get_time() < gm.lights_out_cooldown_ends_at;
+        if get_time() < gm.lights_out_cooldown_ends_at {
+            lights_cooldown_label = format_sabotage_cooldown(gm.lights_out_cooldown_ends_at - get_time());
+        }
+    }
+    jumpscare_disabled := get_time() < player.jumpscare_cooldown_ends_at;
+    jumpscare_cooldown_label := "";
+    if jumpscare_disabled {
+        jumpscare_cooldown_label = format_sabotage_cooldown(player.jumpscare_cooldown_ends_at - get_time());
+    }
+
+    lights_out_handle := draw_entity_sabotage_option_button("sabotage_lights_out", "Lights Out", ENTITY_SABOTAGE_LIGHTS_ICON_PATH, lights_disabled, lights_cooldown_label);
+    jumpscare_handle := draw_entity_sabotage_option_button("sabotage_jumpscare", "Jumpscare", ENTITY_SABOTAGE_JUMPSCARE_ICON_PATH, jumpscare_disabled, jumpscare_cooldown_label);
+    draw_entity_sabotage_option_button("sabotage_toxic_rain", "Toxic Rain", ENTITY_SABOTAGE_TOXIC_RAIN_ICON_PATH);
+
+    UIK.panel_end();
+    UIK.panel_end();
+    UIK.end();
+
+    if UIK.clicked(exit_handle) {
+        player.sabotage_modal_open = false;
+    }
+    if !lights_disabled && UIK.clicked(lights_out_handle) {
+        if #alive(gm) && gm.start_lights_out_sabotage(player) {
+            player.sabotage_modal_open = false;
+        }
+    }
+    if !jumpscare_disabled && UIK.clicked(jumpscare_handle) {
+        player.sabotage_modal_open = false;
+        player.jumpscare_target_modal_open = true;
+    }
+}
+
+draw_entity_jumpscare_target_modal_ui :: proc(player: Player) {
+    if player == null || !player.jumpscare_target_modal_open {
+        return;
+    }
+    if !player.is_local_or_server() || !player.is_round_entity() {
+        player.jumpscare_target_modal_open = false;
+        return;
+    }
+
+    gm := get_game_manager();
+    if !#alive(gm) || (gm.phase != .SURVIVOR_HEAD_START && gm.phase != .ACTIVE) {
+        player.jumpscare_target_modal_open = false;
+        return;
+    }
+    if get_time() < player.jumpscare_cooldown_ends_at {
+        player.jumpscare_target_modal_open = false;
+        return;
+    }
+
+    UIK.begin(UIK.modal(UIK.rect_window_small().scale(1.25, 1.25), 15));
+
+    shell := UIK.panel_modal(.TRANSP_BLACK);
+    shell.gap = 10;
+    shell.padding = v4{16, 16, 16, 16};
+    UIK.panel_begin(shell);
+
+    title_desc := UIK.title_area_desc("Jumpscare");
+    title_desc.icon = get_asset(Texture_Asset, ENTITY_SABOTAGE_JUMPSCARE_ICON_PATH);
+    exit_handle := UIK.title_area(title_desc);
+
+    content := UIK.panel_interior(.INSET);
+    content.width = UIK.flex(1);
+    content.height = UIK.flex(1);
+    content.padding = v4{10, 10, 10, 10};
+    content.gap = 8;
+    content.main_align = .CENTER;
+    UIK.panel_begin(content);
+
+    handles: [ENTITY_JUMPSCARE_MODAL_MAX_TARGETS]UIK.Interact_Handle;
+    target_ids: [ENTITY_JUMPSCARE_MODAL_MAX_TARGETS]string;
+    target_count: s64 = 0;
+
+    list_panel := UIK.layout_column();
+    list_panel.width = UIK.flex(1);
+    list_panel.height = UIK.flex(1);
+    list_panel.gap = 8;
+    UIK.list_begin("jumpscare_target_list", list_panel);
+
+    for survivor: component_iterator(Player) {
+        if target_count >= ENTITY_JUMPSCARE_MODAL_MAX_TARGETS {
+            break;
+        }
+        if !is_valid_jumpscare_target(survivor) {
+            continue;
+        }
+
+        desc := UIK.widget_desc_button_default(.BUTTON_BASIC_GREY);
+        desc.panel.width = UIK.flex(1);
+        desc.panel.height = UIK.pixels(76);
+
+        handles[target_count] = UIK.button(format_string("jumpscare_target_%", {target_count}), survivor.get_username(), desc);
+        target_ids[target_count] = survivor.get_user_id();
+        target_count += 1;
+    }
+
+    if target_count == 0 {
+        empty_text := UIK.text_body();
+        UIK.text_set_halign(&empty_text, .CENTER);
+        UIK.text("No alive Survivors", empty_text);
+    }
+
+    UIK.list_end();
+
+    UIK.panel_end();
+    UIK.panel_end();
+    UIK.end();
+
+    if UIK.clicked(exit_handle) {
+        player.jumpscare_target_modal_open = false;
+        return;
+    }
+    if target_count <= 0 {
+        return;
+    }
+
+    for i: 0..target_count - 1 {
+        if UIK.clicked(handles[i]) {
+            target, found := find_player_by_user_id(target_ids[i]);
+            if found && is_valid_jumpscare_target(target) {
+                queue_jumpscare_sabotage_request(player, target);
+                player.jumpscare_target_modal_open = false;
+                return;
+            }
+        }
+    }
+}
+
+Entity_Sabotage_Ability :: class : Ability_Base {
+    on_init :: method() {
+        name = "Sabotage";
+        icon = get_asset(Texture_Asset, ENTITY_SABOTAGE_ICON_PATH);
+        disable_keybind = true;
+    }
+
+    can_use :: method() -> bool {
+        if player == null || !player.is_round_entity() {
+            return false;
+        }
+
+        gm := get_game_manager();
+        if !#alive(gm) || (gm.phase != .SURVIVOR_HEAD_START && gm.phase != .ACTIVE) {
+            return false;
+        }
+
+        return true;
+    }
+
+    on_update :: method(params: ref Ability_Update_Params) {
+        if !params.clicked || !params.can_use {
+            return;
+        }
+
+        player.sabotage_modal_open = !player.sabotage_modal_open;
+    }
+
+    on_draw_button :: proc(instance: Entity_Sabotage_Ability, rect: Rect) {
+        draw_ability_name_label(rect, "Sabotage");
+    }
+}

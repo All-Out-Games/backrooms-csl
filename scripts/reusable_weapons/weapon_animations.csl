@@ -238,4 +238,27 @@ setup_reusable_weapons_player_state_machine :: proc(player: Player) {
         }
         base_layer.create_global_transition(dance_state, true).create_trigger_condition(dance_trigger);
     }
+
+    jumpscare_state := base_layer.try_get_state("Emote/Jumpscare");
+    if jumpscare_state == null {
+        jumpscare_state = base_layer.create_state("Emote/Jumpscare", false);
+    }
+    jumpscare_idle_state := base_layer.try_get_state("Idle_Drowsy");
+    if jumpscare_idle_state == null {
+        jumpscare_idle_state = base_layer.create_state("Idle_Drowsy", true);
+    }
+    jumpscared_var := sm.try_get_variable("jumpscared");
+    if jumpscared_var == null {
+        jumpscared_var = sm.create_variable("jumpscared", .BOOL);
+    }
+    jumpscare_trigger := sm.try_get_variable("jumpscare");
+    if jumpscare_trigger == null {
+        jumpscare_trigger = sm.create_variable("jumpscare", .TRIGGER);
+    }
+
+    base_layer.create_global_transition(jumpscare_state, true).create_trigger_condition(jumpscare_trigger);
+    jumpscare_to_idle := base_layer.create_transition(jumpscare_state, jumpscare_idle_state, true);
+    jumpscare_to_idle.create_bool_condition(jumpscared_var, true);
+    jumpscare_idle_to_idle := base_layer.create_transition(jumpscare_idle_state, ao_idle, false);
+    jumpscare_idle_to_idle.create_bool_condition(jumpscared_var, false);
 }

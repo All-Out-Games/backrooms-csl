@@ -1,0 +1,63 @@
+CORPSE_DEATH_ANIMATION :: "Death_No_HP";
+
+Corpse :: class : Component {
+    owner_user_id: string;
+    owner_entity_id: u64;
+    spawned_at: float;
+}
+
+spawn_corpse_for_player :: proc(player: Player) -> Corpse {
+    if player == null || !#alive(player.entity) {
+        return null;
+    }
+    if player.animator == null || player.animator.instance == null {
+        return null;
+    }
+
+    corpse_entity := Scene.create_entity();
+    corpse_entity.set_local_position(player.entity.world_position);
+    corpse_entity.set_local_rotation(player.entity.world_rotation);
+    corpse_entity.set_local_scale(player.entity.world_scale);
+
+    corpse := corpse_entity.add_component(Corpse);
+    corpse.owner_user_id = player.get_user_id();
+    corpse.owner_entity_id = player.entity.id;
+    corpse.spawned_at = get_time();
+
+    spine := corpse_entity.add_component(Spine_Animator);
+    spine.awaken();
+    if spine.instance == null {
+        corpse_entity.destroy();
+        return null;
+    }
+
+    skeleton := player.animator.get_skeleton();
+    if skeleton == null {
+        corpse_entity.destroy();
+        return null;
+    }
+
+    spine.mask_in_shadow = true;
+    spine.layer = player.animator.layer;
+    spine.depth_offset = player.animator.depth_offset;
+    spine.set_skeleton(skeleton);
+    spine.disable_all_skins();
+
+    player_skins := player.animator.get_skins();
+    for i: 0..player_skins.count - 1 {
+        spine.enable_skin(player_skins[i]);
+    }
+    spine.refresh_skins();
+    spine.set_color_replace_color(player.avatar_color);
+    spine.set_animation(CORPSE_DEATH_ANIMATION, false, 0);
+
+    return corpse;
+}
+
+clear_all_corpses :: proc() {
+    for corpse: component_iterator(Corpse) {
+        if #alive(corpse.entity) {
+            corpse.entity.destroy();
+        }
+    }
+}

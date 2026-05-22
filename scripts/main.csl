@@ -146,6 +146,10 @@ PLAYER_LIGHT_RADIUS_Y_PADDING :: 2.0;
 PLAYER_LIGHT_FIXED_RADIUS :: 40.0;
 PLAYER_LIGHT_INTENSITY :: 0.85;
 PLAYER_LIGHT_COLOR := v4.{1.0, 1.0, 1.0, 1.0};
+LIGHTS_OUT_LOS_INNER_RADIUS :: 2.25;
+LIGHTS_OUT_LOS_OUTER_RADIUS :: 3.5;
+LIGHTS_OUT_VIGNETTE_RADIUS :: 0.58;
+LIGHTS_OUT_VIGNETTE_SOFTNESS :: 0.42;
 ENTITY_FILM_GRAIN_STRENGTH :: 0.045;
 ENTITY_FILM_GRAIN_NOISE_SCALE :: 1.75;
 ENTITY_COLOR_GRADE_FILTER := v3.{1.0, 1.0, 1.0};
@@ -163,6 +167,9 @@ ENTITY_REVEALED_EYE_ICON_NAMEPLATE_OFFSET :: 14.0;
 ENTITY_REVEALED_EYE_ICON_LAYER :: 80;
 ENTITY_VIEW_PLAYER_REVEAL_FADE_OUT_SECONDS :: 2.0;
 ENTITY_NAME_INVISIBILITY_REASON :: "entity_role_active";
+JUMPSCARE_OVERLAY_SPINE_PATH :: "Animations/jumpscare/jumpscare_asset.spine";
+JUMPSCARE_OVERLAY_SECONDS :: 1.3;
+JUMPSCARE_OVERLAY_SCALE := v2.{250.0, 250.0};
 PLAYER_WINS_SAVE_KEY :: "playerWins";
 ROUND_SURVIVOR_NORMAL_MOVEMENT_MULTIPLIER :: 0.90;
 DOWNED_SURVIVOR_MOVEMENT_MULTIPLIER :: 0.30;
@@ -230,13 +237,20 @@ is_hidden_by_entity_local_view :: proc(player: Player) -> bool {
 is_revealed_in_entity_local_view :: proc(player: Player) -> bool {
     if player == null return false;
     if !is_hidden_by_entity_local_view(player) return false;
-    return player.entity_local_view_is_active && player.entity_local_view_alpha > 0.0;
+    return is_revealed_by_jumpscare_effect(player) || (player.entity_local_view_is_active && player.entity_local_view_alpha > 0.0);
+}
+
+is_revealed_by_jumpscare_effect :: proc(player: Player) -> bool {
+    if player == null || !#alive(player.entity) {
+        return false;
+    }
+    return has_effect(player.entity, Jumpscared_Effect);
 }
 
 is_entity_reveal_active :: proc(player: Player) -> bool {
     if player == null return false;
     if !player.is_round_survivor() return false;
-    return player.entity_local_view_is_active && player.entity_local_view_alpha > 0.0;
+    return is_revealed_by_jumpscare_effect(player) || (player.entity_local_view_is_active && player.entity_local_view_alpha > 0.0);
 }
 
 is_hidden_by_round_dead_local_view :: proc(player: Player) -> bool {
@@ -262,8 +276,19 @@ Player :: class : Player_Base {
     chat_mode_inited: bool;
     chat_mode_last_applied: Chat.Mode;
     vitals_modal_open: bool;
+    sabotage_modal_open: bool;
+    jumpscare_target_modal_open: bool;
     security_cameras_open: bool;
     security_camera_index: s64;
+    jumpscare_request_target_user_id: string;
+    jumpscare_request_id: s64;
+    jumpscare_processed_request_id: s64;
+    jumpscare_cooldown_ends_at: float;
+    jumpscare_overlay_request_id: s64;
+    jumpscare_overlay_seen_request_id: s64;
+    jumpscare_overlay_ends_at: float;
+    jumpscare_overlay_spine: Spine_Instance;
+    jumpscare_overlay_asset: Spine_Asset;
     override_rig: Spine_Animator;
     entity_override_rig_asset: Spine_Asset;
     entity_override_state_machine: State_Machine;
@@ -343,12 +368,13 @@ Player :: class : Player_Base {
         override_rig.instance.refresh_skins();
 
         sm := State_Machine.create();
-        sm.debug_enabled = true;
+        //sm.debug_enabled = true;
         entity_override_state_machine = sm;
 
         layer := sm.create_layer("main", 0);
         idle_state := layer.create_state("idle", true);
         run_state := layer.create_state("run", true);
+        run_fast_state := layer.create_state("run_fast", true);
         bite_state := layer.create_state("bite", false);
         convertbreath_state := layer.create_state("convertbreath", false);
         scream_state := layer.create_state("scream", false);
@@ -359,6 +385,7 @@ Player :: class : Player_Base {
         layer.set_initial_state(idle_state);
 
         is_moving_var := sm.create_variable("is_moving", .BOOL);
+        is_lurching_var := sm.create_variable("is_lurching", .BOOL);
         bite_var := sm.create_variable("bite", .TRIGGER);
         convertbreath_var := sm.create_variable("convertbreath", .TRIGGER);
         scream_var := sm.create_variable("scream", .TRIGGER);
@@ -366,8 +393,21 @@ Player :: class : Player_Base {
         teleport_disappear_var := sm.create_variable("teleport_disapear", .TRIGGER);
         vomit_var := sm.create_variable("vomit", .TRIGGER);
 
-        layer.create_transition(idle_state, run_state, false).create_bool_condition(is_moving_var, true);
+        idle_to_run := layer.create_transition(idle_state, run_state, false);
+        idle_to_run.create_bool_condition(is_moving_var, true);
+        idle_to_run.create_bool_condition(is_lurching_var, false);
+
+        idle_to_run_fast := layer.create_transition(idle_state, run_fast_state, false);
+        idle_to_run_fast.create_bool_condition(is_moving_var, true);
+        idle_to_run_fast.create_bool_condition(is_lurching_var, true);
+
         layer.create_transition(run_state, idle_state, false).create_bool_condition(is_moving_var, false);
+        layer.create_transition(run_state, run_fast_state, false).create_bool_condition(is_lurching_var, true);
+
+        layer.create_transition(run_fast_state, idle_state, false).create_bool_condition(is_moving_var, false);
+        run_fast_to_run := layer.create_transition(run_fast_state, run_state, false);
+        run_fast_to_run.create_bool_condition(is_moving_var, true);
+        run_fast_to_run.create_bool_condition(is_lurching_var, false);
 
         to_bite := layer.create_global_transition(bite_state, true);
         to_bite.create_trigger_condition(bite_var);
@@ -419,6 +459,66 @@ Player :: class : Player_Base {
         held_item_entity = null;
         held_item_sprite = null;
         held_item_weapon_type = .NONE;
+    }
+
+    destroy_jumpscare_overlay :: method() {
+        if !this.is_local_or_server() {
+            return;
+        }
+        if jumpscare_overlay_spine != null {
+            jumpscare_overlay_spine.destroy();
+            jumpscare_overlay_spine = null;
+        }
+        jumpscare_overlay_ends_at = 0.0;
+    }
+
+    start_jumpscare_overlay :: method() {
+        if !this.is_local_or_server() {
+            return;
+        }
+
+        this.destroy_jumpscare_overlay();
+        if jumpscare_overlay_asset == null {
+            jumpscare_overlay_asset = get_asset(Spine_Asset, JUMPSCARE_OVERLAY_SPINE_PATH);
+        }
+        if jumpscare_overlay_asset == null {
+            return;
+        }
+
+        jumpscare_overlay_spine = Spine_Instance.create();
+        jumpscare_overlay_spine.set_skeleton(jumpscare_overlay_asset);
+        jumpscare_overlay_spine.set_animation("appear", false, 0);
+        jumpscare_overlay_ends_at = get_time() + JUMPSCARE_OVERLAY_SECONDS;
+    }
+
+    update_jumpscare_overlay :: method(dt: float) {
+        if !this.is_local_or_server() {
+            return;
+        }
+        if jumpscare_overlay_request_id > jumpscare_overlay_seen_request_id {
+            jumpscare_overlay_seen_request_id = jumpscare_overlay_request_id;
+            this.start_jumpscare_overlay();
+        }
+        if jumpscare_overlay_spine == null {
+            return;
+        }
+        if get_time() >= jumpscare_overlay_ends_at {
+            this.destroy_jumpscare_overlay();
+            return;
+        }
+
+        jumpscare_overlay_spine.update(dt);
+    }
+
+    draw_jumpscare_overlay :: method() {
+        if !this.is_local_or_server() || jumpscare_overlay_spine == null {
+            return;
+        }
+        UI.push_screen_draw_context();
+        defer UI.pop_draw_context();
+
+        screen := UI.get_safe_screen_rect();
+        UI.spine(screen.center(), jumpscare_overlay_spine, JUMPSCARE_OVERLAY_SCALE, 0.0);
     }
 
     ensure_held_item_visual :: method(wt: Weapon_Type) {
@@ -614,8 +714,18 @@ Player :: class : Player_Base {
         task_help_open = false;
         chat_mode_inited = false;
         vitals_modal_open = false;
+        sabotage_modal_open = false;
+        jumpscare_target_modal_open = false;
         security_cameras_open = false;
         security_camera_index = 0;
+        jumpscare_request_target_user_id = "";
+        jumpscare_request_id = 0;
+        jumpscare_processed_request_id = 0;
+        jumpscare_cooldown_ends_at = 0.0;
+        jumpscare_overlay_request_id = 0;
+        jumpscare_overlay_seen_request_id = 0;
+        jumpscare_overlay_ends_at = 0.0;
+        jumpscare_overlay_spine = null;
         ensure_sprint_resources();
         footstep_stride_accum = 0.0;
         footstep_left_next = false;
@@ -895,6 +1005,7 @@ Player :: class : Player_Base {
 
         gm := get_game_manager();
         if count_as_survivor_elimination && was_round_survivor && #alive(gm) && (gm.phase == .SURVIVOR_HEAD_START || gm.phase == .ACTIVE) {
+            spawn_corpse_for_player(this);
             entity_player := find_round_entity_for_mold_vomit("");
             spawn_mold_vomit_at_position(death_position, entity_player);
         }
@@ -1105,6 +1216,7 @@ Player :: class : Player_Base {
         }
         if should_use_entity_override && entity_override_state_machine != null {
             entity_override_state_machine.set_bool("is_moving", is_moving);
+            entity_override_state_machine.set_bool("is_lurching", entity_lurch_remaining > 0.0);
         }
 
         if this.is_round_entity() || round_dead || round_downed {
@@ -1185,6 +1297,8 @@ Player :: class : Player_Base {
 
         this.tick_downed_scream_state(dt);
         this.tick_entity_afk_round_state();
+        process_entity_jumpscare_sabotage_request(this);
+        this.update_jumpscare_overlay(dt);
 
         if animator != null && animator.instance != null {
             animator.state_machine.set_bool("downed", round_downed);
@@ -1225,6 +1339,9 @@ Player :: class : Player_Base {
         if this.is_local() && (this.is_round_entity() || security_cameras_open) {
             this.apply_entity_local_post_processing();
         }
+        if this.is_local() && this.is_lights_out_local_effect_active() {
+            this.apply_lights_out_local_post_processing();
+        }
         if this.is_local() && viewfinder_active && equipped_weapon_type == .CAMERA {
             this.apply_viewfinder_post_processing();
         }
@@ -1253,6 +1370,8 @@ Player :: class : Player_Base {
                 return;
             }
             draw_vitals_modal_ui(this);
+            draw_entity_sabotage_modal_ui(this);
+            draw_entity_jumpscare_target_modal_ui(this);
             draw_radio_hint_arrows(this);
             draw_radio_tuning_ui(this, dt);
             draw_generator_restart_ui(this, dt);
@@ -1283,6 +1402,7 @@ Player :: class : Player_Base {
                     draw_entity_ability_button(this, Entity_Vomit_Ability, 2, ENTITY_VOMIT_ICON_PATH);
                     draw_entity_ability_button(this, Entity_Lurch_Ability, 3, "AbilityIcons/SprintIcon.png");
                     draw_entity_ability_button(this, Entity_Wall_Seep_Ability, 4, "AbilityIcons/Scream.png");
+                    draw_ability_button(this, Entity_Sabotage_Ability, 5);
                 }
                 if equipped_weapon_type != .NONE {
                     weapon_unequip(this, equipped_weapon_type);
@@ -1335,6 +1455,7 @@ Player :: class : Player_Base {
         }
 
         this.draw_entity_status_debuff_icons();
+        this.draw_jumpscare_overlay();
 
         if this.is_local() && this.is_round_entity() && is_entity_flashbanged(this) {
             this.draw_entity_flashbang_blackout_overlay();
@@ -1364,6 +1485,7 @@ Player :: class : Player_Base {
         silhouette_material_applied = false;
 
         this.destroy_held_item_visual();
+        this.destroy_jumpscare_overlay();
         close_security_cameras_for_player(this);
 
         // Local-only: destroy LOS light entity.
@@ -1449,6 +1571,10 @@ Player :: class : Player_Base {
     }
 
     get_local_light_radii :: proc(using this: Player) -> v2 {
+        if this.is_lights_out_local_effect_active() {
+            return v2.{LIGHTS_OUT_LOS_INNER_RADIUS, LIGHTS_OUT_LOS_OUTER_RADIUS};
+        }
+
         // When integrating global darkness / phases, drive night_blend from Game_Manager (or similar).
         night_blend := 0.0;
 
@@ -1463,6 +1589,21 @@ Player :: class : Player_Base {
         outer_radius = max(outer_radius, min_outer);
 
         return v2.{inner_radius, outer_radius};
+    }
+
+    is_lights_out_local_effect_active :: proc(using this: Player) -> bool {
+        gm := get_game_manager();
+        if !#alive(gm) {
+            return false;
+        }
+        return gm.lights_out_active && this.is_round_survivor();
+    }
+
+    apply_lights_out_local_post_processing :: proc(using this: Player) {
+        vignette: Post_Processing.Vignette_Config;
+        vignette.radius = LIGHTS_OUT_VIGNETTE_RADIUS;
+        vignette.softness = LIGHTS_OUT_VIGNETTE_SOFTNESS;
+        Post_Processing.vignette(vignette);
     }
 
     apply_entity_local_post_processing :: proc(using this: Player) {
@@ -1664,7 +1805,7 @@ Player :: class : Player_Base {
     }
 
     should_hide_revealed_eye_for_local_ui :: proc(using this: Player) -> bool {
-        if vitals_modal_open || task_help_open || security_cameras_open {
+        if vitals_modal_open || sabotage_modal_open || jumpscare_target_modal_open || task_help_open || security_cameras_open {
             return true;
         }
         if entity != null && entity.get_active_effect() != null {
@@ -1674,7 +1815,7 @@ Player :: class : Player_Base {
     }
 
     should_hide_arrow_overlays_for_modal_ui :: proc(using this: Player) -> bool {
-        if task_help_open || vitals_modal_open || security_cameras_open {
+        if task_help_open || vitals_modal_open || sabotage_modal_open || jumpscare_target_modal_open || security_cameras_open {
             return true;
         }
         if get_radio_tuning_effect(this) != null {
@@ -1704,6 +1845,9 @@ Player :: class : Player_Base {
         screen_pos = world_to_screen(survivor.entity.world_position + v2{0.0, 2.0});
 
         alpha := clamp(survivor.entity_local_view_alpha, 0.0, 1.0);
+        if is_revealed_by_jumpscare_effect(survivor) {
+            alpha = 1.0;
+        }
         pulse := 1.0 + sin(get_time() * 8.0 + survivor.entity.world_position.x) * 0.045;
         half_size := ENTITY_REVEALED_EYE_ICON_HALF_SIZE * pulse;
         rect := Rect{screen_pos, screen_pos}.grow(half_size);
@@ -1759,6 +1903,23 @@ Player :: class : Player_Base {
         }
 
         this.reveal_for_entity_local_view_with_duration(fade_out_seconds);
+        entity_scream_reveal_remaining = max(entity_scream_reveal_remaining, fade_out_seconds);
+    }
+
+    reveal_for_entity_jumpscare_local_view :: proc(using this: Player, fade_out_seconds: float) {
+        if this.is_round_entity() return;
+        if fade_out_seconds <= 0.0 {
+            fade_out_seconds = ENTITY_VIEW_PLAYER_REVEAL_FADE_OUT_SECONDS;
+        }
+
+        current_remaining := 0.0;
+        if entity_local_view_is_active {
+            current_remaining = entity_local_view_alpha * entity_local_view_fade_out_seconds;
+        }
+
+        entity_local_view_alpha = 1.0;
+        entity_local_view_is_active = true;
+        entity_local_view_fade_out_seconds = max(current_remaining, fade_out_seconds);
         entity_scream_reveal_remaining = max(entity_scream_reveal_remaining, fade_out_seconds);
     }
 
@@ -1854,6 +2015,10 @@ Player :: class : Player_Base {
         }
 
         if !is_hidden_by_entity_local_view(this) {
+            this.set_animator_alpha(1.0);
+            return;
+        }
+        if is_revealed_by_jumpscare_effect(this) {
             this.set_animator_alpha(1.0);
             return;
         }

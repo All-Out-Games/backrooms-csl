@@ -62,10 +62,7 @@ refresh_emergency_systems_online_state :: proc() {
         return;
     }
 
-    gm.set_emergency_systems_online(
-        is_generator_solved() &&
-        is_wire_connected()
-    );
+    gm.set_emergency_systems_online(is_wire_connected());
 }
 
 get_wire_hint_position :: proc() -> v2 {
@@ -274,6 +271,15 @@ Wire_Puzzle :: class : Interactable {
         complete_task_for_survivors(TASK_ID_RECONNECT_WIRE);
         refresh_emergency_systems_online_state();
         notify_survivors("% reconnected the wire.", {player.get_username()});
+
+        gm := get_game_manager();
+        if #alive(gm) {
+            for round_player: component_iterator(Player) {
+                if gm.is_survivor_player(round_player) || gm.is_entity_player(round_player) {
+                    Notifier.notify(round_player, "Blast Doors Powered");
+                }
+            }
+        }
     }
 
     ao_update :: method(dt: float) {

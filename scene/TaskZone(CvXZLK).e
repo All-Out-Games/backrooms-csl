@@ -22,12 +22,12 @@
   "component_type": "Internal_Component",
   "internal_component_type": "Sprite_Renderer",
   "data": {
-    "texture": "UI/HearingRadius.png",
+    "texture": "UI/CircleRadii.png",
     "tint": {
       "X": 0,
       "Y": 1.2121211290359497,
       "Z": 0.2473732680082321,
-      "W": 0.1960784345865250
+      "W": 0.3921568691730499
     },
     "layer": -1
   }
