@@ -1,30 +1,12 @@
 [
   {
-    "id": "Tiles/Tiles_Zone2/Zone2WallTop.png",
+    "id": "Tiles/Zone1/tile_floor_furniture_zone_squish.png",
     "texture": {
       "wrap_repeat": true
     }
   },
   {
-    "id": "Tiles/Tiles_Zone2/Zone2WallNew.png",
-    "texture": {
-      "wrap_repeat": true
-    }
-  },
-  {
-    "id": "Tiles/Tiles_Zone2/Zone2Wall.png",
-    "texture": {
-      "wrap_repeat": true
-    }
-  },
-  {
-    "id": "Tiles/Tiles_Zone2/Zone2Pitfall.png",
-    "texture": {
-      "wrap_repeat": true
-    }
-  },
-  {
-    "id": "Tiles/Tiles_Zone2/Zone2Tile.png",
+    "id": "Tiles/Zone1/wall_furniture_store.png",
     "texture": {
       "wrap_repeat": true
     }
