@@ -1,5 +1,35 @@
 [
   {
+    "id": "Tiles/Tiles_Zone2/Zone2Pitfall.png",
+    "texture": {
+      "wrap_repeat": true
+    }
+  },
+  {
+    "id": "Tiles/Tiles_Zone2/Zone2Wallv3.png",
+    "texture": {
+      "wrap_repeat": true
+    }
+  },
+  {
+    "id": "Tiles/Tiles_Zone2/Zone2Wall.png",
+    "texture": {
+      "wrap_repeat": true
+    }
+  },
+  {
+    "id": "Tiles/Tiles_Zone2/Filler.png",
+    "texture": {
+      "wrap_repeat": true
+    }
+  },
+  {
+    "id": "Tiles/Tiles_Zone2/Zone2WallNew.png",
+    "texture": {
+      "wrap_repeat": true
+    }
+  },
+  {
     "id": "Tiles/Tiles_Zone2/Zone2Tile3.png",
     "texture": {
       "wrap_repeat": true
