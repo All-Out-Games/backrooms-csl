@@ -5,8 +5,8 @@
   "name": "lamp.png",
   "local_enabled": true,
   "local_position": {
-    "X": 39.6247253417968750,
-    "Y": -28.3664455413818359
+    "X": 38.7025756835937500,
+    "Y": -25.9707336425781250
   },
   "local_rotation": 0,
   "local_scale": {
@@ -24,9 +24,25 @@
   "internal_component_type": "Sprite_Renderer",
   "data": {
     "texture": "sprites/Zone1b/lamp.png",
+    "depth_offset": -1.0203456878662109,
     "scale": {
       "X": 2,
       "Y": 2
+    }
+  }
+},
+{
+  "cid": 2,
+  "aoid": 1808187786,
+  "component_type": "Internal_Component",
+  "internal_component_type": "Box_Collider",
+  "data": {
+    "size": {
+      "X": 0.4207763671875000,
+      "Y": 0.2431507110595703
+    },
+    "offset": {
+      "Y": -1.0299749374389648
     }
   }
 }

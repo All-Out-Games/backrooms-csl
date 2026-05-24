@@ -5,14 +5,15 @@
   "name": "almond_water.png",
   "local_enabled": true,
   "local_position": {
-    "X": 11.1841735839843750,
-    "Y": -9.5909242630004883
+    "X": 26.0673522949218750,
+    "Y": -3.5815172195434570
   },
   "local_rotation": 0,
   "local_scale": {
     "X": 1,
     "Y": 1
   },
+  "previous_sibling": 1800114643,
   "next_sibling": 1797414523,
   "parent": 1809603361
 },

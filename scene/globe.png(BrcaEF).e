@@ -5,8 +5,8 @@
   "name": "globe.png",
   "local_enabled": true,
   "local_position": {
-    "X": 6.2563934326171875,
-    "Y": -33.1500473022460938
+    "X": 46.5862274169921875,
+    "Y": -8.3516111373901367
   },
   "local_rotation": 0,
   "local_scale": {
@@ -14,7 +14,7 @@
     "Y": 1
   },
   "previous_sibling": 1797206745,
-  "next_sibling": 1804369977,
+  "next_sibling": 1795867698,
   "parent": 1809603361
 },
 {
@@ -23,6 +23,7 @@
   "component_type": "Internal_Component",
   "internal_component_type": "Sprite_Renderer",
   "data": {
-    "texture": "sprites/Zone1b/globe.png"
+    "texture": "sprites/Zone1b/globe.png",
+    "depth_offset": -0.4156532287597656
   }
 }

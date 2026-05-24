@@ -5,8 +5,8 @@
   "name": "floodlight_yellow_down.png",
   "local_enabled": true,
   "local_position": {
-    "X": -8.3753662109375000,
-    "Y": -10.5617752075195312
+    "X": -1.8625183105468750,
+    "Y": -8.5819740295410156
   },
   "local_rotation": 0,
   "local_scale": {
@@ -14,7 +14,7 @@
     "Y": 1
   },
   "previous_sibling": 1797414523,
-  "next_sibling": 1802195952,
+  "next_sibling": 1804133838,
   "parent": 1809603361
 },
 {

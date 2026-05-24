@@ -5,7 +5,7 @@
   "name": "barricade_diagonal.png",
   "local_enabled": true,
   "local_position": {
-    "X": -3.5157318115234375,
+    "X": -3.7302856445312500,
     "Y": 34.3548240661621094
   },
   "local_rotation": 0,
@@ -13,7 +13,7 @@
     "X": 1,
     "Y": 1
   },
-  "previous_sibling": 1804255207,
+  "previous_sibling": 1803250702,
   "next_sibling": 1807242918,
   "parent": 1809603361
 },

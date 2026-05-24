@@ -5,8 +5,8 @@
   "name": "bucket.png",
   "local_enabled": true,
   "local_position": {
-    "X": -38.5283508300781250,
-    "Y": 13.8084745407104492
+    "X": -42.5121002197265625,
+    "Y": 36.6538887023925781
   },
   "local_rotation": 0,
   "local_scale": {
@@ -23,6 +23,7 @@
   "component_type": "Internal_Component",
   "internal_component_type": "Sprite_Renderer",
   "data": {
-    "texture": "sprites/Zone1b/bucket.png"
+    "texture": "sprites/Zone1b/bucket.png",
+    "depth_offset": -0.1213607788085938
   }
 }

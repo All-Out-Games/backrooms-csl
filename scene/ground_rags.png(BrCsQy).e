@@ -5,15 +5,15 @@
   "name": "ground_rags.png",
   "local_enabled": true,
   "local_position": {
-    "X": 0.4904785156250000,
-    "Y": 10.8302793502807617
+    "X": -6.9561614990234375,
+    "Y": 37.5666427612304688
   },
   "local_rotation": 0,
   "local_scale": {
     "X": 1,
     "Y": 1
   },
-  "previous_sibling": 1804369977,
+  "previous_sibling": 1802608901,
   "next_sibling": 1798876698,
   "parent": 1809603361
 },
@@ -23,6 +23,10 @@
   "component_type": "Internal_Component",
   "internal_component_type": "Sprite_Renderer",
   "data": {
-    "texture": "sprites/Zone1b/ground_rags.png"
+    "texture": "sprites/Zone1b/ground_rags.png",
+    "layer": -8,
+    "scale": {
+      "X": -1
+    }
   }
 }

@@ -5,8 +5,8 @@
   "name": "electrical_panels.png",
   "local_enabled": true,
   "local_position": {
-    "X": 27.3689422607421875,
-    "Y": -3.5564270019531250
+    "X": 27.7149963378906250,
+    "Y": -1.6354093551635742
   },
   "local_rotation": 0,
   "local_scale": {
@@ -23,6 +23,7 @@
   "component_type": "Internal_Component",
   "internal_component_type": "Sprite_Renderer",
   "data": {
-    "texture": "sprites/Zone1b/electrical_panels.png"
+    "texture": "sprites/Zone1b/electrical_panels.png",
+    "depth_offset": -0.9061012268066406
   }
 }

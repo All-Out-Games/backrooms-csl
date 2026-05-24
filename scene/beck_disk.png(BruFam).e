@@ -5,8 +5,8 @@
   "name": "beck_disk.png",
   "local_enabled": true,
   "local_position": {
-    "X": 11.2476959228515625,
-    "Y": -11.3915243148803711
+    "X": 25.3174743652343750,
+    "Y": -3.6352920532226562
   },
   "local_rotation": 0,
   "local_scale": {
