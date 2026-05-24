@@ -1,0 +1,17 @@
+[
+  {
+    "id": "sprites/Zone1/staircase_ornate/banister_railing.png"
+  },
+  {
+    "id": "sprites/Zone1/staircase_ornate/staircase_step.png",
+    "texture": {
+      "wrap_repeat": true,
+      "slice": [
+        10.8000068664550781,
+        30.5000000000000000,
+        14.8000040054321289,
+        10.5000009536743164
+      ]
+    }
+  }
+]

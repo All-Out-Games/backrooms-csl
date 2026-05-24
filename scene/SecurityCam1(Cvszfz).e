@@ -5,7 +5,7 @@
   "name": "SecurityCam1",
   "local_enabled": true,
   "local_position": {
-    "Y": 14.5000000000000000
+    "Y": 14.1445846557617188
   },
   "local_rotation": 0,
   "local_scale": {
