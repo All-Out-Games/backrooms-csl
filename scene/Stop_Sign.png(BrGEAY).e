@@ -1,25 +1,25 @@
 14
-2220498092033
-1806133461
+2443836391425
+1796751384
 {
   "name": "Stop_Sign.png",
   "local_enabled": true,
   "local_position": {
-    "X": -10.3651428222656250,
-    "Y": -10.2476530075073242
+    "X": -13.0820922851562500,
+    "Y": -4.1572256088256836
   },
   "local_rotation": 0,
   "local_scale": {
     "X": 1,
     "Y": 1
   },
-  "previous_sibling": 1800984885,
-  "next_sibling": 1808977936,
+  "previous_sibling": 1803627202,
+  "next_sibling": 1802942766,
   "parent": 1809603361
 },
 {
   "cid": 1,
-  "aoid": 1810215680,
+  "aoid": 1795339657,
   "component_type": "Internal_Component",
   "internal_component_type": "Sprite_Renderer",
   "data": {

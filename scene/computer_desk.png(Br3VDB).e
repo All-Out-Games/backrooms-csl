@@ -5,8 +5,8 @@
   "name": "computer_desk.png",
   "local_enabled": true,
   "local_position": {
-    "X": 20.1691436767578125,
-    "Y": 7.5811843872070312
+    "X": 25.1707611083984375,
+    "Y": 5.1444940567016602
   },
   "local_rotation": 0,
   "local_scale": {
