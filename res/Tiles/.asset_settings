@@ -1,5 +1,65 @@
 [
   {
+    "id": "Tiles/Zone3/zone3_pool_wall_tile.png",
+    "texture": {
+      "wrap_repeat": true
+    }
+  },
+  {
+    "id": "Tiles/Zone3/zone3_pool_floor_tile_2.png",
+    "texture": {
+      "wrap_repeat": true
+    }
+  },
+  {
+    "id": "Tiles/Zone3/zone3_pool_floor_tile_1.png",
+    "texture": {
+      "wrap_repeat": true
+    }
+  },
+  {
+    "id": "Tiles/Zone3/zone3_water_shore_pool.png",
+    "texture": {
+      "wrap_repeat": true
+    }
+  },
+  {
+    "id": "Tiles/Zone3/zone3_water_body_pool.png",
+    "texture": {
+      "wrap_repeat": true
+    }
+  },
+  {
+    "id": "Tiles/Zone3/zone3_water_body_pool_detail.png",
+    "texture": {
+      "wrap_repeat": true
+    }
+  },
+  {
+    "id": "Tiles/Zone3/zone3_filler.png",
+    "texture": {
+      "wrap_repeat": true
+    }
+  },
+  {
+    "id": "Tiles/Zone3/zone3_wall_1.png",
+    "texture": {
+      "wrap_repeat": true
+    }
+  },
+  {
+    "id": "Tiles/Zone3/zone3_pool_wall_1.png",
+    "texture": {
+      "wrap_repeat": true
+    }
+  },
+  {
+    "id": "Tiles/Zone3/zone3_floor_tile_1.png",
+    "texture": {
+      "wrap_repeat": true
+    }
+  },
+  {
     "id": "Tiles/Zone1b/zone1_wall1_repeatable_large.png",
     "texture": {
       "wrap_repeat": true
