@@ -24,7 +24,7 @@
   "internal_component_type": "Sprite_Renderer",
   "data": {
     "texture": "Tiles/Zone1b/zone1_wall_line.png",
-    "depth_offset": -0.2454161942005157,
+    "depth_offset": -0.1371001005172729,
     "nine_slice": {
       "slice": {
         "X": 32.7000045776367188,
