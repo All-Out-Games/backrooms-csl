@@ -1,30 +1,30 @@
 14
-1361504632833
-1803149037
+2224793059329
+1802458876
 {
   "name": "lamp.png",
   "local_enabled": true,
   "local_position": {
-    "X": 39.5010223388671875,
-    "Y": -39.0522041320800781
+    "X": 36.0017547607421875,
+    "Y": -39.9121932983398438
   },
   "local_rotation": -179.9790496826171875,
   "local_scale": {
     "X": 1,
     "Y": 1
   },
-  "previous_sibling": 1799085104,
-  "next_sibling": 1806004034,
+  "previous_sibling": 1802942766,
+  "next_sibling": 1804005699,
   "parent": 1809603361
 },
 {
   "cid": 1,
-  "aoid": 1799810845,
+  "aoid": 1802539104,
   "component_type": "Internal_Component",
   "internal_component_type": "Sprite_Renderer",
   "data": {
     "texture": "sprites/Zone1b/lamp.png",
-    "depth_offset": -1.8506908416748047,
+    "depth_offset": -1.7765560150146484,
     "scale": {
       "X": 2,
       "Y": 2
@@ -33,7 +33,7 @@
 },
 {
   "cid": 2,
-  "aoid": 1810982677,
+  "aoid": 1803990317,
   "component_type": "Internal_Component",
   "internal_component_type": "Box_Collider",
   "data": {
