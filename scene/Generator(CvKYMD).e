@@ -5,16 +5,16 @@
   "name": "Generator",
   "local_enabled": true,
   "local_position": {
-    "X": -57.9138526916503906,
-    "Y": 31.2340755462646484
+    "X": 204.2975463867187500,
+    "Y": -41.1232681274414062
   },
   "local_rotation": 0,
   "local_scale": {
     "X": 1,
     "Y": 1
   },
-  "previous_sibling": 2938623902,
-  "next_sibling": 2937949974
+  "previous_sibling": 2941496139,
+  "next_sibling": 2947417253
 },
 {
   "cid": 1,

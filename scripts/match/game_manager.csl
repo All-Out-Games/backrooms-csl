@@ -726,6 +726,7 @@ Game_Manager :: class : Component {
     ReconnectWiresEntity: Entity @ao_serialize;
     TaskZoneEntity: Entity @ao_serialize;
     RadioPuzzle: Entity @ao_serialize;
+    LobbySpawn: Entity @ao_serialize;
     SurvivorSpawn: Entity @ao_serialize;
     ReconnectWiresSpawns: Entity @ao_serialize;
     RadioSpawns: Entity @ao_serialize;
@@ -818,6 +819,9 @@ Game_Manager :: class : Component {
         lights_out_previous_task_zone_position = v2.{0.0, 0.0};
         reset_round_tapes_collected();
         match_rng = rng_root_seed();
+        if !#alive(LobbySpawn) {
+            LobbySpawn = Scene.get_entity_by_name("LobbySpawn");
+        }
         if !#alive(EndOfGameWarp) {
             EndOfGameWarp = Scene.get_entity_by_name("EndOfGameWarp");
         }
@@ -1002,6 +1006,30 @@ Game_Manager :: class : Component {
             TaskZoneEntity = Scene.get_entity_by_name("Task Zone");
         }
         return TaskZoneEntity;
+    }
+
+    get_lobby_spawn_entity :: method() -> Entity {
+        if !#alive(LobbySpawn) {
+            LobbySpawn = Scene.get_entity_by_name("LobbySpawn");
+        }
+        return LobbySpawn;
+    }
+
+    teleport_player_to_lobby_spawn :: method(player: Player) {
+        if player == null || !#alive(player.entity) {
+            return;
+        }
+
+        spawn := get_lobby_spawn_entity();
+        if !#alive(spawn) {
+            return;
+        }
+
+        player.entity.set_local_position(spawn.world_position);
+        player.entity.mark_teleported();
+        if #alive(player.agent) {
+            player.agent.velocity = v2{0.0, 0.0};
+        }
     }
 
     hide_task_zone :: method() {

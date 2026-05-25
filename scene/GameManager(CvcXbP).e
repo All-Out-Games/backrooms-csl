@@ -25,6 +25,7 @@
     "GeneratorEntity": 2938733315,
     "ReconnectWiresEntity": 2937949974,
     "RadioPuzzle": 2938296857,
+    "LobbySpawn": 2948362439,
     "SurvivorSpawn": 2950830672,
     "ReconnectWiresSpawns": 2949722784,
     "RadioSpawns": 2951500453,

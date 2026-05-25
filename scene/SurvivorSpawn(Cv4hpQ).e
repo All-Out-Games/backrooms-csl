@@ -5,8 +5,8 @@
   "name": "SurvivorSpawn",
   "local_enabled": true,
   "local_position": {
-    "X": -57.5213966369628906,
-    "Y": 62.0797119140625000
+    "X": 237.6364746093750000,
+    "Y": -58.8875694274902344
   },
   "local_rotation": 0,
   "local_scale": {
@@ -14,5 +14,5 @@
     "Y": 1
   },
   "previous_sibling": 2940634730,
-  "next_sibling": 2938623902
+  "next_sibling": 2948362439
 }

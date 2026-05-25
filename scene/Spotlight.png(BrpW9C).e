@@ -10,7 +10,7 @@
   },
   "local_rotation": 0,
   "local_scale": {
-    "X": 1,
+    "X": -1,
     "Y": 1
   },
   "previous_sibling": 1803149037,
@@ -26,7 +26,7 @@
     "texture": "sprites/Zone1b/Spotlight.png",
     "depth_offset": -0.7257843017578125,
     "scale": {
-      "X": -1.5000000000000000,
+      "X": 1.5000000000000000,
       "Y": 1.5000000000000000
     }
   }
@@ -37,6 +37,8 @@
   "component_type": "Internal_Component",
   "internal_component_type": "Polygon_Collider",
   "data": {
+    "make_navmesh_loop": true,
+    "flip_navmesh_loop": true,
     "points": [
       {
         "X": -0.0212860107421875,
