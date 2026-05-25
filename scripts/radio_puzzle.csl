@@ -347,8 +347,6 @@ draw_radio_hint_arrows :: proc(player: Player) {
         if !is_task_completed(player, TASK_ID_RECONNECT_WIRE) {
             return;
         }
-
-        draw_escape_door_hint_arrow(player);
     }
 }
 

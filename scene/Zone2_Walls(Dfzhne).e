@@ -425,8 +425,11 @@
         "wall_top_mask": "$AO/tile_mask.png",
         "collision_enabled": true,
         "collision_inset": {
-          "X": 0.3000000119209290,
-          "Y": 0.4000000059604645
+          "X": 0.2500000000000000,
+          "Y": -0.7500000000000000
+        },
+        "collision_offset": {
+          "Y": 1
         }
       }
     ]

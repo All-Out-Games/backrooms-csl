@@ -5,6 +5,7 @@ ENTITY_BITE_EFFECT_SECONDS :: 0.567;
 ENTITY_BITE_COOLDOWN_SECONDS :: 5.0;
 ENTITY_BITE_DEATH_FREEZE_SECONDS :: 2.0;
 DOWNED_SCREAM_EFFECT_SECONDS :: 0.9;
+DOWNED_SURVIVOR_SCREAM_SFX_PATH :: "scream_d7106e.wav";
 
 play_entity_bite_sfx :: proc(player: Player) {
     if player == null || !#alive(player.entity) return;
@@ -14,6 +15,18 @@ play_entity_bite_sfx :: proc(player: Player) {
     desc.local_only = false;
     desc.volume = 1.15;
     SFX.play(get_asset(SFX_Asset, "SFX/entitybite.wav"), desc);
+}
+
+play_downed_survivor_scream_sfx :: proc(player: Player) {
+    if player == null || !#alive(player.entity) return;
+
+    desc := SFX.default_sfx_desc();
+    desc.entity_to_follow = player.entity.id;
+    desc.local_only = false;
+    desc.volume = 0.9;
+    desc.range_multiplier = 5.0;
+    desc.speed_perturb = 0.08;
+    SFX.play(get_asset(SFX_Asset, DOWNED_SURVIVOR_SCREAM_SFX_PATH), desc);
 }
 
 reveal_downed_player_with_echo :: proc(player: Player, fade_out_seconds: float = ENTITY_VIEW_PLAYER_REVEAL_FADE_OUT_SECONDS) {
@@ -128,6 +141,7 @@ Downed_Scream_Effect :: class : Effect_Base {
         }
 
         player.start_downed_hit_reaction();
+        play_downed_survivor_scream_sfx(player);
         reveal_downed_player_with_echo(player);
     }
 

@@ -1,25 +1,25 @@
 14
-721554505729
-2941644261
+3191160700929
+2941958603
 {
   "name": "ItemSpawn",
   "local_enabled": true,
   "local_position": {
-    "X": 26.5868835449218750,
-    "Y": 40.4400253295898438
+    "X": -15.1558685302734375,
+    "Y": -12.5519409179687500
   },
   "local_rotation": 0,
   "local_scale": {
     "X": 1,
     "Y": 1
   },
-  "previous_sibling": 2939430639,
-  "next_sibling": 2950312100,
+  "previous_sibling": 2950312100,
+  "next_sibling": 2937951186,
   "parent": 2942794679
 },
 {
   "cid": 1,
-  "aoid": 2952472556,
+  "aoid": 2941388818,
   "component_type": "Internal_Component",
   "internal_component_type": "Sprite_Renderer",
   "data": {

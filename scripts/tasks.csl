@@ -20,6 +20,8 @@ TASK_LIST_PADDING        :: 10.0;
 TASK_HEADER_TOP_OFFSET   :: 30.0;
 TASK_CHECKBOX_HALF_SIZE  :: 9.0;
 TASK_DROPDOWN_SLICE_PX   :: 16.0;
+TASK_HELP_ENTRY_HEIGHT   :: 140.0;
+TASK_HELP_ENTRY_GAP      :: 12.0;
 
 TASK_TEX_CHECKBOX         :: "UI/task list/checkbox.png";
 TASK_TEX_CHECKBOX_FILLED  :: "UI/task list/checkbox_filled.png";
@@ -1165,9 +1167,9 @@ draw_task_overlay_close_button :: proc(panel_rect: Rect, id: string) -> bool {
 }
 
 draw_task_help_entry_row :: proc(entry: Task_Help_Entry) {
-    row := UIK.layout_row(UIK.flex(1), UIK.pixels(92), 12);
+    row := UIK.layout_row(UIK.flex(1), UIK.pixels(TASK_HELP_ENTRY_HEIGHT), 14);
     row.background = .MODAL_TRANSP_BLACK;
-    row.padding = v4{14, 12, 14, 12};
+    row.padding = v4{16, 16, 16, 16};
     row.cross_align = .CENTER;
     UIK.panel_begin(row);
 
@@ -1185,8 +1187,8 @@ draw_task_help_entry_row :: proc(entry: Task_Help_Entry) {
 
     text_panel := UIK.layout_column();
     text_panel.width = UIK.flex(1);
-    text_panel.height = UIK.fit();
-    text_panel.gap = 3;
+    text_panel.height = UIK.flex(1);
+    text_panel.gap = 8;
     text_panel.main_align = .CENTER;
     text_panel.show_background = false;
     UIK.panel_begin(text_panel);
@@ -1208,7 +1210,7 @@ draw_task_help_entry_list :: proc(scroll_id: string, entries: ref [..]Task_Help_
     list_panel := UIK.layout_column();
     list_panel.width = UIK.flex(1);
     list_panel.height = UIK.flex(1);
-    list_panel.gap = 8;
+    list_panel.gap = TASK_HELP_ENTRY_GAP;
     list_panel.padding = v4{2, 2, 2, 2};
     UIK.list_begin(scroll_id, list_panel);
 

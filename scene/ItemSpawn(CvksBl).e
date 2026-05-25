@@ -1,25 +1,24 @@
 14
-721554505729
-2941644261
+3208340570113
+2945630309
 {
   "name": "ItemSpawn",
   "local_enabled": true,
   "local_position": {
-    "X": 26.5868835449218750,
-    "Y": 40.4400253295898438
+    "X": -28.7901916503906250,
+    "Y": 51.3266296386718750
   },
   "local_rotation": 0,
   "local_scale": {
     "X": 1,
     "Y": 1
   },
-  "previous_sibling": 2939430639,
-  "next_sibling": 2950312100,
+  "previous_sibling": 2936439800,
   "parent": 2942794679
 },
 {
   "cid": 1,
-  "aoid": 2952472556,
+  "aoid": 2945454424,
   "component_type": "Internal_Component",
   "internal_component_type": "Sprite_Renderer",
   "data": {

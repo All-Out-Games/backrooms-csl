@@ -1334,6 +1334,16 @@ Game_Manager :: class : Component {
         clear_spawned_entity_list(ref spawned_async_molds);
     }
 
+    assign_mold_vomit_tripmine_owners_for_round :: method() {
+        if entity_user_id.count == 0 {
+            return;
+        }
+
+        for tripmine: component_iterator(Mold_Vomit_Tripmine) {
+            tripmine.owner_user_id = entity_user_id;
+        }
+    }
+
     clear_all_player_round_inventories :: method() {
         for player: component_iterator(Player) {
             player.clear_round_inventory();
@@ -2118,6 +2128,7 @@ Game_Manager :: class : Component {
         spawn_broken_camera_items_for_match();
         spawn_vhs_tape_items_for_match();
         spawn_async_entities_for_match();
+        assign_mold_vomit_tripmine_owners_for_round();
         players.clear();
         pool.clear();
 
