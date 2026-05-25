@@ -5,8 +5,8 @@
   "name": "tent2.png",
   "local_enabled": true,
   "local_position": {
-    "X": -38.3213348388671875,
-    "Y": 21.7237663269042969
+    "X": -11.7571258544921875,
+    "Y": 38.3159980773925781
   },
   "local_rotation": 0,
   "local_scale": {

@@ -434,6 +434,20 @@ get_tape_index_for_item_id :: proc(item_id: string) -> s64 {
     return -1;
 }
 
+get_tape_color_name_for_index :: proc(index: s64) -> string {
+    switch index {
+        case 0: return "Yellow";
+        case 1: return "Black";
+        case 2: return "White";
+        case 3: return "Red";
+        case 4: return "Orange";
+        case 5: return "Pink";
+        case 6: return "Blue";
+        case 7: return "Green";
+    }
+    return "";
+}
+
 collect_tape_inventory_items :: proc(player: Player) {
     if player == null {
         return;
@@ -464,6 +478,10 @@ collect_tape_inventory_items :: proc(player: Player) {
             continue;
         }
 
+        if !gm.round_tapes_collected[tape_index] {
+            tape_color := get_tape_color_name_for_index(tape_index);
+            notify_all_players("% found the % Beck Tape!", {player.get_username(), tape_color});
+        }
         gm.round_tapes_collected[tape_index] = true;
         Items.destroy_item_instance(item);
         continue;

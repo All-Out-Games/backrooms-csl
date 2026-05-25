@@ -14,6 +14,7 @@
     "Y": 2
   },
   "previous_sibling": 1811045367,
+  "next_sibling": 1797486833,
   "parent": 1808447826
 },
 {
@@ -22,7 +23,6 @@
   "component_type": "Internal_Component",
   "internal_component_type": "Sprite_Renderer",
   "data": {
-    "texture": "WallDecos/Arrow.png",
-    "layer": 1
+    "texture": "WallDecos/Arrow.png"
   }
 }

@@ -11,6 +11,7 @@ DANGER_PING_PATH_MIN_ADVANCE :: 0.08;
 DANGER_PING_PATH_REACHED_DISTANCE :: 0.35;
 DANGER_PING_PATH_PROBE_SPEED :: 900.0;
 DANGER_PING_ICON_PATH :: "warning-alert-icon_592ad7.png";
+INFO_PING_ICON_PATH :: "info_icon_880603.png";
 DANGER_PING_PREFAB_PATH :: "WarningPing.prefab";
 
 is_alive_survivor_for_danger_ping :: proc(player: Player) -> bool {
@@ -79,7 +80,7 @@ resolve_danger_ping_target :: proc(player: Player, params: ref Ability_Update_Pa
     return selected_position, false;
 }
 
-draw_danger_ping_target_preview :: proc(position: v2, valid: bool) {
+draw_danger_ping_target_preview :: proc(position: v2, valid: bool, icon_path: string, color: v4) {
     UI.push_screen_draw_context();
     defer UI.pop_draw_context();
 
@@ -90,7 +91,6 @@ draw_danger_ping_target_preview :: proc(position: v2, valid: bool) {
     edge := world_to_screen(position + v2{DANGER_PING_AOE_RADIUS, 0.0});
     radius_px := length(edge - center);
 
-    color := v4{1.0, 0.08, 0.04, 0.78};
     if !valid {
         color = v4{0.65, 0.65, 0.65, 0.45};
     }
@@ -98,9 +98,31 @@ draw_danger_ping_target_preview :: proc(position: v2, valid: bool) {
     UI.wire_circle(center, radius_px, 5.0, color, 56);
     UI.wire_circle(center, radius_px * 0.72, 2.0, v4{1.0, 1.0, 1.0, color.w * 0.65}, 48);
 
-    icon := get_asset(Texture_Asset, DANGER_PING_ICON_PATH);
+    icon := get_asset(Texture_Asset, icon_path);
     icon_rect := Rect{min=center + v2{-24.0, -24.0}, max=center + v2{24.0, 24.0}};
     UI.quad(icon_rect.fit_aspect(icon.get_aspect(), .KEEP_BIGGER), icon, v4{1.0, 1.0, 1.0, color.w});
+}
+
+set_warning_ping_visual_icon :: proc(target: Entity, icon_path: string) {
+    if !#alive(target) || icon_path.count <= 0 {
+        return;
+    }
+
+    icon := get_asset(Texture_Asset, icon_path);
+    component := target.get_first_component();
+    while component != null {
+        if component.#type == Sprite_Renderer {
+            sprite := component.(Sprite_Renderer);
+            sprite.set_texture(icon);
+        }
+        component = component.get_next_component_on_entity();
+    }
+
+    child := target.get_first_child();
+    while child != null {
+        set_warning_ping_visual_icon(child, icon_path);
+        child = child.get_next_sibling();
+    }
 }
 
 apply_warning_ping_visual_alpha :: proc(target: Entity, alpha: float) {
@@ -139,12 +161,17 @@ apply_warning_ping_visual_alpha :: proc(target: Entity, alpha: float) {
 Warning_Ping_Fade_Out :: class : Component {
     elapsed: float;
     duration_seconds: float;
+    icon_path: string;
 
     ao_start :: method() {
         elapsed = 0.0;
         if duration_seconds <= 0.0 {
             duration_seconds = DANGER_PING_LIFETIME_SECONDS;
         }
+        if icon_path.count <= 0 {
+            icon_path = DANGER_PING_ICON_PATH;
+        }
+        set_warning_ping_visual_icon(entity, icon_path);
         apply_warning_ping_visual_alpha(entity, 1.0);
     }
 
@@ -301,15 +328,21 @@ ping_danger_for_alive_survivors :: proc(ping_position: v2) {
     }
 }
 
-spawn_warning_ping :: proc(position: v2) {
+spawn_warning_ping_with_icon :: proc(position: v2, icon_path: string) {
     prefab := get_asset(Prefab_Asset, DANGER_PING_PREFAB_PATH);
     ping_entity := Scene.instantiate(prefab, position);
     if !#alive(ping_entity) {
         return;
     }
 
+    set_warning_ping_visual_icon(ping_entity, icon_path);
     fade := ping_entity.add_component(Warning_Ping_Fade_Out);
     fade.duration_seconds = DANGER_PING_LIFETIME_SECONDS;
+    fade.icon_path = icon_path;
+}
+
+spawn_warning_ping :: proc(position: v2) {
+    spawn_warning_ping_with_icon(position, DANGER_PING_ICON_PATH);
 }
 
 draw_danger_ping_nav_paths_ui :: proc(player: Player) {
@@ -359,7 +392,11 @@ draw_danger_ping_arrows_ui :: proc(player: Player) {
             continue;
         }
 
-        player.DrawArrowToPosition(ping.entity.world_position, DANGER_PING_ICON_PATH, "", true, 56.0);
+        icon_path := ping.icon_path;
+        if icon_path.count <= 0 {
+            icon_path = DANGER_PING_ICON_PATH;
+        }
+        player.DrawArrowToPosition(ping.entity.world_position, icon_path, "", true, 56.0);
     }
 }
 
@@ -398,7 +435,7 @@ Survivor_Danger_Ping_Ability :: class : Ability_Base {
         target_position, found := resolve_danger_ping_target(player, ref params, aiming.aim_direction);
         if aiming.aim {
             player.last_aim_direction = aiming.aim_direction;
-            draw_danger_ping_target_preview(target_position, found);
+            draw_danger_ping_target_preview(target_position, found, DANGER_PING_ICON_PATH, v4{1.0, 0.08, 0.04, 0.78});
         }
 
         if !aiming.activate {
@@ -417,5 +454,62 @@ Survivor_Danger_Ping_Ability :: class : Ability_Base {
 
     on_draw_button :: proc(instance: Survivor_Danger_Ping_Ability, rect: Rect) {
         draw_ability_name_label(rect, "Danger");
+    }
+}
+
+Survivor_Info_Ping_Ability :: class : Ability_Base {
+    on_init :: method() {
+        name = "Info Ping";
+        icon = get_asset(Texture_Asset, INFO_PING_ICON_PATH);
+        is_aimed_ability = true;
+    }
+
+    can_use :: method() -> bool {
+        if !is_alive_survivor_for_danger_ping(player) {
+            return false;
+        }
+
+        gm := get_game_manager();
+        if !#alive(gm) || gm.phase != .ACTIVE {
+            return false;
+        }
+
+        return player.entity.get_active_effect() == null;
+    }
+
+    on_update :: method(params: ref Ability_Update_Params) {
+        targeted := Ability_Utilities.update_targeted_ability(player, this, ref params);
+        if !targeted.targeting {
+            return;
+        }
+
+        aiming := Ability_Utilities.update_aiming_ability(player, ref params);
+        if aiming.cancel {
+            player.active_ability = null;
+            return;
+        }
+
+        target_position, found := resolve_danger_ping_target(player, ref params, aiming.aim_direction);
+        if aiming.aim {
+            player.last_aim_direction = aiming.aim_direction;
+            draw_danger_ping_target_preview(target_position, found, INFO_PING_ICON_PATH, v4{0.18, 0.58, 1.0, 0.78});
+        }
+
+        if !aiming.activate {
+            return;
+        }
+
+        player.active_ability = null;
+        if !params.can_use || !found {
+            return;
+        }
+
+        spawn_warning_ping_with_icon(target_position, INFO_PING_ICON_PATH);
+        ping_danger_for_alive_survivors(target_position);
+        current_cooldown = DANGER_PING_COOLDOWN_SECONDS;
+    }
+
+    on_draw_button :: proc(instance: Survivor_Info_Ping_Ability, rect: Rect) {
+        draw_ability_name_label(rect, "Info");
     }
 }

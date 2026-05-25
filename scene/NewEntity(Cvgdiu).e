@@ -24,4 +24,14 @@
   "data": {
 
   }
+},
+{
+  "cid": 2,
+  "aoid": 2944803495,
+  "component_type": "Internal_Component",
+  "internal_component_type": "Circle_Collider",
+  "data": {
+    "is_trigger": true,
+    "size": 1
+  }
 }

@@ -14,6 +14,7 @@
     "Y": 0.6160084009170532
   },
   "previous_sibling": 2944522414,
+  "next_sibling": 2947889896,
   "parent": 1804146235
 },
 {
@@ -23,5 +24,15 @@
   "internal_component_type": "Mold_Vomit_Tripmine",
   "data": {
 
+  }
+},
+{
+  "cid": 2,
+  "aoid": 2952654057,
+  "component_type": "Internal_Component",
+  "internal_component_type": "Circle_Collider",
+  "data": {
+    "is_trigger": true,
+    "size": 1
   }
 }

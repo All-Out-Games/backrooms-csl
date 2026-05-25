@@ -5,8 +5,8 @@
   "name": "globe.png",
   "local_enabled": true,
   "local_position": {
-    "X": 46.5862274169921875,
-    "Y": -8.3516111373901367
+    "X": 17.4663848876953125,
+    "Y": 29.2450428009033203
   },
   "local_rotation": 0,
   "local_scale": {

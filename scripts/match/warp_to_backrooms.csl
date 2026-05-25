@@ -4,6 +4,7 @@ WARP_TO_BACKROOMS_PROMPT :: "Enter Backrooms";
 
 WarpToBackrooms :: class : Interactable {
     destination_entity: Entity @ao_serialize;
+    RequireReconnectWires: bool @ao_serialize;
 
     ao_start :: method() {
         this.set_listener(this);
@@ -19,7 +20,17 @@ WarpToBackrooms :: class : Interactable {
         if !#alive(destination_entity) {
             return false;
         }
-        return player.is_round_survivor();
+
+        is_survivor := player.is_round_survivor();
+        is_entity := player.is_round_entity();
+        if !is_survivor && !is_entity {
+            return false;
+        }
+
+        if is_survivor && RequireReconnectWires && !is_task_completed(player, TASK_ID_RECONNECT_WIRE) {
+            return false;
+        }
+        return true;
     }
 
     on_interact :: method(player: Player) {

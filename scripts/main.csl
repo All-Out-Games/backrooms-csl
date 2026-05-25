@@ -70,6 +70,7 @@ ao_start :: proc() {
         light_loop_desc := SFX.default_sfx_desc();
         light_loop_desc.loop = true;
         light_loop_desc.volume = 0.45;
+        light_loop_desc.channel = .MUSIC;
         ambient_light_loop_sound_id = SFX.play(get_asset(SFX_Asset, "SFX/lightslongloop.wav"), light_loop_desc);
     }
 }
@@ -1458,6 +1459,7 @@ Player :: class : Player_Base {
                 if this.is_round_survivor() {
                     draw_ability_button(this, Survivor_Vitals_Ability, 3);
                     draw_ability_button(this, Survivor_Danger_Ping_Ability, 4);
+                    draw_ability_button(this, Survivor_Info_Ping_Ability, 5);
                 }
                 // Draw fire ability button based on equipped weapon
                 if equipped_weapon_type != .NONE {

@@ -5,7 +5,7 @@
   "name": "Chair_Stack_GRP",
   "local_enabled": true,
   "local_position": {
-    "X": 2.8655548095703125,
+    "X": 2.8655700683593750,
     "Y": -11.9710645675659180
   },
   "local_rotation": 0,
@@ -13,9 +13,8 @@
     "X": 1,
     "Y": 1
   },
-  "previous_sibling": 1797215674,
-  "next_sibling": 1809603361,
-  "parent": 1799249834
+  "next_sibling": 1804668840,
+  "parent": 1809603361
 },
 {
   "cid": 1,
