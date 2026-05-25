@@ -13,7 +13,7 @@
     "X": 1,
     "Y": 1
   },
-  "previous_sibling": 1803309742,
+  "previous_sibling": 1810905399,
   "next_sibling": 1811390743,
   "parent": 1809603361
 },
@@ -25,5 +25,21 @@
   "data": {
     "texture": "sprites/Zone1b/chair_side.png",
     "depth_offset": -0.1157417297363281
+  }
+},
+{
+  "cid": 2,
+  "aoid": 1806739105,
+  "component_type": "Internal_Component",
+  "internal_component_type": "Box_Collider",
+  "data": {
+    "size": {
+      "X": 0.4796752929687500,
+      "Y": 0.4810962677001953
+    },
+    "offset": {
+      "X": 0.0561218261718750,
+      "Y": -0.4646425247192383
+    }
   }
 }

@@ -24,6 +24,22 @@
   "internal_component_type": "Sprite_Renderer",
   "data": {
     "texture": "sprites/Clipping_Furniture/fancy_table.png",
-    "depth_offset": -0.4121532440185547
+    "depth_offset": -0.0140171051025391
+  }
+},
+{
+  "cid": 2,
+  "aoid": 1802085973,
+  "component_type": "Internal_Component",
+  "internal_component_type": "Box_Collider",
+  "data": {
+    "size": {
+      "X": 1.9710998535156250,
+      "Y": 0.7225799560546875
+    },
+    "offset": {
+      "X": 0.0512847900390625,
+      "Y": 0.2412376403808594
+    }
   }
 }

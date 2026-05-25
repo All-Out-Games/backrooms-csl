@@ -1,25 +1,25 @@
 14
-2070174236673
-1800801108
+2585570312194
+1809366673
 {
   "name": "chair (1).png",
   "local_enabled": true,
   "local_position": {
-    "X": 34.2108764648437500,
-    "Y": 18.6650161743164062
+    "X": -15.4372406005859375,
+    "Y": -18.6486473083496094
   },
   "local_rotation": 359.2532958984375000,
   "local_scale": {
     "X": 1,
     "Y": 1
   },
-  "previous_sibling": 1810905399,
-  "next_sibling": 1807734018,
+  "previous_sibling": 1801823790,
+  "next_sibling": 1808382023,
   "parent": 1809603361
 },
 {
   "cid": 1,
-  "aoid": 1804229187,
+  "aoid": 1805948677,
   "component_type": "Internal_Component",
   "internal_component_type": "Sprite_Renderer",
   "data": {
@@ -28,6 +28,22 @@
     "tint": {
       "X": 0.3810517787933350,
       "Y": 0.4061306416988373
+    }
+  }
+},
+{
+  "cid": 2,
+  "aoid": 1807115823,
+  "component_type": "Internal_Component",
+  "internal_component_type": "Box_Collider",
+  "data": {
+    "size": {
+      "X": 0.5848388671875000,
+      "Y": 0.4085521697998047
+    },
+    "offset": {
+      "X": -0.0031738281250000,
+      "Y": -0.4169626235961914
     }
   }
 }

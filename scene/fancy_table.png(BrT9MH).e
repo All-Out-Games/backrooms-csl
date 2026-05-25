@@ -5,8 +5,8 @@
   "name": "fancy_table.png",
   "local_enabled": true,
   "local_position": {
-    "X": -46.8112640380859375,
-    "Y": -2.1858634948730469
+    "X": -36.9826202392578125,
+    "Y": -2.0608167648315430
   },
   "local_rotation": 0,
   "local_scale": {

@@ -12,7 +12,6 @@
     "X": 1,
     "Y": 1
   },
-  "previous_sibling": 1807259580,
-  "next_sibling": 1811705503,
+  "previous_sibling": 1811705503,
   "parent": 1804982722
 }

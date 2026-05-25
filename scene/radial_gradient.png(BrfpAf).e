@@ -5,8 +5,8 @@
   "name": "radial_gradient.png",
   "local_enabled": true,
   "local_position": {
-    "X": 24.0724182128906250,
-    "Y": -11.8894500732421875
+    "X": 26.8512573242187500,
+    "Y": -9.1408081054687500
   },
   "local_rotation": 0.3526936471462250,
   "local_scale": {
@@ -25,8 +25,8 @@
   "data": {
     "texture": "sprites/shapes/shape_circle_gradient.png",
     "tint": {
-      "X": 0.9286563992500305,
-      "Z": 0.3671193122863770
+      "X": 0.9056866765022278,
+      "Z": 0.1633574366569519
     },
     "layer": -12
   }
