@@ -24,9 +24,28 @@
   "internal_component_type": "Sprite_Renderer",
   "data": {
     "texture": "sprites/Clipping_Furniture/leather_armchair.png",
+    "depth_offset": 0.1712951660156250,
     "scale": {
       "X": 2,
       "Y": 2
+    }
+  }
+},
+{
+  "cid": 2,
+  "aoid": 2964882366,
+  "component_type": "Internal_Component",
+  "internal_component_type": "Box_Collider",
+  "data": {
+    "make_navmesh_loop": true,
+    "flip_navmesh_loop": true,
+    "size": {
+      "X": 1.3230438232421875,
+      "Y": 0.3972339630126953
+    },
+    "offset": {
+      "X": -0.0307693481445312,
+      "Y": -0.1320943832397461
     }
   }
 }

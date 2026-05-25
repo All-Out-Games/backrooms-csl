@@ -24,7 +24,7 @@
   "internal_component_type": "Sprite_Renderer",
   "data": {
     "texture": "sprites/Zone1b/well.png",
-    "depth_offset": -0.9338054656982422,
+    "depth_offset": 0.1203422546386719,
     "scale": {
       "X": 2,
       "Y": 2
@@ -41,11 +41,11 @@
     "flip_navmesh_loop": true,
     "size": {
       "X": 1.5389099121093750,
-      "Y": 1.1691722869873047
+      "Y": 1.6598682403564453
     },
     "offset": {
       "X": -0.0814666748046875,
-      "Y": -0.9617795944213867
+      "Y": -0.7164316177368164
     }
   }
 }

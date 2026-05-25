@@ -24,7 +24,7 @@
   "internal_component_type": "Sprite_Renderer",
   "data": {
     "texture": "sprites/Clipping_Furniture/couch_modern_grey_2.png",
-    "depth_offset": -0.8568029403686523,
+    "depth_offset": -0.1770563125610352,
     "scale": {
       "X": 2,
       "Y": 2
@@ -40,12 +40,12 @@
     "make_navmesh_loop": true,
     "flip_navmesh_loop": true,
     "size": {
-      "X": 1.2803955078125000,
-      "Y": 1.0925121307373047
+      "X": 1.3161468505859375,
+      "Y": 1.0703468322753906
     },
     "offset": {
-      "X": 0.2492370605468750,
-      "Y": -0.4521474838256836
+      "X": 0.2313613891601562,
+      "Y": -0.4632301330566406
     }
   }
 }
