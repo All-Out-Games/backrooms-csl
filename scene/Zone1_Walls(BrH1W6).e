@@ -394,7 +394,7 @@
         "wall_top_mask": "Tiles/mask_normal_sharp.png",
         "collision_enabled": true,
         "collision_inset": {
-          "X": 0.3000000119209290,
+          "X": 0.2500000000000000,
           "Y": -0.7500000000000000
         },
         "collision_offset": {

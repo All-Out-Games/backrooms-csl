@@ -345,7 +345,6 @@ draw_radio_hint_arrows :: proc(player: Player) {
 
     if find_task(player, TASK_ID_RECONNECT_WIRE) != null {
         if !is_task_completed(player, TASK_ID_RECONNECT_WIRE) {
-            draw_task_zone_hint_arrow(player, TASK_ID_RECONNECT_WIRE, WIRE_HINT_TEXTURE_PATH);
             return;
         }
 

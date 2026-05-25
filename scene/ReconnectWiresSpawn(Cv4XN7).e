@@ -5,8 +5,8 @@
   "name": "ReconnectWiresSpawn",
   "local_enabled": true,
   "local_position": {
-    "X": -46.9786109924316406,
-    "Y": -28.5103073120117188
+    "X": 2.9333457946777344,
+    "Y": 21.1999206542968750
   },
   "local_rotation": 0,
   "local_scale": {

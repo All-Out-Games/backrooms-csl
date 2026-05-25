@@ -3,7 +3,7 @@
 2943874818
 {
   "name": "Num7.png",
-  "local_enabled": true,
+  "local_enabled": false,
   "local_position": {
     "X": 50.2415161132812500,
     "Y": 8.5096292495727539
@@ -14,7 +14,8 @@
     "Y": 1
   },
   "previous_sibling": 2946265459,
-  "next_sibling": 2944047147
+  "next_sibling": 2944047147,
+  "parent": 2946807869
 },
 {
   "cid": 1,

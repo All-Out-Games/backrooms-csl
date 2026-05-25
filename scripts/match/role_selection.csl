@@ -50,48 +50,7 @@ role_selection_role_color :: proc(role: Round_Role) -> v4 {
     return v4{1.0, 1.0, 1.0, 1.0};
 }
 
-draw_survivor_intro_static_ui :: proc(player: Player) {
-    gm := get_game_manager();
-    if !#alive(gm) || player == null || !player.is_local() {
-        return;
-    }
-    if gm.phase != .SURVIVOR_HEAD_START || role_selection_player_role(player) == .NONE {
-        return;
-    }
-    if gm.role_selection_started_at <= 0.0 || gm.role_selection_ends_at <= 0.0 {
-        return;
-    }
-
-    now := get_time();
-    start_elapsed := now - gm.role_selection_started_at;
-    end_elapsed := now - gm.role_selection_ends_at;
-    post_fade_elapsed := now - gm.get_intro_spawn_transition_ends_at();
-    static_alpha := 0.0;
-    chromatic_t := 0.0;
-
-    if start_elapsed >= 0.0 && start_elapsed < SURVIVOR_INTRO_STATIC_SECONDS {
-        t := clamp(start_elapsed / SURVIVOR_INTRO_STATIC_SECONDS, 0.0, 1.0);
-        static_alpha = 1.0 - pow(t, 2.0);
-        chromatic_t = t;
-    } else if start_elapsed >= SURVIVOR_INTRO_STATIC_SECONDS && start_elapsed < SURVIVOR_INTRO_STATIC_SECONDS * 2.0 {
-        t := clamp((start_elapsed - SURVIVOR_INTRO_STATIC_SECONDS) / SURVIVOR_INTRO_STATIC_SECONDS, 0.0, 1.0);
-        chromatic_t = 1.0 - t;
-    } else if end_elapsed >= 0.0 && end_elapsed < SURVIVOR_INTRO_STATIC_SECONDS {
-        t := clamp(end_elapsed / SURVIVOR_INTRO_STATIC_SECONDS, 0.0, 1.0);
-        static_alpha = 1.0 - pow(t, 2.0);
-        chromatic_t = t;
-    } else if end_elapsed >= SURVIVOR_INTRO_STATIC_SECONDS && end_elapsed < SURVIVOR_INTRO_STATIC_SECONDS * 2.0 {
-        t := clamp((end_elapsed - SURVIVOR_INTRO_STATIC_SECONDS) / SURVIVOR_INTRO_STATIC_SECONDS, 0.0, 1.0);
-        chromatic_t = 1.0 - t;
-    } else if post_fade_elapsed >= 0.0 && post_fade_elapsed < SURVIVOR_INTRO_STATIC_SECONDS {
-        t := clamp(post_fade_elapsed / SURVIVOR_INTRO_STATIC_SECONDS, 0.0, 1.0);
-        static_alpha = 1.0 - pow(t, 2.0);
-        chromatic_t = t;
-    } else if post_fade_elapsed >= SURVIVOR_INTRO_STATIC_SECONDS && post_fade_elapsed < SURVIVOR_INTRO_STATIC_SECONDS * 2.0 {
-        t := clamp((post_fade_elapsed - SURVIVOR_INTRO_STATIC_SECONDS) / SURVIVOR_INTRO_STATIC_SECONDS, 0.0, 1.0);
-        chromatic_t = 1.0 - t;
-    }
-
+draw_survivor_static_effect :: proc(static_alpha: float, chromatic_t: float) {
     if static_alpha <= 0.0 && chromatic_t <= 0.0 {
         return;
     }
@@ -146,6 +105,53 @@ draw_survivor_intro_static_ui :: proc(player: Player) {
         };
         UI.quad(block_rect, core_globals.white_sprite, v4{0.75, 0.9, 1.0, block_alpha});
     }
+}
+
+draw_survivor_intro_static_ui :: proc(player: Player) {
+    gm := get_game_manager();
+    if !#alive(gm) || player == null || !player.is_local() {
+        return;
+    }
+
+    target_role := role_selection_player_role(player);
+    if gm.phase != .SURVIVOR_HEAD_START || target_role == .NONE || target_role == .SURVIVOR {
+        return;
+    }
+    if gm.role_selection_started_at <= 0.0 || gm.role_selection_ends_at <= 0.0 {
+        return;
+    }
+
+    now := get_time();
+    start_elapsed := now - gm.role_selection_started_at;
+    end_elapsed := now - gm.role_selection_ends_at;
+    post_fade_elapsed := now - gm.get_intro_spawn_transition_ends_at();
+    static_alpha := 0.0;
+    chromatic_t := 0.0;
+
+    if start_elapsed >= 0.0 && start_elapsed < SURVIVOR_INTRO_STATIC_SECONDS {
+        t := clamp(start_elapsed / SURVIVOR_INTRO_STATIC_SECONDS, 0.0, 1.0);
+        static_alpha = 1.0 - pow(t, 2.0);
+        chromatic_t = t;
+    } else if start_elapsed >= SURVIVOR_INTRO_STATIC_SECONDS && start_elapsed < SURVIVOR_INTRO_STATIC_SECONDS * 2.0 {
+        t := clamp((start_elapsed - SURVIVOR_INTRO_STATIC_SECONDS) / SURVIVOR_INTRO_STATIC_SECONDS, 0.0, 1.0);
+        chromatic_t = 1.0 - t;
+    } else if end_elapsed >= 0.0 && end_elapsed < SURVIVOR_INTRO_STATIC_SECONDS {
+        t := clamp(end_elapsed / SURVIVOR_INTRO_STATIC_SECONDS, 0.0, 1.0);
+        static_alpha = 1.0 - pow(t, 2.0);
+        chromatic_t = t;
+    } else if end_elapsed >= SURVIVOR_INTRO_STATIC_SECONDS && end_elapsed < SURVIVOR_INTRO_STATIC_SECONDS * 2.0 {
+        t := clamp((end_elapsed - SURVIVOR_INTRO_STATIC_SECONDS) / SURVIVOR_INTRO_STATIC_SECONDS, 0.0, 1.0);
+        chromatic_t = 1.0 - t;
+    } else if post_fade_elapsed >= 0.0 && post_fade_elapsed < SURVIVOR_INTRO_STATIC_SECONDS {
+        t := clamp(post_fade_elapsed / SURVIVOR_INTRO_STATIC_SECONDS, 0.0, 1.0);
+        static_alpha = 1.0 - pow(t, 2.0);
+        chromatic_t = t;
+    } else if post_fade_elapsed >= SURVIVOR_INTRO_STATIC_SECONDS && post_fade_elapsed < SURVIVOR_INTRO_STATIC_SECONDS * 2.0 {
+        t := clamp((post_fade_elapsed - SURVIVOR_INTRO_STATIC_SECONDS) / SURVIVOR_INTRO_STATIC_SECONDS, 0.0, 1.0);
+        chromatic_t = 1.0 - t;
+    }
+
+    draw_survivor_static_effect(static_alpha, chromatic_t);
 }
 
 draw_role_selection_ui :: proc(player: Player) {

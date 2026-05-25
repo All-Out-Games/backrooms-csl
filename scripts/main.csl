@@ -14,6 +14,7 @@ ENTITY_CAMERA_SIZE_DELTA :: 1.5;
 ROUND_DEAD_CAMERA_SIZE_DELTA :: 2.5;
 ROUND_DEAD_LOCAL_PLAYER_ALPHA :: 150.0 / 255.0;
 ROUND_DEAD_ENTITY_POINTER_DISTANCE :: 15.0;
+WARP_TO_BACKROOMS_STATIC_SECONDS :: 1.0;
 is_round_audio_active :: proc() -> bool {
     gm := get_game_manager();
     if !#alive(gm) {
@@ -321,6 +322,7 @@ Player :: class : Player_Base {
     downed_scream_remaining: float;
     downed_bleed_out_ends_at: float;
     vent_cooldown_ends_at: float;
+    warp_to_backrooms_static_started_at: float;
     end_game_cutscene_dance_triggered: bool;
     entity_afk_last_position: v2;
     entity_afk_last_move_at: float;
@@ -641,6 +643,43 @@ Player :: class : Player_Base {
         camera.size = desired_camera_size;
     }
 
+    snap_local_camera_to_player :: method() {
+        if !this.is_local() || !#alive(entity) {
+            return;
+        }
+
+        camera.follow_player = true;
+        camera.position = entity.world_position;
+    }
+
+    trigger_warp_to_backrooms_static :: method() {
+        warp_to_backrooms_static_started_at = get_time();
+    }
+
+    draw_warp_to_backrooms_static_ui :: method() {
+        if !this.is_local() || warp_to_backrooms_static_started_at <= 0.0 {
+            return;
+        }
+
+        elapsed := get_time() - warp_to_backrooms_static_started_at;
+        if elapsed < 0.0 || elapsed >= WARP_TO_BACKROOMS_STATIC_SECONDS * 2.0 {
+            return;
+        }
+
+        static_alpha := 0.0;
+        chromatic_t := 0.0;
+        if elapsed < WARP_TO_BACKROOMS_STATIC_SECONDS {
+            t := clamp(elapsed / WARP_TO_BACKROOMS_STATIC_SECONDS, 0.0, 1.0);
+            static_alpha = 1.0 - pow(t, 2.0);
+            chromatic_t = t;
+        } else {
+            t := clamp((elapsed - WARP_TO_BACKROOMS_STATIC_SECONDS) / WARP_TO_BACKROOMS_STATIC_SECONDS, 0.0, 1.0);
+            chromatic_t = 1.0 - t;
+        }
+
+        draw_survivor_static_effect(static_alpha, chromatic_t);
+    }
+
     update_local_voice_chat_range_cache :: method() {
         if !this.is_local() || local_voice_chat_muted_for_round_dead {
             return;
@@ -756,6 +795,7 @@ Player :: class : Player_Base {
         downed_scream_remaining = 0.0;
         downed_bleed_out_ends_at = 0.0;
         vent_cooldown_ends_at = 0.0;
+        warp_to_backrooms_static_started_at = 0.0;
         end_game_cutscene_dance_triggered = false;
         entity_afk_has_position = false;
         entity_afk_last_move_at = get_time();
@@ -1351,6 +1391,7 @@ Player :: class : Player_Base {
             task_info_was_open := task_help_open;
             if task_info_was_open {
                 draw_task_list_ui(this);
+                this.draw_warp_to_backrooms_static_ui();
                 this.draw_viewfinder_screen_overlay();
                 return;
             }
@@ -1358,6 +1399,7 @@ Player :: class : Player_Base {
             draw_match_lobby_ui(this);
             draw_role_selection_ui(this);
             draw_survivor_intro_static_ui(this);
+            this.draw_warp_to_backrooms_static_ui();
             draw_intro_spawn_transition_ui(this);
             draw_head_start_ui(this);
             draw_hunt_begin_banner_ui(this);

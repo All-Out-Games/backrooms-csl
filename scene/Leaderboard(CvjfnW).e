@@ -3,7 +3,7 @@
 2945317334
 {
   "name": "Leaderboard",
-  "local_enabled": true,
+  "local_enabled": false,
   "local_position": {
     "X": 5.6790585517883301,
     "Y": 29.3667144775390625

@@ -8,7 +8,7 @@ INTRO_SPAWN_FADE_TO_BLACK_LEAD_SECONDS :: 1.85;
 INTRO_SPAWN_FADE_TO_BLACK_SECONDS :: 0.75;
 INTRO_SPAWN_BLACK_HOLD_SECONDS :: 1;
 INTRO_SPAWN_FADE_FROM_BLACK_SECONDS :: 0.45;
-MATCH_MAX_SECONDS :: 20.0; // ~8 minutes after survivors' head start ends
+MATCH_MAX_SECONDS :: 1200.0; // ~8 minutes after survivors' head start ends
 ENTITY_ABILITY_UNLOCK_INTERVAL_SECONDS :: 120.0;
 ENTITY_ABILITY_UNLOCK_NOTIFICATION :: "The Monster grows stronger...";
 ENTITY_LOCKED_ABILITY_ICON_PATH :: "lock_0572b2.png";
@@ -732,6 +732,7 @@ Game_Manager :: class : Component {
     RadioSpawns: Entity @ao_serialize;
     EntitySpawns: Entity @ao_serialize;
     BrokenCameraSpawns: Entity @ao_serialize;
+    VhsTapeSpawns: Entity @ao_serialize;
     ItemSpawns: Entity @ao_serialize;
     AsyncSpawns: Entity @ao_serialize;
     EndOfGameWarp: Entity @ao_serialize;
@@ -764,6 +765,7 @@ Game_Manager :: class : Component {
 
     match_rng: u64;
     hearing_radius_sprite: Sprite_Renderer;
+    // Includes every world-owned round pickup, including Broken Cameras and VHS tapes.
     spawned_round_items: [..]Dropped_Item;
     spawned_async_deads: [..]Entity;
     spawned_async_molds: [..]Entity;
@@ -821,6 +823,9 @@ Game_Manager :: class : Component {
         match_rng = rng_root_seed();
         if !#alive(LobbySpawn) {
             LobbySpawn = Scene.get_entity_by_name("LobbySpawn");
+        }
+        if !#alive(ReconnectWiresSpawns) {
+            ReconnectWiresSpawns = Scene.get_entity_by_name("ReconnectWiresSpawns");
         }
         if !#alive(EndOfGameWarp) {
             EndOfGameWarp = Scene.get_entity_by_name("EndOfGameWarp");
@@ -1238,6 +1243,44 @@ Game_Manager :: class : Component {
         }
     }
 
+    hide_spawn_reference_sprites :: method(spawn_parent: Entity) {
+        if !#alive(spawn_parent) {
+            return;
+        }
+
+        spawn_refs: [..]Entity;
+        collect_child_entity_references(spawn_parent, ref spawn_refs);
+        for i: 0..spawn_refs.count - 1 {
+            spawn_ref := spawn_refs[i];
+            if !#alive(spawn_ref) {
+                continue;
+            }
+
+            sprite := spawn_ref.get_component(Sprite_Renderer);
+            if sprite != null {
+                sprite.set_enabled(false);
+            }
+        }
+        spawn_refs.clear();
+    }
+
+    hide_round_spawn_sprites_for_round :: method() {
+        if !#alive(ItemSpawns) {
+            ItemSpawns = Scene.get_entity_by_name("ItemDropsSpawns");
+        }
+        hide_spawn_reference_sprites(ItemSpawns);
+
+        if !#alive(BrokenCameraSpawns) {
+            BrokenCameraSpawns = Scene.get_entity_by_name("BrokenCameraSpawns");
+        }
+        hide_spawn_reference_sprites(BrokenCameraSpawns);
+
+        if !#alive(VhsTapeSpawns) {
+            VhsTapeSpawns = Scene.get_entity_by_name("VhsTapeSpawns");
+        }
+        hide_spawn_reference_sprites(VhsTapeSpawns);
+    }
+
     clear_spawned_round_items :: method() {
         i: s64 = 0;
         while i < spawned_round_items.count {
@@ -1278,6 +1321,11 @@ Game_Manager :: class : Component {
         for player: component_iterator(Player) {
             player.clear_round_inventory();
         }
+    }
+
+    clear_round_item_state :: method() {
+        clear_all_player_round_inventories();
+        clear_spawned_round_items();
     }
 
     get_round_item_weight :: method(index: s64) -> s64 {
@@ -1451,6 +1499,106 @@ Game_Manager :: class : Component {
         }
 
         broken_camera_spawns.clear();
+        valid_spawns.clear();
+    }
+
+    get_vhs_tape_item_id_for_index :: method(index: s64) -> string {
+        switch index {
+            case 0: return TASK_TAPE_ITEM_YELLOW;
+            case 1: return TASK_TAPE_ITEM_BLACK;
+            case 2: return TASK_TAPE_ITEM_WHITE;
+            case 3: return TASK_TAPE_ITEM_RED;
+            case 4: return TASK_TAPE_ITEM_ORANGE;
+            case 5: return TASK_TAPE_ITEM_PINK;
+            case 6: return TASK_TAPE_ITEM_BLUE;
+            case 7: return TASK_TAPE_ITEM_GREEN;
+        }
+        return "";
+    }
+
+    spawn_vhs_tape_item_at_reference :: method(spawn_ref: Entity, tape_index: s64) -> Dropped_Item {
+        if !#alive(spawn_ref) {
+            return null;
+        }
+
+        tape_item_id := get_vhs_tape_item_id_for_index(tape_index);
+        if tape_item_id.count == 0 {
+            return null;
+        }
+
+        init_weapon_items();
+        tape_def := get_registered_item_def_by_id(tape_item_id);
+        if tape_def == null {
+            return null;
+        }
+
+        item := Items.create_item_instance(tape_def, 1);
+        dropped_item := Dropped_Item.spawn(spawn_ref.world_position, item);
+        if !#alive(dropped_item) {
+            if #alive(item) {
+                Items.destroy_item_instance(item);
+            }
+            return null;
+        }
+
+        install_ghost_item_ping_listener(dropped_item);
+        if dropped_item.sprite != null {
+            dropped_item.sprite.mask_in_shadow = true;
+        }
+        if dropped_item.starburst != null {
+            dropped_item.starburst.mask_in_shadow = true;
+        }
+        if dropped_item.shadow != null {
+            dropped_item.shadow.mask_in_shadow = true;
+        }
+        viewfinder_only := dropped_item.entity.add_component(ViewfinderOnly);
+        viewfinder_only.sync_visibility();
+        dropped_item.despawn_time_start = get_time() + (ROUND_ITEM_DESPAWN_TOTAL_SECONDS - ROUND_ITEM_ENGINE_DESPAWN_WINDOW_SECONDS);
+        return dropped_item;
+    }
+
+    spawn_vhs_tape_items_for_match :: method() {
+        if !#alive(VhsTapeSpawns) {
+            VhsTapeSpawns = Scene.get_entity_by_name("VhsTapeSpawns");
+        }
+
+        vhs_tape_spawns: [..]Entity;
+        collect_child_entity_references(VhsTapeSpawns, ref vhs_tape_spawns);
+
+        valid_spawns: [..]Entity;
+        for i: 0..vhs_tape_spawns.count - 1 {
+            spawn_ref := vhs_tape_spawns[i];
+            if !#alive(spawn_ref) {
+                continue;
+            }
+
+            already_added := false;
+            for j: 0..valid_spawns.count - 1 {
+                if valid_spawns[j] == spawn_ref {
+                    already_added = true;
+                    break;
+                }
+            }
+
+            if !already_added {
+                valid_spawns.append(spawn_ref);
+            }
+        }
+
+        for tape_index: 0..TASK_TAPE_COUNT - 1 {
+            if valid_spawns.count == 0 {
+                break;
+            }
+
+            spawn_index := rng_range_int(ref match_rng, 0, valid_spawns.count - 1);
+            dropped_item := spawn_vhs_tape_item_at_reference(valid_spawns[spawn_index], tape_index);
+            if #alive(dropped_item) {
+                spawned_round_items.append(dropped_item);
+            }
+            valid_spawns.unordered_remove_by_index(spawn_index);
+        }
+
+        vhs_tape_spawns.clear();
         valid_spawns.clear();
     }
 
@@ -1663,6 +1811,10 @@ Game_Manager :: class : Component {
         wire_entity := get_reconnect_wires_entity();
         if !#alive(wire_entity) {
             return false;
+        }
+
+        if !#alive(ReconnectWiresSpawns) {
+            ReconnectWiresSpawns = Scene.get_entity_by_name("ReconnectWiresSpawns");
         }
 
         spawn := pick_random_spawn_from_parent(ReconnectWiresSpawns);
@@ -1913,6 +2065,7 @@ Game_Manager :: class : Component {
         clear_all_footstep_echoes();
         clear_all_corpses();
         reset_round_tapes_collected();
+        hide_round_spawn_sprites_for_round();
 
         next_role_selection_ends_at := now + ROLE_SELECTION_SECONDS;
         intro_spawn_after_popup_seconds := INTRO_SPAWN_BLACK_HOLD_SECONDS + INTRO_SPAWN_FADE_FROM_BLACK_SECONDS;
@@ -1942,6 +2095,7 @@ Game_Manager :: class : Component {
         }
         spawn_round_items_for_match();
         spawn_broken_camera_items_for_match();
+        spawn_vhs_tape_items_for_match();
         spawn_async_entities_for_match();
         players.clear();
         pool.clear();
@@ -2066,8 +2220,7 @@ Game_Manager :: class : Component {
             player.remove_freeze_reason(FREEZE_ENTITY_HEAD_START);
             player.remove_freeze_reason(FREEZE_INTRO_POPUP);
         }
-        clear_all_player_round_inventories();
-        clear_spawned_round_items();
+        clear_round_item_state();
         clear_spawned_async_entities();
         clear_all_corpses();
         reset_all_keypad_puzzles_for_round(0);
@@ -2188,9 +2341,8 @@ Game_Manager :: class : Component {
         stop_entity_ambience_sound();
         record_game_data_result(.SURVIVORS_WIN);
         award_player_wins(.SURVIVORS_WIN);
-        clear_all_player_round_inventories();
         clear_all_footstep_echoes();
-        clear_spawned_round_items();
+        clear_round_item_state();
         clear_spawned_async_entities();
         clear_all_corpses();
         phase = .ENDED;
@@ -2211,9 +2363,8 @@ Game_Manager :: class : Component {
         stop_entity_ambience_sound();
         record_game_data_result(.ENTITY_WIN);
         award_player_wins(.ENTITY_WIN);
-        clear_all_player_round_inventories();
         clear_all_footstep_echoes();
-        clear_spawned_round_items();
+        clear_round_item_state();
         clear_spawned_async_entities();
         clear_all_corpses();
         phase = .ENDED;

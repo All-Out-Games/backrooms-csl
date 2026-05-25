@@ -3,7 +3,7 @@
 2946880461
 {
   "name": "Num4.png",
-  "local_enabled": true,
+  "local_enabled": false,
   "local_position": {
     "X": -43.7869110107421875,
     "Y": 52.4619598388671875
@@ -14,7 +14,8 @@
     "Y": 1
   },
   "previous_sibling": 2936494255,
-  "next_sibling": 2951208403
+  "next_sibling": 2951208403,
+  "parent": 2946807869
 },
 {
   "cid": 1,

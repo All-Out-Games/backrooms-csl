@@ -153,12 +153,19 @@ find_task :: proc(player: Player, task_id: string) -> Task_Base {
     return null;
 }
 
-is_task_completed :: proc(player: Player, task_id: string) -> bool {
-    task := find_task(player, task_id);
+is_task_completed_for_player :: proc(player: Player, task: Task_Base) -> bool {
     if task == null {
         return false;
     }
+    if task.id == TASK_ID_FIX_CAMERA {
+        return player_inventory_has_item_id(player, CAMERA_ITEM_ID);
+    }
     return task.completed;
+}
+
+is_task_completed :: proc(player: Player, task_id: string) -> bool {
+    task := find_task(player, task_id);
+    return is_task_completed_for_player(player, task);
 }
 
 remove_task :: proc(player: Player, task_id: string) {
@@ -242,7 +249,7 @@ get_required_task_counts :: proc(total: ref int, remaining: ref int) {
             }
 
             total += 1;
-            if !task.completed {
+            if !is_task_completed_for_player(player, task) {
                 remaining += 1;
             }
         }
@@ -335,7 +342,7 @@ get_task_display_name :: proc(task_id: string) -> string {
         case TASK_ID_ENTER_KEYCODE:     return "Enter Keycode";
         case TASK_ID_RESTART_GENERATOR: return "Restart Generator";
         case TASK_ID_LIGHTS_OUT_GENERATOR: return "Restart Generator";
-        case TASK_ID_RECONNECT_WIRE:    return "Reroute Power to Blast Door";
+        case TASK_ID_RECONNECT_WIRE:    return "Viewfinder: Wires Panel";
         case TASK_ID_REPAIR_LAPTOP:     return "Repair Laptop";
         case TASK_ID_FIX_CAMERA:        return "Find and Fix handheld Camera";
     }
@@ -357,7 +364,7 @@ get_task_description :: proc(task_id: string) -> string {
             return "Restore power to end Lights Out.";
         }
         case TASK_ID_RECONNECT_WIRE: {
-            return "Repair the severed circuit that powers the blast door.";
+            return "Use the Viewfinder to reveal the Wires panel, then repair the circuit powering the blast door.";
         }
         case TASK_ID_REPAIR_LAPTOP: {
             return "Drag each piece back into its correct slot on the laptop.";
@@ -469,12 +476,18 @@ update_survivor_task_progression :: proc(player: Player) {
     }
 
     camera_task := ensure_task_assigned(player, TASK_ID_FIX_CAMERA);
-    if !camera_task.completed && player_inventory_has_item_id(player, CAMERA_ITEM_ID) {
+    has_camera := player_inventory_has_item_id(player, CAMERA_ITEM_ID);
+    if !has_camera {
+        camera_task.completed = false;
+        camera_task.started = false;
+        return;
+    }
+    if !camera_task.completed {
         camera_task.started = true;
         camera_task.complete_attempt(player, true);
     }
 
-    if !camera_task.completed {
+    if !is_task_completed_for_player(player, camera_task) {
         return;
     }
 
@@ -1399,12 +1412,13 @@ draw_task_entry :: proc(entry_rect: Rect, task: Task_Base, player: Player) {
     entry_content := entry_rect.inset(0.0, 6.0, 0.0, 6.0);
     checkbox_slot := entry_content.cut_left(24.0);
     checkbox_rect := checkbox_slot.center_rect().grow(TASK_CHECKBOX_HALF_SIZE);
-    draw_task_checkbox(checkbox_rect, task.completed);
+    checked_off := is_task_completed_for_player(player, task);
+    draw_task_checkbox(checkbox_rect, checked_off);
 
     text_rect := entry_content;
     task_ts := UI.default_text_settings();
     task_ts.size = 24;
-    if task.completed {
+    if checked_off {
         task_ts.color = v4.{0.6, 0.6, 0.6, 1};
     } else {
         task_ts.color = v4.{1, 1, 1, 1};

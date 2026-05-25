@@ -5,7 +5,8 @@
   "name": "BrokenCameraSpawns",
   "local_enabled": true,
   "local_position": {
-
+    "X": 220.5989837646484375,
+    "Y": -4.9220886230468750
   },
   "local_rotation": 0,
   "local_scale": {

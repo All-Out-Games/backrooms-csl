@@ -12,7 +12,7 @@
     "X": 1,
     "Y": 1
   },
-  "next_sibling": 2944678581
+  "next_sibling": 2941662231
 },
 {
   "cid": 1,
@@ -30,6 +30,8 @@
     "ReconnectWiresSpawns": 2949722784,
     "RadioSpawns": 2951500453,
     "EntitySpawns": 2938623902,
+    "BrokenCameraSpawns": 2938661806,
+    "VhsTapeSpawns": 2941662231,
     "ItemSpawns": 2942794679,
     "AsyncSpawns": 2940883308,
     "EndOfGameWarp": 2946391297,

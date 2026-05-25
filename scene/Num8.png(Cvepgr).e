@@ -3,7 +3,7 @@
 2944047147
 {
   "name": "Num8.png",
-  "local_enabled": true,
+  "local_enabled": false,
   "local_position": {
     "X": 32.3681678771972656,
     "Y": -21.4813671112060547
@@ -14,7 +14,7 @@
     "Y": 1
   },
   "previous_sibling": 2943874818,
-  "next_sibling": 2940883308
+  "parent": 2946807869
 },
 {
   "cid": 1,

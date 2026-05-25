@@ -3,7 +3,7 @@
 2941217422
 {
   "name": "VentLadder",
-  "local_enabled": true,
+  "local_enabled": false,
   "local_position": {
     "X": 3.4903604984283447,
     "Y": -42.4052810668945312
@@ -14,7 +14,8 @@
     "Y": 1
   },
   "previous_sibling": 2947399614,
-  "next_sibling": 2950502297
+  "next_sibling": 2950502297,
+  "parent": 2946807869
 },
 {
   "cid": 1,

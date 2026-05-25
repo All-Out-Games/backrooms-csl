@@ -5,7 +5,7 @@
   "name": "Arrow.png",
   "local_enabled": true,
   "local_position": {
-    "X": -37.9666595458984375,
+    "X": -38.5581512451171875,
     "Y": -22.8803215026855469
   },
   "local_rotation": 344.9314270019531250,

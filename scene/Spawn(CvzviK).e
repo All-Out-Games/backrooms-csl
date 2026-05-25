@@ -5,14 +5,27 @@
   "name": "Spawn",
   "local_enabled": true,
   "local_position": {
-    "X": 9.4946451187133789,
-    "Y": -30.9427814483642578
+    "X": 21.5891265869140625,
+    "Y": -36.7810173034667969
   },
   "local_rotation": 0,
   "local_scale": {
     "X": 1,
     "Y": 1
   },
-  "next_sibling": 2938025997,
+  "next_sibling": 2947076508,
   "parent": 2938661806
+},
+{
+  "cid": 1,
+  "aoid": 2948658092,
+  "component_type": "Internal_Component",
+  "internal_component_type": "Sprite_Renderer",
+  "data": {
+    "texture": "UI/HearingRadius.png",
+    "tint": {
+      "X": 0.9807788133621216,
+      "Z": 0
+    }
+  }
 }

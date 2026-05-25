@@ -3,7 +3,7 @@
 2948663148
 {
   "name": "TileMap",
-  "local_enabled": true,
+  "local_enabled": false,
   "local_position": {
 
   },

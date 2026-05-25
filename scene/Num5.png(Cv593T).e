@@ -3,7 +3,7 @@
 2951208403
 {
   "name": "Num5.png",
-  "local_enabled": true,
+  "local_enabled": false,
   "local_position": {
     "X": -9.7633085250854492,
     "Y": 51.5144233703613281
@@ -14,7 +14,8 @@
     "Y": 1
   },
   "previous_sibling": 2946880461,
-  "next_sibling": 2946265459
+  "next_sibling": 2946265459,
+  "parent": 2946807869
 },
 {
   "cid": 1,

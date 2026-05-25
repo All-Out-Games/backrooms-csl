@@ -5,8 +5,8 @@
   "name": "Spawn",
   "local_enabled": true,
   "local_position": {
-    "X": 30.6649150848388672,
-    "Y": 54.5903205871582031
+    "X": 26.3513011932373047,
+    "Y": 40.0024719238281250
   },
   "local_rotation": 0,
   "local_scale": {
@@ -14,6 +14,5 @@
     "Y": 1
   },
   "previous_sibling": 2940405474,
-  "next_sibling": 2945836120,
   "parent": 2938623902
 }

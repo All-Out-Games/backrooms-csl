@@ -5,8 +5,8 @@
   "name": "ReconnectWires",
   "local_enabled": true,
   "local_position": {
-    "X": -73.5383682250976562,
-    "Y": 6.9615821838378906
+    "X": 260.8084411621093750,
+    "Y": 15.7267341613769531
   },
   "local_rotation": 0,
   "local_scale": {
@@ -42,5 +42,14 @@
     "prompt_offset": {
       "Y": 1
     }
+  }
+},
+{
+  "cid": 3,
+  "aoid": 2940429919,
+  "component_type": "Internal_Component",
+  "internal_component_type": "ViewfinderOnly",
+  "data": {
+
   }
 }

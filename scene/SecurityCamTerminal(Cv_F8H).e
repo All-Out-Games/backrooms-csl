@@ -3,7 +3,7 @@
 2952290055
 {
   "name": "SecurityCamTerminal",
-  "local_enabled": true,
+  "local_enabled": false,
   "local_position": {
     "X": -40.7923469543457031,
     "Y": -33.0411949157714844
@@ -14,7 +14,8 @@
     "Y": 1
   },
   "previous_sibling": 2943971087,
-  "next_sibling": 2947660454
+  "next_sibling": 2947660454,
+  "parent": 2946807869
 },
 {
   "cid": 1,

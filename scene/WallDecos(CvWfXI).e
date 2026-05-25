@@ -3,7 +3,7 @@
 2941908424
 {
   "name": "WallDecos",
-  "local_enabled": true,
+  "local_enabled": false,
   "local_position": {
 
   },
@@ -12,6 +12,6 @@
     "X": 1,
     "Y": 1
   },
-  "previous_sibling": 2949722784,
-  "next_sibling": 2937596086
+  "next_sibling": 2937596086,
+  "parent": 2946807869
 }
