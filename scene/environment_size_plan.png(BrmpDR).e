@@ -3,7 +3,7 @@
 1805291729
 {
   "name": "environment_size_plan.png",
-  "local_enabled": true,
+  "local_enabled": false,
   "local_position": {
 
   },

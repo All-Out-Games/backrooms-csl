@@ -29,7 +29,7 @@
         "layer_id": 1,
         "sort_order": 1,
         "layer_mode": 1,
-        "manual_layer": -15,
+        "manual_layer": -16,
         "chunks": [
           {
             "chunk_y": 1,
