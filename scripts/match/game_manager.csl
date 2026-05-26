@@ -879,6 +879,7 @@ Game_Manager :: class : Component {
         sync_entity_hearing_radius_visual(0.0);
         clear_all_footstep_echoes();
         clear_spawned_round_items();
+        clear_all_barricades();
         clear_spawned_async_entities();
         clear_all_corpses();
 
@@ -889,6 +890,7 @@ Game_Manager :: class : Component {
         Server.set_matchmaking_priority(MATCHMAKING_PRIORITY_BETWEEN_ROUNDS);
         clear_all_footstep_echoes();
         clear_spawned_round_items();
+        clear_all_barricades();
         clear_spawned_async_entities();
         clear_all_corpses();
         sync_entity_hearing_radius_visual(0.0);
@@ -1486,6 +1488,7 @@ Game_Manager :: class : Component {
     clear_round_item_state :: method() {
         clear_all_player_round_inventories();
         clear_spawned_round_items();
+        clear_all_barricades();
     }
 
     get_round_item_weight :: method(index: s64) -> s64 {
@@ -2248,6 +2251,7 @@ Game_Manager :: class : Component {
         lights_out_previous_task_zone_position = v2.{0.0, 0.0};
         clear_all_footstep_echoes();
         clear_all_corpses();
+        clear_all_barricades();
         reset_round_tapes_collected();
         hide_round_spawn_sprites_for_round();
         set_blast_door_sprite_enabled(true);

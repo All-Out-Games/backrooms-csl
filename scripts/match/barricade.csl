@@ -1,0 +1,406 @@
+import "core:ao"
+
+BARRICADE_PLACE_DISTANCE :: 1.25;
+BARRICADE_PICKUP_HOLD_SECONDS :: 0.45;
+BARRICADE_MONSTER_BREAK_HOLD_SECONDS :: 5.0;
+BARRICADE_PLACE_COOLDOWN_SECONDS :: 0.25;
+BARRICADE_SPRITE_LAYER :: 0;
+BARRICADE_SPRITE_SCALE :: v2{2.5, 2.5};
+BARRICADE_OBSTACLE_HALF_LONG :: 0.75;
+BARRICADE_OBSTACLE_HALF_SHORT :: 0.28;
+BARRICADE_PLAYER_BLOCK_RADIUS :: 0.32;
+BARRICADE_PREVIEW_ALPHA :: 0.48;
+
+Barricade_Direction :: enum {
+    UP;
+    DOWN;
+    LEFT;
+    RIGHT;
+}
+
+is_barricade_item_def :: proc(item_def: Item_Definition) -> bool {
+    return item_def != null && item_def.get_id() == BARRICADE_ITEM_ID;
+}
+
+get_barricade_item_def :: proc() -> Item_Definition {
+    init_weapon_items();
+    return get_registered_item_def_by_id(BARRICADE_ITEM_ID);
+}
+
+player_has_selected_barricade :: proc(player: Player) -> bool {
+    if player == null {
+        return false;
+    }
+    item := player.get_equipped_item_instance();
+    if !#alive(item) {
+        return false;
+    }
+    return is_barricade_item_def(item.get_definition());
+}
+
+get_barricade_direction_from_aim :: proc(direction: v2) -> Barricade_Direction {
+    if abs(direction.x) > abs(direction.y) {
+        if direction.x < 0.0 {
+            return .LEFT;
+        }
+        return .RIGHT;
+    }
+
+    if direction.y < 0.0 {
+        return .DOWN;
+    }
+    return .UP;
+}
+
+get_barricade_direction_vector :: proc(direction: Barricade_Direction) -> v2 {
+    switch direction {
+        case .UP: return v2{0.0, 1.0};
+        case .DOWN: return v2{0.0, -1.0};
+        case .LEFT: return v2{-1.0, 0.0};
+        case .RIGHT: return v2{1.0, 0.0};
+    }
+    return v2{1.0, 0.0};
+}
+
+get_barricade_texture_path :: proc(direction: Barricade_Direction) -> string {
+    switch direction {
+        case .UP: return "Barriers/BarrierUp.png";
+        case .DOWN: return "Barriers/BarrierDown.png";
+        case .LEFT: return "Barriers/BarrierLeft.png";
+        case .RIGHT: return "Barriers/BarrierRight.png";
+    }
+    return "Barriers/BarrierUp.png";
+}
+
+is_barricade_horizontal :: proc(direction: Barricade_Direction) -> bool {
+    return direction == .UP || direction == .DOWN;
+}
+
+get_barricade_half_extents :: proc(direction: Barricade_Direction) -> v2 {
+    if is_barricade_horizontal(direction) {
+        return v2{BARRICADE_OBSTACLE_HALF_LONG, BARRICADE_OBSTACLE_HALF_SHORT};
+    }
+    return v2{BARRICADE_OBSTACLE_HALF_SHORT, BARRICADE_OBSTACLE_HALF_LONG};
+}
+
+play_barricade_sfx :: proc(path: string, entity_to_follow: Entity) {
+    sound := get_asset(SFX_Asset, path);
+    if sound == null {
+        return;
+    }
+
+    desc := SFX.default_sfx_desc();
+    if #alive(entity_to_follow) {
+        desc.entity_to_follow = entity_to_follow.id;
+    }
+    desc.volume = 0.55;
+    desc.volume_perturb = 0.1;
+    desc.speed_perturb = 0.08;
+    SFX.play(sound, desc);
+}
+
+give_barricade_item_to_player :: proc(player: Player) -> bool {
+    if player == null {
+        return false;
+    }
+
+    item_def := get_barricade_item_def();
+    if item_def == null {
+        return false;
+    }
+
+    item := Items.create_item_instance(item_def, 1);
+    will_destroy_item: bool;
+    if !Items.can_move_item_to_inventory(item, player.default_inventory, ref will_destroy_item) {
+        Items.destroy_item_instance(item);
+        return false;
+    }
+
+    Items.move_item_to_inventory(item, player.default_inventory);
+    return true;
+}
+
+Barricade :: class : Component {
+    direction: Barricade_Direction @ao_serialize;
+    navmesh: Navmesh;
+
+    ao_start :: method() {
+        sync_visuals();
+    }
+
+    ao_update :: method(dt: float) {
+        block_players();
+    }
+
+    sync_visuals :: method() {
+        sprite := entity.get_component(Sprite_Renderer);
+        if sprite != null {
+            sprite.set_texture(get_asset(Texture_Asset, get_barricade_texture_path(direction)));
+            sprite.layer = BARRICADE_SPRITE_LAYER;
+            sprite.mask_in_shadow = true;
+        }
+    }
+
+    should_block_player :: method(player: Player) -> bool {
+        if player == null || !#alive(player.entity) {
+            return false;
+        }
+        if player.is_round_dead() {
+            return false;
+        }
+        return player.is_round_survivor() || player.is_round_entity() || player.is_round_minion();
+    }
+
+    block_players :: method() {
+        half := get_barricade_half_extents(direction);
+        half.x += BARRICADE_PLAYER_BLOCK_RADIUS;
+        half.y += BARRICADE_PLAYER_BLOCK_RADIUS;
+        center := entity.world_position;
+
+        for player: component_iterator(Player) {
+            if !should_block_player(player) {
+                continue;
+            }
+
+            delta := player.entity.world_position - center;
+            if abs(delta.x) > half.x || abs(delta.y) > half.y {
+                continue;
+            }
+
+            push_x := half.x - abs(delta.x);
+            push_y := half.y - abs(delta.y);
+            new_pos := player.entity.world_position;
+            if push_x < push_y {
+                if delta.x < 0.0 {
+                    new_pos.x = center.x - half.x;
+                } else {
+                    new_pos.x = center.x + half.x;
+                }
+                if #alive(player.agent) {
+                    player.agent.velocity = v2{0.0, player.agent.velocity.y};
+                }
+            } else {
+                if delta.y < 0.0 {
+                    new_pos.y = center.y - half.y;
+                } else {
+                    new_pos.y = center.y + half.y;
+                }
+                if #alive(player.agent) {
+                    player.agent.velocity = v2{player.agent.velocity.x, 0.0};
+                }
+            }
+
+            player.entity.set_local_position(new_pos);
+        }
+    }
+
+    pick_up :: method(player: Player) {
+        if player == null {
+            return;
+        }
+
+        if !give_barricade_item_to_player(player) {
+            if player.is_local() {
+                Notifier.notify(player, "No room for Barricade.");
+            }
+            return;
+        }
+
+        play_barricade_sfx("reusable_weapons/sounds/reusable-weapons/drop_item.wav", entity);
+        entity.destroy();
+    }
+
+    break_permanently :: method() {
+        play_barricade_sfx("reusable_weapons/sounds/reusable-weapons/ice_cube_break.wav", entity);
+        entity.destroy();
+    }
+
+    ao_end :: method() {
+    }
+}
+
+Barricade_Survivor_Interactable :: class : Interactable {
+    barrier: Barricade;
+
+    setup :: method(target: Barricade) {
+        barrier = target;
+        this.install_listener();
+    }
+
+    install_listener :: method() {
+        this.set_listener(this);
+        this.set_text("Pick Up Barricade");
+        required_hold_time = BARRICADE_PICKUP_HOLD_SECONDS;
+        radius = 1.4;
+        priority = 20;
+    }
+
+    ao_start :: method() {
+        this.install_listener();
+    }
+
+    can_use :: method(player: Player) -> bool {
+        if !#alive(barrier) {
+            return false;
+        }
+        if player == null || player.is_round_dead() || player.is_round_downed() {
+            return false;
+        }
+        return player.is_round_survivor();
+    }
+
+    on_interact :: method(player: Player) {
+        if #alive(barrier) {
+            barrier.pick_up(player);
+        }
+    }
+}
+
+Barricade_Monster_Interactable :: class : Interactable {
+    barrier: Barricade;
+
+    setup :: method(target: Barricade) {
+        barrier = target;
+        this.install_listener();
+    }
+
+    install_listener :: method() {
+        this.set_listener(this);
+        this.set_text("Break Barricade");
+        required_hold_time = BARRICADE_MONSTER_BREAK_HOLD_SECONDS;
+        radius = 1.4;
+        priority = 20;
+    }
+
+    ao_start :: method() {
+        this.install_listener();
+    }
+
+    can_use :: method(player: Player) -> bool {
+        if !#alive(barrier) {
+            return false;
+        }
+        if player == null || player.is_round_dead() || player.is_round_downed() {
+            return false;
+        }
+        return player.is_round_entity() || player.is_round_minion();
+    }
+
+    on_interact :: method(player: Player) {
+        if #alive(barrier) {
+            barrier.break_permanently();
+        }
+    }
+}
+
+spawn_barricade :: proc(player: Player, position: v2, direction: Barricade_Direction) -> Barricade {
+    gm := get_game_manager();
+
+    e := Scene.create_entity();
+    e.set_local_position(position);
+    e.set_local_scale(BARRICADE_SPRITE_SCALE);
+
+    sprite := e.add_component(Sprite_Renderer);
+    sprite.set_texture(get_asset(Texture_Asset, get_barricade_texture_path(direction)));
+    sprite.layer = BARRICADE_SPRITE_LAYER;
+    sprite.mask_in_shadow = true;
+
+    barrier := e.add_component(Barricade);
+    barrier.direction = direction;
+    barrier.sync_visuals();
+    survivor_interactable := e.add_component(Barricade_Survivor_Interactable);
+    survivor_interactable.setup(barrier);
+    monster_interactable := e.add_component(Barricade_Monster_Interactable);
+    monster_interactable.setup(barrier);
+
+    play_barricade_sfx("reusable_weapons/sounds/reusable-weapons/drop_item.wav", e);
+    return barrier;
+}
+
+draw_barricade_preview :: proc(player: Player, direction: Barricade_Direction) {
+    if player == null || !#alive(player.entity) {
+        return;
+    }
+
+    dir := get_barricade_direction_vector(direction);
+    pos := player.entity.world_position + dir * BARRICADE_PLACE_DISTANCE;
+    tex := get_asset(Texture_Asset, get_barricade_texture_path(direction));
+    if tex == null {
+        return;
+    }
+
+    UI.push_world_draw_context();
+    defer UI.pop_draw_context();
+    UI.push_layer(BARRICADE_SPRITE_LAYER + 10);
+    defer UI.pop_layer();
+
+    half := get_barricade_half_extents(direction);
+    rect := Rect{pos - half, pos + half};
+    rect = rect.fit_aspect(tex.get_aspect(), .KEEP_BIGGER);
+    UI.quad(rect, tex, v4{1.0, 1.0, 1.0, BARRICADE_PREVIEW_ALPHA});
+}
+
+place_selected_barricade :: proc(player: Player, aim_direction: v2) -> bool {
+    if player == null || !#alive(player.entity) {
+        return false;
+    }
+
+    item := player.get_equipped_item_instance();
+    if !#alive(item) || !is_barricade_item_def(item.get_definition()) {
+        return false;
+    }
+
+    direction := get_barricade_direction_from_aim(aim_direction);
+    dir := get_barricade_direction_vector(direction);
+    spawn_barricade(player, player.entity.world_position + dir * BARRICADE_PLACE_DISTANCE, direction);
+
+    Items.destroy_item_instance(item, 1);
+    player.handle_equipped_item_changing(player.last_selected_index);
+    return true;
+}
+
+clear_all_barricades :: proc() {
+    for barrier: component_iterator(Barricade) {
+        if #alive(barrier.entity) {
+            barrier.entity.destroy();
+        }
+    }
+}
+
+Place_Barricade_Ability :: class : Ability_Base {
+    on_init :: method() {
+        name = "Place";
+        icon = get_asset(Texture_Asset, "Barriers/BarrierUp.png");
+        is_aimed_ability = true;
+    }
+
+    can_use :: method() -> bool {
+        if player == null || !player.is_round_survivor() {
+            return false;
+        }
+        if player.is_round_dead() || player.is_round_downed() {
+            return false;
+        }
+        return player_has_selected_barricade(player);
+    }
+
+    on_update :: method(params: ref Ability_Update_Params) {
+        aiming := Ability_Utilities.full_update_aimed_ability(player, ref params);
+        if length_squared(aiming.direction) > 0.0001 {
+            direction := get_barricade_direction_from_aim(aiming.direction);
+            icon = get_asset(Texture_Asset, get_barricade_texture_path(direction));
+            draw_barricade_preview(player, direction);
+        }
+
+        if !aiming.activate || !params.can_use {
+            return;
+        }
+
+        place_selected_barricade(player, aiming.direction);
+        current_cooldown = BARRICADE_PLACE_COOLDOWN_SECONDS;
+    }
+
+    on_draw_button :: proc(instance: Place_Barricade_Ability, rect: Rect) {
+        draw_ability_name_label(rect, "Place");
+    }
+}

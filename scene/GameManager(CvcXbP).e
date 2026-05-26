@@ -39,11 +39,13 @@
     "RoundItemIds": [
       "flashbang",
       "noisemaker",
-      "stim"
+      "stim",
+      "barricade"
     ],
     "RoundItemWeights": [
       2,
       1,
+      2,
       2
     ],
     "MinRoundItemSpawnCount": 22,

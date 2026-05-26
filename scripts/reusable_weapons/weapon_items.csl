@@ -1,8 +1,9 @@
 WEAPON_COUNT :: 31;
 AMMO_TYPE_COUNT :: 10;
-UTILITY_ITEM_COUNT :: 10;
+UTILITY_ITEM_COUNT :: 11;
 
 ASYNC_KEYCARD_ITEM_ID :: "async_keycard";
+BARRICADE_ITEM_ID :: "barricade";
 
 g_weapon_item_defs: [WEAPON_COUNT]Item_Definition;
 g_ammo_item_defs: [AMMO_TYPE_COUNT]Item_Definition;
@@ -195,6 +196,12 @@ get_utility_item_info :: proc(index: s64) -> Utility_Item_Info {
             info.id = ASYNC_KEYCARD_ITEM_ID;
             info.name = "Async Keycard";
             info.icon_path = "sprites/Zone1b/ASYNC_keycard_drop.png";
+            info.stack_size = 1;
+        }
+        case 10: {
+            info.id = BARRICADE_ITEM_ID;
+            info.name = "Barricade";
+            info.icon_path = "Barriers/BarrierUp.png";
             info.stack_size = 1;
         }
     }
