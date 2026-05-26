@@ -8,6 +8,14 @@ ENTITY_JUMPSCARE_EFFECT_SECONDS :: 10.0;
 ENTITY_JUMPSCARE_COOLDOWN_SECONDS :: 120.0;
 ENTITY_JUMPSCARE_MODAL_MAX_TARGETS :: 32;
 
+is_entity_jumpscare_sabotage_unlocked :: proc() -> bool {
+    gm := get_game_manager();
+    if !#alive(gm) {
+        return false;
+    }
+    return gm.entity_jumpscare_sabotage_unlocked;
+}
+
 is_valid_jumpscare_target :: proc(player: Player) -> bool {
     if player == null || !#alive(player.entity) {
         return false;
@@ -66,6 +74,9 @@ apply_jumpscare_sabotage_to_survivor :: proc(entity_player: Player, target: Play
     if !is_valid_jumpscare_target(target) {
         return false;
     }
+    if !is_entity_jumpscare_sabotage_unlocked() {
+        return false;
+    }
     if get_time() < entity_player.jumpscare_cooldown_ends_at {
         return false;
     }
@@ -89,6 +100,9 @@ queue_jumpscare_sabotage_request :: proc(entity_player: Player, target: Player) 
     if !is_valid_jumpscare_target(target) {
         return;
     }
+    if !is_entity_jumpscare_sabotage_unlocked() {
+        return;
+    }
     if get_time() < entity_player.jumpscare_cooldown_ends_at {
         return;
     }
@@ -110,6 +124,9 @@ process_entity_jumpscare_sabotage_request :: proc(entity_player: Player) {
         return;
     }
     if get_time() < entity_player.jumpscare_cooldown_ends_at {
+        return;
+    }
+    if !is_entity_jumpscare_sabotage_unlocked() {
         return;
     }
 
@@ -221,9 +238,12 @@ draw_entity_sabotage_modal_ui :: proc(player: Player) {
             lights_cooldown_label = format_sabotage_cooldown(gm.lights_out_cooldown_ends_at - get_time());
         }
     }
-    jumpscare_disabled := get_time() < player.jumpscare_cooldown_ends_at;
+    jumpscare_unlocked := is_entity_jumpscare_sabotage_unlocked();
+    jumpscare_disabled := !jumpscare_unlocked || get_time() < player.jumpscare_cooldown_ends_at;
     jumpscare_cooldown_label := "";
-    if jumpscare_disabled {
+    if !jumpscare_unlocked {
+        jumpscare_cooldown_label = "Locked";
+    } else if get_time() < player.jumpscare_cooldown_ends_at {
         jumpscare_cooldown_label = format_sabotage_cooldown(player.jumpscare_cooldown_ends_at - get_time());
     }
 
@@ -264,6 +284,10 @@ draw_entity_jumpscare_target_modal_ui :: proc(player: Player) {
         return;
     }
     if get_time() < player.jumpscare_cooldown_ends_at {
+        player.jumpscare_target_modal_open = false;
+        return;
+    }
+    if !is_entity_jumpscare_sabotage_unlocked() {
         player.jumpscare_target_modal_open = false;
         return;
     }

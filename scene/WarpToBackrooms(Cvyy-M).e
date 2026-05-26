@@ -27,6 +27,7 @@
     "prompt_offset": {
       "Y": 1
     },
-    "destination_entity": 2942144659
+    "destination_entity": 2942144659,
+    "current_zone": 1
   }
 }

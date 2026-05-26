@@ -42,6 +42,33 @@ is_blocked_broken_camera_pickup :: proc(player: Player, dropped_item: Dropped_It
     return player_inventory_has_item_id(player, BROKEN_CAMERA_ITEM_ID) || player_inventory_has_item_id(player, CAMERA_ITEM_ID);
 }
 
+is_vhs_tape_item_id :: proc(item_id: string) -> bool {
+    switch item_id {
+        case TASK_TAPE_ITEM_YELLOW,
+             TASK_TAPE_ITEM_BLACK,
+             TASK_TAPE_ITEM_WHITE,
+             TASK_TAPE_ITEM_RED,
+             TASK_TAPE_ITEM_ORANGE,
+             TASK_TAPE_ITEM_PINK,
+             TASK_TAPE_ITEM_BLUE,
+             TASK_TAPE_ITEM_GREEN: return true;
+    }
+    return false;
+}
+
+is_blocked_vhs_tape_pickup :: proc(player: Player, dropped_item: Dropped_Item) -> bool {
+    if player == null || !#alive(dropped_item) || !#alive(dropped_item.item) {
+        return false;
+    }
+
+    defn := dropped_item.item.get_definition();
+    if defn == null || !is_vhs_tape_item_id(defn.get_id()) {
+        return false;
+    }
+
+    return !player.viewfinder_active || player.equipped_weapon_type != .CAMERA;
+}
+
 is_round_dead_survivor_ghost :: proc(player: Player) -> bool {
     if player == null || !player.is_round_dead() {
         return false;
@@ -312,6 +339,9 @@ Ghost_Item_Ping_Interactable :: class : Component {
         if is_blocked_broken_camera_pickup(player, dropped_item) {
             return false;
         }
+        if is_blocked_vhs_tape_pickup(player, dropped_item) {
+            return false;
+        }
 
         return dropped_item.can_use(player);
     }
@@ -338,6 +368,9 @@ Ghost_Item_Ping_Interactable :: class : Component {
         }
 
         if is_blocked_broken_camera_pickup(player, dropped_item) {
+            return;
+        }
+        if is_blocked_vhs_tape_pickup(player, dropped_item) {
             return;
         }
         dropped_item.on_interact(player);

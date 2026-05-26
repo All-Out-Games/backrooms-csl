@@ -158,10 +158,35 @@ apply_warning_ping_visual_alpha :: proc(target: Entity, alpha: float) {
     }
 }
 
+collect_warning_ping_visual_components :: proc(target: Entity, components: ref [..]Component, original_enabled: ref [..]bool) {
+    if !#alive(target) {
+        return;
+    }
+
+    component := target.get_first_component();
+    while component != null {
+        if component.#type == Sprite_Renderer || component.#type == Spine_Animator || component.#type == Light {
+            components.append(component);
+            original_enabled.append(component.get_enabled());
+        }
+        component = component.get_next_component_on_entity();
+    }
+
+    child := target.get_first_child();
+    while child != null {
+        collect_warning_ping_visual_components(child, ref components, ref original_enabled);
+        child = child.get_next_sibling();
+    }
+}
+
 Warning_Ping_Fade_Out :: class : Component {
     elapsed: float;
     duration_seconds: float;
     icon_path: string;
+    visible_to_local_player: bool;
+    visuals_initialized: bool;
+    visual_components: [..]Component;
+    visual_original_enabled: [..]bool;
 
     ao_start :: method() {
         elapsed = 0.0;
@@ -173,6 +198,8 @@ Warning_Ping_Fade_Out :: class : Component {
         }
         set_warning_ping_visual_icon(entity, icon_path);
         apply_warning_ping_visual_alpha(entity, 1.0);
+        visible_to_local_player = true;
+        this.sync_local_visibility();
     }
 
     ao_update :: method(dt: float) {
@@ -186,6 +213,56 @@ Warning_Ping_Fade_Out :: class : Component {
 
         alpha := 1.0 - t;
         apply_warning_ping_visual_alpha(entity, alpha);
+        this.sync_local_visibility();
+    }
+
+    ao_on_state_sync :: method() {
+        this.sync_local_visibility();
+    }
+
+    ensure_visuals_initialized :: method() {
+        if visuals_initialized {
+            return;
+        }
+
+        visuals_initialized = true;
+        visual_components.clear();
+        visual_original_enabled.clear();
+        collect_warning_ping_visual_components(entity, ref visual_components, ref visual_original_enabled);
+    }
+
+    should_show_to_local_player :: method() -> bool {
+        local_player := get_local_player();
+        if #alive(local_player) && local_player.is_round_entity() {
+            return false;
+        }
+
+        return true;
+    }
+
+    apply_local_visibility :: method(visible: bool) {
+        this.ensure_visuals_initialized();
+
+        i: s64 = 0;
+        while i < visual_components.count {
+            component := visual_components[i];
+            if #alive(component) {
+                component.set_enabled(visible && visual_original_enabled[i]);
+            }
+            i += 1;
+        }
+    }
+
+    sync_local_visibility :: method() {
+        this.ensure_visuals_initialized();
+
+        should_show := this.should_show_to_local_player();
+        if should_show == visible_to_local_player {
+            return;
+        }
+
+        visible_to_local_player = should_show;
+        this.apply_local_visibility(should_show);
     }
 }
 
@@ -346,7 +423,7 @@ spawn_warning_ping :: proc(position: v2) {
 }
 
 draw_danger_ping_nav_paths_ui :: proc(player: Player) {
-    if !player.is_local() || !is_survivor_for_danger_ping_path(player) {
+    if !player.is_local() || player.is_round_entity() || !is_survivor_for_danger_ping_path(player) {
         return;
     }
 
@@ -383,7 +460,7 @@ draw_danger_ping_nav_paths_ui :: proc(player: Player) {
 }
 
 draw_danger_ping_arrows_ui :: proc(player: Player) {
-    if !player.is_local() || !is_survivor_for_danger_ping_path(player) {
+    if !player.is_local() || player.is_round_entity() || !is_survivor_for_danger_ping_path(player) {
         return;
     }
 

@@ -9,7 +9,8 @@ INTRO_SPAWN_FADE_TO_BLACK_SECONDS :: 0.75;
 INTRO_SPAWN_BLACK_HOLD_SECONDS :: 1;
 INTRO_SPAWN_FADE_FROM_BLACK_SECONDS :: 0.45;
 MATCH_MAX_SECONDS :: 1200.0; // ~8 minutes after survivors' head start ends
-ENTITY_ABILITY_UNLOCK_INTERVAL_SECONDS :: 120.0;
+ENTITY_SCREAM_UNLOCK_DELAY_SECONDS :: 120.0;
+ENTITY_NEXT_ZONE_UNLOCKED_ABILITY_COUNT :: 4;
 ENTITY_ABILITY_UNLOCK_NOTIFICATION :: "The Monster grows stronger...";
 ENTITY_LOCKED_ABILITY_ICON_PATH :: "lock_0572b2.png";
 HUNT_BEGIN_BANNER_SECONDS :: 2.0;
@@ -50,7 +51,6 @@ TASK_ZONE_RANDOM_RADIUS :: 7.0;
 TASK_ZONE_ARROW_HIDE_DISTANCE :: 20.0;
 LIGHTS_OUT_SABOTAGE_COOLDOWN_SECONDS :: 120.0;
 SABOTAGE_START_COOLDOWN_FRACTION :: 0.5;
-JUMPSCARE_SABOTAGE_START_COOLDOWN_SECONDS :: 120.0;
 
 Match_Phase :: enum {
     LOBBY;
@@ -223,6 +223,8 @@ unlock :: proc(player: Player) {
 
     gm.unlocked_entity_ability_count = 5;
     gm.next_entity_ability_unlock_at = 0.0;
+    gm.entity_next_zone_progression_unlocked = true;
+    gm.entity_jumpscare_sabotage_unlocked = true;
     gm.lights_out_cooldown_ends_at = 0.0;
 
     entity_player.jumpscare_cooldown_ends_at = 0.0;
@@ -305,6 +307,7 @@ format_countdown_mm_ss :: proc(total_seconds: s64) -> string {
 
 MATCH_TIMER_TOP_DOWN_OFFSET :: 90.0;
 INTRO_SPAWN_TRANSITION_UI_LAYER :: 10000;
+ZONE1_TAPE_GOAL_COUNT :: 3;
 
 draw_match_status_ui :: proc(title: string, value: string) {
     UIK.begin(UIK.window(UIK.rect_topbar().offset(0.0, -MATCH_TIMER_TOP_DOWN_OFFSET)));
@@ -348,6 +351,9 @@ get_match_countdown_seconds :: proc(gm: Game_Manager) -> s64 {
     }
 
     rem := gm.match_ends_at - get_time();
+    if gm.round_timer_paused {
+        rem = gm.round_timer_paused_remaining_seconds;
+    }
     if rem <= 0.0 {
         return 0;
     }
@@ -358,6 +364,20 @@ get_match_countdown_seconds :: proc(gm: Game_Manager) -> s64 {
         secs = one;
     }
     return secs;
+}
+
+get_round_tapes_found_count :: proc(gm: Game_Manager) -> s64 {
+    if !#alive(gm) {
+        return 0;
+    }
+
+    found: s64 = 0;
+    for i: 0..TASK_TAPE_COUNT - 1 {
+        if gm.round_tapes_collected[i] {
+            found += 1;
+        }
+    }
+    return found;
 }
 
 get_end_countdown_seconds :: proc(gm: Game_Manager) -> s64 {
@@ -571,6 +591,13 @@ draw_match_timer_ui :: proc(player: Player) {
 
     UIK.text("Time Remaining", UIK.text_title());
     UIK.text(format_countdown_mm_ss(countdown), UIK.text_title());
+    if gm.round_timer_paused {
+        UIK.text("Paused", UIK.text_body());
+    }
+    if player.is_round_survivor() && player.current_zone == .Zone1 {
+        tapes_found := get_round_tapes_found_count(gm);
+        UIK.text(format_string("Tapes Found %/%", {tapes_found, ZONE1_TAPE_GOAL_COUNT}), UIK.text_body());
+    }
 
     if player.is_local() && !player.is_round_entity() && player.entity_scream_reveal_remaining > 0.0 {
         UIK.spacer(UIK.pixels(1), UIK.pixels(10));
@@ -757,6 +784,9 @@ Game_Manager :: class : Component {
     unlocked_entity_ability_count: s64;
     exit_unlocked_at: float;
     match_ends_at: float;
+    round_timer_paused: bool;
+    round_timer_paused_remaining_seconds: float;
+    round_timer_pause_started_at: float;
     entity_win_delay_ends_at: float;
     ended_at: float;
     end_game_cutscene_ends_at: float;
@@ -774,6 +804,8 @@ Game_Manager :: class : Component {
     round_start_positions_applied: bool;
     round_start_transition_finished: bool;
     task_zone_task_id: string;
+    entity_next_zone_progression_unlocked: bool;
+    entity_jumpscare_sabotage_unlocked: bool;
     round_tapes_collected: [8]bool;
     lights_out_active: bool;
     lights_out_cooldown_ends_at: float;
@@ -806,6 +838,9 @@ Game_Manager :: class : Component {
         unlocked_entity_ability_count = 0;
         exit_unlocked_at = 0.0;
         match_ends_at = 0.0;
+        round_timer_paused = false;
+        round_timer_paused_remaining_seconds = 0.0;
+        round_timer_pause_started_at = 0.0;
         entity_win_delay_ends_at = 0.0;
         ended_at = 0.0;
         end_game_cutscene_ends_at = 0.0;
@@ -814,6 +849,8 @@ Game_Manager :: class : Component {
         round_start_positions_applied = false;
         round_start_transition_finished = false;
         task_zone_task_id = "";
+        entity_next_zone_progression_unlocked = false;
+        entity_jumpscare_sabotage_unlocked = false;
         lights_out_active = false;
         lights_out_cooldown_ends_at = 0.0;
         lights_out_generator_was_solved = false;
@@ -910,8 +947,10 @@ Game_Manager :: class : Component {
         }
 
         if phase == .ACTIVE {
-            update_entity_ability_unlocks();
-            if get_time() >= match_ends_at {
+            if !round_timer_paused {
+                update_entity_ability_unlocks();
+            }
+            if !round_timer_paused && get_time() >= match_ends_at {
                 end_match_entity_win();
                 return;
             }
@@ -938,16 +977,94 @@ Game_Manager :: class : Component {
         return phase == .SURVIVOR_HEAD_START || phase == .ACTIVE;
     }
 
+    set_round_timer_paused :: method(paused: bool) -> bool {
+        if phase != .ACTIVE {
+            return false;
+        }
+
+        now := get_time();
+        if paused {
+            if round_timer_paused {
+                return true;
+            }
+
+            round_timer_paused = true;
+            round_timer_pause_started_at = now;
+            round_timer_paused_remaining_seconds = match_ends_at - now;
+            if round_timer_paused_remaining_seconds < 0.0 {
+                round_timer_paused_remaining_seconds = 0.0;
+            }
+            return true;
+        }
+
+        if !round_timer_paused {
+            return true;
+        }
+
+        paused_for := now - round_timer_pause_started_at;
+        if paused_for < 0.0 {
+            paused_for = 0.0;
+        }
+        match_ends_at = now + round_timer_paused_remaining_seconds;
+        if next_entity_ability_unlock_at > 0.0 {
+            next_entity_ability_unlock_at += paused_for;
+        }
+        round_timer_paused = false;
+        round_timer_paused_remaining_seconds = 0.0;
+        round_timer_pause_started_at = 0.0;
+        return true;
+    }
+
+    set_round_timer_seconds :: method(seconds: float) -> bool {
+        if phase != .ACTIVE {
+            return false;
+        }
+
+        remaining := seconds;
+        if remaining < 0.0 {
+            remaining = 0.0;
+        }
+
+        if round_timer_paused {
+            round_timer_paused_remaining_seconds = remaining;
+        }
+        match_ends_at = get_time() + remaining;
+        return true;
+    }
+
     update_entity_ability_unlocks :: method() {
         if phase != .ACTIVE || next_entity_ability_unlock_at <= 0.0 {
             return;
         }
 
         now := get_time();
-        while unlocked_entity_ability_count < 5 && now >= next_entity_ability_unlock_at {
-            unlocked_entity_ability_count += 1;
-            next_entity_ability_unlock_at += ENTITY_ABILITY_UNLOCK_INTERVAL_SECONDS;
+        if unlocked_entity_ability_count < 2 && now >= next_entity_ability_unlock_at {
+            unlocked_entity_ability_count = 2;
+            next_entity_ability_unlock_at = 0.0;
             notify_all_players(ENTITY_ABILITY_UNLOCK_NOTIFICATION);
+        }
+    }
+
+    register_survivor_reached_next_zone :: method(player: Player) {
+        if phase != .ACTIVE {
+            return;
+        }
+        if player == null || !is_survivor_player(player) {
+            return;
+        }
+        if entity_next_zone_progression_unlocked {
+            return;
+        }
+
+        entity_next_zone_progression_unlocked = true;
+        entity_jumpscare_sabotage_unlocked = true;
+        if unlocked_entity_ability_count < ENTITY_NEXT_ZONE_UNLOCKED_ABILITY_COUNT {
+            unlocked_entity_ability_count = ENTITY_NEXT_ZONE_UNLOCKED_ABILITY_COUNT;
+            notify_all_players(ENTITY_ABILITY_UNLOCK_NOTIFICATION);
+        }
+
+        if entity_player, ok := find_player_by_user_id(entity_user_id); ok {
+            entity_player.jumpscare_cooldown_ends_at = 0.0;
         }
     }
 
@@ -1331,7 +1448,18 @@ Game_Manager :: class : Component {
 
     clear_spawned_async_entities :: method() {
         clear_spawned_entity_list(ref spawned_async_deads);
-        clear_spawned_entity_list(ref spawned_async_molds);
+        i: s64 = 0;
+        while i < spawned_async_molds.count {
+            spawned_entity := spawned_async_molds[i];
+            if #alive(spawned_entity) {
+                tripmine := spawned_entity.get_component(Mold_Vomit_Tripmine);
+                if tripmine == null || !tripmine.DontDelete {
+                    spawned_entity.destroy();
+                }
+            }
+            i += 1;
+        }
+        spawned_async_molds.clear();
     }
 
     assign_mold_vomit_tripmine_owners_for_round :: method() {
@@ -1340,7 +1468,7 @@ Game_Manager :: class : Component {
         }
 
         for tripmine: component_iterator(Mold_Vomit_Tripmine) {
-            tripmine.owner_user_id = entity_user_id;
+            tripmine.set_owner_user_id(entity_user_id);
         }
     }
 
@@ -2131,6 +2259,7 @@ Game_Manager :: class : Component {
         reset_all_wire_puzzles_for_round((next_head_start_ends_at * 1000.0).(u64));
 
         for i: 0..players.count - 1 {
+            players[i].current_zone = .None;
             clear_player_tasks(players[i]);
             players[i].vent_cooldown_ends_at = 0.0;
             players[i].jumpscare_request_target_user_id = "";
@@ -2154,7 +2283,7 @@ Game_Manager :: class : Component {
         pool.clear();
 
         if entity_player, ok := find_player_by_user_id(entity_user_id); ok {
-            entity_player.jumpscare_cooldown_ends_at = now + JUMPSCARE_SABOTAGE_START_COOLDOWN_SECONDS;
+            entity_player.current_zone = .Zone1;
             entity_player.add_freeze_reason(FREEZE_ENTITY_HEAD_START);
         }
 
@@ -2164,9 +2293,14 @@ Game_Manager :: class : Component {
         hunt_started_at = 0.0;
         next_entity_ability_unlock_at = 0.0;
         unlocked_entity_ability_count = 1;
+        entity_next_zone_progression_unlocked = false;
+        entity_jumpscare_sabotage_unlocked = false;
         exit_unlocked_at = 0.0;
         // Match clock starts after head start (full hunt window).
         match_ends_at = head_start_ends_at + MATCH_MAX_SECONDS;
+        round_timer_paused = false;
+        round_timer_paused_remaining_seconds = 0.0;
+        round_timer_pause_started_at = 0.0;
         entity_win_delay_ends_at = 0.0;
         phase = .SURVIVOR_HEAD_START;
         set_matchmaking_priority_for_phase(phase);
@@ -2190,7 +2324,7 @@ Game_Manager :: class : Component {
         SFX.play(get_asset(SFX_Asset, "SFX/braam.wav"), braam_desc);
 
         hunt_started_at = get_time();
-        next_entity_ability_unlock_at = hunt_started_at + ENTITY_ABILITY_UNLOCK_INTERVAL_SECONDS;
+        next_entity_ability_unlock_at = hunt_started_at + ENTITY_SCREAM_UNLOCK_DELAY_SECONDS;
         phase = .ACTIVE;
         set_matchmaking_priority_for_phase(phase);
         log_info("Game_Manager: Hunt started; match ends at t=%", {match_ends_at});
@@ -2268,6 +2402,7 @@ Game_Manager :: class : Component {
         finish_end_game_cutscene();
         clear_all_footstep_echoes();
         for player: component_iterator(Player) {
+            player.current_zone = .None;
             clear_player_tasks(player);
             player.vent_cooldown_ends_at = 0.0;
             player.remove_freeze_reason(FREEZE_ENTITY_HEAD_START);
@@ -2301,6 +2436,9 @@ Game_Manager :: class : Component {
         unlocked_entity_ability_count = 0;
         exit_unlocked_at = 0.0;
         match_ends_at = 0.0;
+        round_timer_paused = false;
+        round_timer_paused_remaining_seconds = 0.0;
+        round_timer_pause_started_at = 0.0;
         entity_win_delay_ends_at = 0.0;
         ended_at = 0.0;
         end_game_cutscene_ends_at = 0.0;
@@ -2308,6 +2446,8 @@ Game_Manager :: class : Component {
         round_entity_spawn = null;
         round_start_positions_applied = false;
         round_start_transition_finished = false;
+        entity_next_zone_progression_unlocked = false;
+        entity_jumpscare_sabotage_unlocked = false;
         hide_task_zone();
     }
 
@@ -2399,6 +2539,9 @@ Game_Manager :: class : Component {
         clear_round_item_state();
         clear_spawned_async_entities();
         clear_all_corpses();
+        for player: component_iterator(Player) {
+            player.current_zone = .None;
+        }
         phase = .ENDED;
         set_matchmaking_priority_for_phase(phase);
         result = .SURVIVORS_WIN;
@@ -2421,6 +2564,9 @@ Game_Manager :: class : Component {
         clear_round_item_state();
         clear_spawned_async_entities();
         clear_all_corpses();
+        for player: component_iterator(Player) {
+            player.current_zone = .None;
+        }
         phase = .ENDED;
         set_matchmaking_priority_for_phase(phase);
         result = .ENTITY_WIN;
@@ -2468,6 +2614,52 @@ end :: proc(player: Player) {
 
     gm.end_match_survivors_win();
     log_info("end: % forced a Survivor win", {player.get_username()});
+} @chat_command
+
+pause_round_timer :: proc(player: Player) {
+    gm := get_game_manager();
+    if !#alive(gm) {
+        Notifier.notify(player, "No match manager found.");
+        return;
+    }
+
+    if gm.set_round_timer_paused(true) {
+        Notifier.notify(player, "Round timer paused.");
+        log_info("pause_round_timer: % paused the round timer", {player.get_username()});
+    } else {
+        Notifier.notify(player, "Round timer can only be paused during the hunt.");
+    }
+} @chat_command
+
+resume_round_timer :: proc(player: Player) {
+    gm := get_game_manager();
+    if !#alive(gm) {
+        Notifier.notify(player, "No match manager found.");
+        return;
+    }
+
+    if gm.set_round_timer_paused(false) {
+        Notifier.notify(player, "Round timer resumed.");
+        log_info("resume_round_timer: % resumed the round timer", {player.get_username()});
+    } else {
+        Notifier.notify(player, "Round timer can only be resumed during the hunt.");
+    }
+} @chat_command
+
+set_round_timer :: proc(player: Player, seconds: float) {
+    gm := get_game_manager();
+    if !#alive(gm) {
+        Notifier.notify(player, "No match manager found.");
+        return;
+    }
+
+    if gm.set_round_timer_seconds(seconds) {
+        countdown := get_match_countdown_seconds(gm);
+        Notifier.notify(player, "Round timer set to %.", {format_countdown_mm_ss(countdown)});
+        log_info("set_round_timer: % set the round timer to % seconds", {player.get_username(), seconds});
+    } else {
+        Notifier.notify(player, "Round timer can only be set during the hunt.");
+    }
 } @chat_command
 
 fulldie :: proc(player: Player) {

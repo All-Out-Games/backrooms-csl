@@ -28,6 +28,7 @@
       "Y": 1
     },
     "destination_entity": 2942144659,
-    "RequireReconnectWires": true
+    "RequireReconnectWires": true,
+    "current_zone": 2
   }
 }

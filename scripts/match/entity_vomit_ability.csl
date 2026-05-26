@@ -54,12 +54,20 @@ ping_survivor_from_mold_vomit :: proc(entity_player: Player, survivor: Player) {
 }
 
 Mold_Vomit_Tripmine :: class : Component {
+    DontDelete: bool @ao_serialize;
     owner_user_id: string;
     trip_records: [..]Mold_Vomit_Trip_Record;
 
+    set_owner_user_id :: method(next_owner_user_id: string) {
+        if owner_user_id != next_owner_user_id {
+            owner_user_id = next_owner_user_id;
+            trip_records.clear();
+        }
+    }
+
     setup :: method(owner: Player) {
         if owner != null {
-            owner_user_id = owner.get_user_id();
+            set_owner_user_id(owner.get_user_id());
         }
     }
 
@@ -91,6 +99,9 @@ Mold_Vomit_Tripmine :: class : Component {
     ao_update :: method(dt: float) {
         gm := get_game_manager();
         if !#alive(gm) || (gm.phase != .SURVIVOR_HEAD_START && gm.phase != .ACTIVE) {
+            if DontDelete {
+                return;
+            }
             entity.destroy();
             return;
         }

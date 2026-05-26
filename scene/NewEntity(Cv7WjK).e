@@ -23,7 +23,7 @@
   "component_type": "Internal_Component",
   "internal_component_type": "Mold_Vomit_Tripmine",
   "data": {
-
+    "DontDelete": true
   }
 },
 {

@@ -6,6 +6,7 @@ WARP_TO_NEXT_LEVEL_PROMPT :: "To Next Level";
 WarpToBackrooms :: class : Interactable {
     destination_entity: Entity @ao_serialize;
     RequireReconnectWires: bool @ao_serialize;
+    current_zone: CurrentZone @ao_serialize;
 
     ao_start :: method() {
         this.set_listener(this);
@@ -49,8 +50,16 @@ WarpToBackrooms :: class : Interactable {
 
         player.entity.set_local_position(destination_entity.world_position);
         player.entity.mark_teleported();
+        player.current_zone = current_zone;
         if #alive(player.agent) {
             player.agent.velocity = v2{0.0, 0.0};
+        }
+
+        if player.is_round_survivor() && RequireReconnectWires {
+            gm := get_game_manager();
+            if #alive(gm) {
+                gm.register_survivor_reached_next_zone(player);
+            }
         }
 
         player.snap_local_camera_to_player();

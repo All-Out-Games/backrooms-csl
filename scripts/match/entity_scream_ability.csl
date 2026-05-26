@@ -3,7 +3,7 @@ import "core:ao"
 ENTITY_SCREAM_EFFECT_SECONDS :: 0.8;
 ENTITY_SCREAM_COOLDOWN_SECONDS :: 15.0;
 ENTITY_SCREAM_REVEAL_FADE_OUT_SECONDS :: 5.0;
-ENTITY_SCREAM_ARROW_SECONDS :: 3.0;
+ENTITY_SCREAM_ARROW_SECONDS :: 5.0;
 
 play_entity_scream_sfx :: proc(player: Player) {
     if player == null || !#alive(player.entity) return;
