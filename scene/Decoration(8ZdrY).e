@@ -1,17 +1,17 @@
 14
-2413771620353
-1021241893
+2482491097089
+1013308120
 {
-  "name": "Zone3_GRP",
+  "name": "Decoration",
   "local_enabled": true,
   "local_position": {
-    "Y": 100
+
   },
   "local_rotation": 0,
   "local_scale": {
     "X": 1,
     "Y": 1
   },
-  "previous_sibling": 1811705503,
-  "parent": 1804982722
+  "next_sibling": 1011186614,
+  "parent": 1021241893
 }

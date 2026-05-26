@@ -1,5 +1,11 @@
 [
   {
+    "id": "Tiles/Zone3/zone3_water_body_pool_black.png",
+    "texture": {
+      "wrap_repeat": true
+    }
+  },
+  {
     "id": "Tiles/Zone3/zone3_pool_wall_tile.png",
     "texture": {
       "wrap_repeat": true
