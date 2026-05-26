@@ -2260,6 +2260,8 @@ Game_Manager :: class : Component {
 
         for i: 0..players.count - 1 {
             players[i].current_zone = .None;
+            players[i].clear_round_minion_state();
+            players[i].clear_round_death_state(false);
             clear_player_tasks(players[i]);
             players[i].vent_cooldown_ends_at = 0.0;
             players[i].jumpscare_request_target_user_id = "";
@@ -2371,6 +2373,9 @@ Game_Manager :: class : Component {
             end_match_survivors_win();
             return;
         }
+        if player.is_round_minion() {
+            return;
+        }
         if !is_survivor_player(player) || player.is_round_dead() {
             return;
         }
@@ -2387,7 +2392,7 @@ Game_Manager :: class : Component {
         if phase != .ACTIVE {
             return;
         }
-        if !is_survivor_player(exiting_player) {
+        if !is_survivor_player(exiting_player) || !exiting_player.is_round_survivor() {
             return;
         }
         if !emergency_systems_online {
@@ -2403,6 +2408,8 @@ Game_Manager :: class : Component {
         clear_all_footstep_echoes();
         for player: component_iterator(Player) {
             player.current_zone = .None;
+            player.clear_round_minion_state();
+            player.clear_round_death_state(false);
             clear_player_tasks(player);
             player.vent_cooldown_ends_at = 0.0;
             player.remove_freeze_reason(FREEZE_ENTITY_HEAD_START);
@@ -2541,6 +2548,7 @@ Game_Manager :: class : Component {
         clear_all_corpses();
         for player: component_iterator(Player) {
             player.current_zone = .None;
+            player.clear_round_minion_state();
         }
         phase = .ENDED;
         set_matchmaking_priority_for_phase(phase);
@@ -2566,6 +2574,7 @@ Game_Manager :: class : Component {
         clear_all_corpses();
         for player: component_iterator(Player) {
             player.current_zone = .None;
+            player.clear_round_minion_state();
         }
         phase = .ENDED;
         set_matchmaking_priority_for_phase(phase);

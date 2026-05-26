@@ -1,0 +1,235 @@
+beast_minion_and_crewmate.png
+	size: 768, 768
+	filter: Linear, Linear
+BackLegL
+	bounds: 536, 658, 104, 115
+	rotate: 90
+BackLegR
+	bounds: 281, 645, 125, 117
+	offsets: 1, 0, 126, 117
+Body
+	bounds: 412, 660, 118, 102
+	offsets: 0, 51, 118, 181
+FrontLegL
+	bounds: 294, 61, 69, 87
+	rotate: 90
+FrontLegR
+	bounds: 125, 88, 73, 96
+Head
+	bounds: 139, 637, 136, 125
+	offsets: 0, 0, 137, 125
+Shadow
+	bounds: 6, 198, 219, 42
+	offsets: 1, 1, 221, 44
+	rotate: 90
+TendrilGrabbing
+	bounds: 6, 596, 127, 166
+Tendril_A
+	bounds: 662, 64, 59, 79
+Tendril_B
+	bounds: 689, 242, 50, 79
+crewmate/hands/hand_L_angryfist
+	bounds: 370, 224, 73, 64
+	offsets: 1, 1, 75, 66
+crewmate/hands/hand_L_backhurt
+	bounds: 599, 63, 57, 80
+	offsets: 1, 1, 59, 82
+crewmate/hands/hand_L_clutch
+	bounds: 387, 59, 72, 62
+	offsets: 1, 1, 74, 64
+	rotate: 90
+crewmate/hands/hand_L_fist
+	bounds: 609, 297, 74, 62
+	offsets: 1, 1, 76, 64
+crewmate/hands/hand_L_flat
+	bounds: 133, 490, 100, 50
+	offsets: 1, 1, 102, 52
+	rotate: 90
+crewmate/hands/hand_L_grab_bucket
+	bounds: 281, 478, 92, 93
+	offsets: 1, 1, 94, 95
+	rotate: 90
+crewmate/hands/hand_L_heartattack
+	bounds: 374, 385, 87, 69
+	offsets: 1, 1, 89, 71
+	rotate: 90
+crewmate/hands/hand_L_hip
+	bounds: 200, 222, 75, 71
+	offsets: 1, 1, 77, 73
+	rotate: 90
+crewmate/hands/hand_L_hold
+	bounds: 615, 149, 72, 69
+	offsets: 1, 1, 74, 71
+	rotate: 90
+crewmate/hands/hand_L_inair
+	bounds: 294, 136, 80, 75
+	offsets: 1, 1, 82, 77
+	rotate: 90
+crewmate/hands/hand_L_insane
+	bounds: 108, 6, 73, 76
+	offsets: 1, 1, 75, 78
+crewmate/hands/hand_L_reachout
+	bounds: 140, 320, 97, 62
+	offsets: 1, 1, 99, 64
+	rotate: 90
+crewmate/hands/hand_L_shock
+	bounds: 370, 294, 85, 73
+	offsets: 1, 2, 87, 76
+	rotate: 90
+crewmate/hands/hand_L_throw
+	bounds: 536, 56, 87, 57
+	offsets: 1, 1, 89, 59
+	rotate: 90
+crewmate/hands/hand_L_throwdown
+	bounds: 449, 226, 64, 79
+	offsets: 1, 1, 66, 81
+	rotate: 90
+crewmate/hands/hand_L_wave
+	bounds: 189, 500, 86, 92
+	offsets: 1, 1, 88, 93
+crewmate/hands/hand_R_fist
+	bounds: 133, 423, 69, 61
+	offsets: 1, 1, 71, 63
+crewmate/hands/hand_R_fist_angry
+	bounds: 187, 6, 68, 52
+	offsets: 1, 1, 70, 54
+crewmate/hands/hand_R_flat
+	bounds: 141, 219, 95, 53
+	offsets: 1, 1, 97, 55
+	rotate: 90
+crewmate/hands/hand_R_gun
+	bounds: 521, 504, 89, 68
+	offsets: 1, 1, 91, 70
+crewmate/hands/hand_R_hip
+	bounds: 616, 505, 68, 67
+	offsets: 1, 1, 70, 69
+crewmate/hands/hand_R_hold
+	bounds: 455, 54, 75, 77
+	offsets: 1, 1, 77, 79
+crewmate/hands/hand_R_inair
+	bounds: 375, 137, 81, 74
+	offsets: 1, 1, 83, 76
+	rotate: 90
+crewmate/hands/hand_R_insane
+	bounds: 535, 149, 74, 72
+	offsets: 1, 1, 77, 74
+crewmate/hands/hand_R_point
+	bounds: 449, 296, 86, 65
+	offsets: 1, 1, 88, 67
+	rotate: 90
+crewmate/hands/hand_R_reach
+	bounds: 204, 138, 84, 78
+	offsets: 1, 1, 86, 80
+crewmate/hands/hand_R_reachout
+	bounds: 277, 222, 87, 72
+	offsets: 1, 1, 89, 74
+crewmate/hands/hand_R_throw
+	bounds: 455, 137, 83, 74
+	offsets: 1, 1, 85, 76
+	rotate: 90
+crewmate/hands/hand_R_walkingstick
+	bounds: 690, 516, 72, 60
+	offsets: 1, 1, 74, 62
+crewmate/hands/hand_R_wave
+	bounds: 277, 300, 83, 87
+	offsets: 1, 1, 85, 89
+	rotate: 90
+crewmate/mouths/mouth_closed
+	bounds: 366, 10, 73, 43
+crewmate/mouths/mouth_open
+	bounds: 689, 327, 73, 48
+crewmate/mouths/mouth_puff
+	bounds: 261, 6, 99, 49
+crewmate/mouths/mouth_vomit
+	bounds: 618, 443, 66, 56
+crewmate/run/leg_L_run1
+	bounds: 449, 484, 90, 66
+	offsets: 1, 1, 92, 68
+	rotate: 90
+crewmate/run/leg_L_run2
+	bounds: 657, 582, 105, 72
+	offsets: 1, 1, 107, 74
+crewmate/run/leg_L_run3
+	bounds: 690, 454, 70, 56
+	offsets: 1, 1, 72, 58
+crewmate/run/leg_L_run4
+	bounds: 690, 169, 67, 61
+	offsets: 1, 1, 70, 63
+	rotate: 90
+crewmate/run/leg_R_run1
+	bounds: 520, 365, 86, 64
+	offsets: 1, 1, 88, 66
+crewmate/run/leg_R_run2
+	bounds: 520, 297, 83, 62
+	offsets: 1, 1, 85, 64
+crewmate/run/leg_R_run3
+	bounds: 534, 227, 78, 64
+	offsets: 1, 1, 80, 66
+crewmate/run/leg_R_run4
+	bounds: 618, 229, 65, 62
+	offsets: 1, 1, 67, 64
+crewmate/search/pack
+	bounds: 54, 190, 81, 103
+	offsets: 1, 1, 83, 105
+crewmate/shadow
+	bounds: 139, 598, 136, 33
+	offsets: 1, 1, 138, 35
+crewmate/stand/body_stand
+	bounds: 6, 423, 121, 167
+	offsets: 81, 69, 284, 301
+crewmate/stand/leg_L_stand_M
+	bounds: 690, 381, 67, 69
+	offsets: 36, 13, 135, 114
+	rotate: 90
+crewmate/stand/leg_R_stand_M
+	bounds: 204, 64, 68, 84
+	offsets: 47, 27, 157, 144
+	rotate: 90
+crewmate/stand/pack
+	bounds: 54, 299, 80, 118
+	offsets: 62, 34, 197, 191
+crewmate/stand/tubes
+	bounds: 615, 380, 57, 65
+	offsets: 1, 1, 59, 67
+	rotate: 90
+crewmate/stand/visor
+	bounds: 6, 88, 113, 96
+	offsets: 1, 1, 115, 98
+crewmate/visors/visor_angry2
+	bounds: 208, 397, 97, 63
+	offsets: 1, 1, 99, 65
+	rotate: 90
+crewmate/visors/visor_angry3
+	bounds: 6, 6, 96, 76
+	offsets: 1, 1, 98, 78
+crewmate/visors/visor_closed
+	bounds: 208, 303, 88, 63
+	offsets: 1, 1, 90, 65
+	rotate: 90
+crewmate/visors/visor_cracked
+	bounds: 521, 435, 88, 63
+	offsets: 1, 1, 90, 65
+crewmate/visors/visor_drained
+	bounds: 412, 580, 104, 74
+	offsets: 1, 1, 106, 76
+crewmate/visors/visor_eyelid
+	bounds: 380, 478, 92, 63
+	offsets: 1, 1, 102, 65
+	rotate: 90
+crewmate/visors/visor_sad
+	bounds: 522, 578, 94, 74
+	offsets: 1, 1, 96, 76
+crewmate/visors/visor_squint
+	bounds: 277, 389, 91, 83
+	offsets: 1, 1, 93, 85
+crewmate/visors/visor_squint3
+	bounds: 449, 388, 90, 65
+	offsets: 1, 1, 92, 67
+	rotate: 90
+crewmate/visors/visor_strain
+	bounds: 657, 660, 102, 105
+	offsets: 1, 1, 104, 106
+	rotate: 90
+crewmate/visors/visor_weary
+	bounds: 281, 576, 107, 63
+	offsets: 1, 1, 109, 65
