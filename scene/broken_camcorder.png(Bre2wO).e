@@ -5,8 +5,8 @@
   "name": "broken_camcorder.png",
   "local_enabled": true,
   "local_position": {
-    "X": 26.9068298339843750,
-    "Y": -3.5983400344848633
+    "X": -2.2877960205078125,
+    "Y": 1.6902308464050293
   },
   "local_rotation": 0,
   "local_scale": {

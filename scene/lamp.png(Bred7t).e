@@ -5,10 +5,10 @@
   "name": "lamp.png",
   "local_enabled": true,
   "local_position": {
-    "X": 39.4196014404296875,
-    "Y": -40.7522659301757812
+    "X": 39.5010223388671875,
+    "Y": -39.0522041320800781
   },
-  "local_rotation": 0,
+  "local_rotation": -179.9790496826171875,
   "local_scale": {
     "X": 1,
     "Y": 1
@@ -24,7 +24,7 @@
   "internal_component_type": "Sprite_Renderer",
   "data": {
     "texture": "sprites/Zone1b/lamp.png",
-    "depth_offset": -1.0203456878662109,
+    "depth_offset": -1.8506908416748047,
     "scale": {
       "X": 2,
       "Y": 2

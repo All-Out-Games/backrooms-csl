@@ -5,8 +5,8 @@
   "name": "decorative_lamp_fancy.png",
   "local_enabled": true,
   "local_position": {
-    "X": 53.7225799560546875,
-    "Y": -51.5040130615234375
+    "X": 57.2664642333984375,
+    "Y": -51.4096870422363281
   },
   "local_rotation": 0,
   "local_scale": {
@@ -14,7 +14,7 @@
     "Y": 1
   },
   "previous_sibling": 1806002806,
-  "next_sibling": 1800801108,
+  "next_sibling": 1799606655,
   "parent": 1809603361
 },
 {

@@ -5,7 +5,7 @@
   "name": "zone1_wall_line.png",
   "local_enabled": true,
   "local_position": {
-    "X": 18.0144042968750000,
+    "X": 17.9981842041015625,
     "Y": -18.3294296264648438
   },
   "local_rotation": 0,
@@ -24,7 +24,7 @@
   "internal_component_type": "Sprite_Renderer",
   "data": {
     "texture": "Tiles/Zone1b/zone1_wall_line.png",
-    "depth_offset": -0.3412048816680908,
+    "depth_offset": -0.1365676969289780,
     "nine_slice": {
       "slice": {
         "X": 32.7000045776367188,
