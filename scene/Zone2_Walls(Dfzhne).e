@@ -32,6 +32,8 @@
         "kind": 1,
         "manual_layer": 1,
         "outline_color": {
+          "X": 0.0365369655191898,
+          "Y": 0.0171202141791582,
           "W": 1
         },
         "chunks": [
@@ -413,7 +415,7 @@
         ],
         "textures": [
           {
-            "texture": "Tiles/Tiles_Zone2/Zone2WallNew.png"
+            "texture": "Tiles/Zone2/Zone2Wallv3.png"
           }
         ],
         "mask": "Tiles/mask_normal_sharp.png",
