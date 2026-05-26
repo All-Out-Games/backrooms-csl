@@ -3,7 +3,7 @@
 3743896498
 {
   "name": "toilet_7d2729.png",
-  "local_enabled": true,
+  "local_enabled": false,
   "local_position": {
     "X": -13.2715911865234375,
     "Y": -28.3855743408203125

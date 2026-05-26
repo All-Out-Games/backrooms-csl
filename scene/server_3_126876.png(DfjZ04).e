@@ -3,7 +3,7 @@
 3750599992
 {
   "name": "server_3_126876.png",
-  "local_enabled": true,
+  "local_enabled": false,
   "local_position": {
     "X": -63.1636199951171875,
     "Y": 17.9483184814453125
@@ -24,7 +24,7 @@
   "internal_component_type": "Sprite_Renderer",
   "data": {
     "texture": "server_3_126876.png",
-    "depth_offset": -0.5861740112304688
+    "depth_offset": -0.4292602539062500
   }
 },
 {
@@ -33,13 +33,15 @@
   "component_type": "Internal_Component",
   "internal_component_type": "Box_Collider",
   "data": {
+    "make_navmesh_loop": true,
+    "flip_navmesh_loop": true,
     "size": {
       "X": 1.0400085449218750,
-      "Y": 0.2853317260742188
+      "Y": 0.4481124877929688
     },
     "offset": {
       "X": 0.0028533935546875,
-      "Y": -0.5917472839355469
+      "Y": -0.4541206359863281
     }
   }
 }

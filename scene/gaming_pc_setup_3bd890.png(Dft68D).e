@@ -3,7 +3,7 @@
 3753357059
 {
   "name": "gaming_pc_setup_3bd890.png",
-  "local_enabled": true,
+  "local_enabled": false,
   "local_position": {
     "X": 0.0050659179687500,
     "Y": 0.2901153564453125

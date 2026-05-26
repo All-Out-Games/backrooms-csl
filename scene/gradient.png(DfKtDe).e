@@ -3,7 +3,7 @@
 3744125150
 {
   "name": "gradient.png",
-  "local_enabled": true,
+  "local_enabled": false,
   "local_position": {
     "X": 0.0060729980468750,
     "Y": -0.9013977050781250

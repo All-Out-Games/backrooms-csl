@@ -23,7 +23,7 @@
   "internal_component_type": "Sprite_Renderer",
   "data": {
     "texture": "desk_f9ec2d.png",
-    "depth_offset": -0.4516234695911407,
+    "depth_offset": -0.1503060460090637,
     "tint": {
       "X": 0.1765718460083008,
       "Y": 0.1309605240821838,
@@ -37,13 +37,15 @@
   "component_type": "Internal_Component",
   "internal_component_type": "Box_Collider",
   "data": {
+    "make_navmesh_loop": true,
+    "flip_navmesh_loop": true,
     "size": {
       "X": 4.5245361328125000,
-      "Y": 1.1200103759765625
+      "Y": 0.7686004638671875
     },
     "offset": {
       "X": -0.0065917968750000,
-      "Y": 0.0600051879882812
+      "Y": 0.2357101440429688
     }
   }
 }

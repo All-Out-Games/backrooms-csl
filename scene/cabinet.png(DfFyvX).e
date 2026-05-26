@@ -13,7 +13,7 @@
     "X": 1,
     "Y": 1
   },
-  "previous_sibling": 3756759440,
+  "previous_sibling": 3743933891,
   "next_sibling": 3747577114,
   "parent": 3756173363
 },
@@ -33,6 +33,8 @@
   "component_type": "Internal_Component",
   "internal_component_type": "Box_Collider",
   "data": {
+    "make_navmesh_loop": true,
+    "flip_navmesh_loop": true,
     "size": {
       "X": 0.7789001464843750,
       "Y": 0.5824460983276367
