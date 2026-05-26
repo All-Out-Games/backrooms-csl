@@ -14,7 +14,7 @@
     "Y": 1
   },
   "previous_sibling": 2941184758,
-  "next_sibling": 2946807869
+  "next_sibling": 2949177306
 },
 {
   "cid": 1,
@@ -38,5 +38,14 @@
     "prompt_offset": {
       "Y": 0.8000000119209290
     }
+  }
+},
+{
+  "cid": 3,
+  "aoid": 2938381130,
+  "component_type": "Internal_Component",
+  "internal_component_type": "InteractableGlow",
+  "data": {
+
   }
 }

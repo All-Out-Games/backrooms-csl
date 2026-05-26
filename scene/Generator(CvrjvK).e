@@ -1,24 +1,24 @@
 14
-420906795009
-2941184758
+6038724018177
+2947431370
 {
   "name": "Generator",
   "local_enabled": true,
   "local_position": {
-    "X": 264.4877319335937500,
-    "Y": -2.0230131149291992
+    "X": 245.2558441162109375,
+    "Y": 79.0680999755859375
   },
   "local_rotation": 0,
   "local_scale": {
     "X": 1,
     "Y": 1
   },
-  "previous_sibling": 2947417253,
-  "next_sibling": 2944168708
+  "previous_sibling": 2949177306,
+  "next_sibling": 2936829444
 },
 {
   "cid": 1,
-  "aoid": 2950801443,
+  "aoid": 2949964255,
   "component_type": "Internal_Component",
   "internal_component_type": "Sprite_Renderer",
   "data": {
@@ -29,7 +29,7 @@
 },
 {
   "cid": 2,
-  "aoid": 2949473621,
+  "aoid": 2937791008,
   "component_type": "Internal_Component",
   "internal_component_type": "Generator",
   "data": {
@@ -42,7 +42,7 @@
 },
 {
   "cid": 3,
-  "aoid": 2946091242,
+  "aoid": 2947372109,
   "component_type": "Internal_Component",
   "internal_component_type": "InteractableGlow",
   "data": {

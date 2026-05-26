@@ -39,4 +39,13 @@
       "Y": 0.8000000119209290
     }
   }
+},
+{
+  "cid": 3,
+  "aoid": 2949640314,
+  "component_type": "Internal_Component",
+  "internal_component_type": "InteractableGlow",
+  "data": {
+
+  }
 }
