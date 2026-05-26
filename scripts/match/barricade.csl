@@ -91,11 +91,10 @@ get_barricade_navmesh :: proc() -> Navmesh {
 }
 
 mark_barricade_navmesh_for_rebuild :: proc() {
-    // Temporarily disabled while waiting on the editor navmesh rebuild fix.
-    // navmesh := get_barricade_navmesh();
-    // if #alive(navmesh) {
-    //     navmesh.mark_for_rebuild();
-    // }
+    navmesh := get_barricade_navmesh();
+    if #alive(navmesh) {
+        navmesh.mark_for_rebuild();
+    }
 }
 
 give_barricade_item_to_player :: proc(player: Player) -> bool {

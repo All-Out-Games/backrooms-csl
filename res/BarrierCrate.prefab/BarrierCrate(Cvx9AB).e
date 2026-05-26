@@ -20,7 +20,6 @@
   "internal_component_type": "Sprite_Renderer",
   "data": {
     "texture": "Barriers/BarrierCrate.png",
-    "layer": 0,
     "scale": {
       "X": 2,
       "Y": 2
@@ -34,25 +33,25 @@
   "component_type": "Internal_Component",
   "internal_component_type": "Navmesh_Loop",
   "data": {
-    "flip_inside_outside": true,
     "points": [
       {
-        "X": -0.75,
-        "Y": -0.75
+        "X": -0.6250000000000000,
+        "Y": -0.8700000047683716
       },
       {
-        "X": 0.75,
-        "Y": -0.75
+        "X": 0.6250000000000000,
+        "Y": -0.8700000047683716
       },
       {
-        "X": 0.75,
-        "Y": 0.75
+        "X": 0.6250000000000000,
+        "Y": 0.6000000238418579
       },
       {
-        "X": -0.75,
-        "Y": 0.75
+        "X": -0.6250000000000000,
+        "Y": 0.6000000238418579
       }
-    ]
+    ],
+    "flip_inside_outside": true
   }
 },
 {
@@ -70,8 +69,8 @@
   "component_type": "Internal_Component",
   "internal_component_type": "Barricade_Survivor_Interactable",
   "data": {
-    "radius": 1.4,
-    "required_hold_time": 0.45,
+    "radius": 1.3999999761581421,
+    "required_hold_time": 0.4499999880790710,
     "priority": 20
   }
 },
@@ -81,7 +80,7 @@
   "component_type": "Internal_Component",
   "internal_component_type": "Barricade_Monster_Interactable",
   "data": {
-    "radius": 1.4,
+    "radius": 1.3999999761581421,
     "required_hold_time": 5,
     "priority": 20
   }
