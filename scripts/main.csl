@@ -179,9 +179,10 @@ ENTITY_REVEALED_EYE_ICON_NAMEPLATE_OFFSET :: 14.0;
 ENTITY_REVEALED_EYE_ICON_LAYER :: 80;
 ENTITY_VIEW_PLAYER_REVEAL_FADE_OUT_SECONDS :: 2.0;
 ENTITY_NAME_INVISIBILITY_REASON :: "entity_role_active";
-JUMPSCARE_OVERLAY_SPINE_PATH :: "Animations/juwmpscare/jumpscare_asset.spine";
+JUMPSCARE_OVERLAY_SPINE_PATH :: "Animations/jumpscare/jumpscare_asset.spine";
 JUMPSCARE_OVERLAY_SECONDS :: 1.3;
 JUMPSCARE_OVERLAY_SCALE := v2.{200.0, 200.0};
+JUMPSCARE_OVERLAY_LAYER :: 2500;
 PLAYER_WINS_SAVE_KEY :: "playerWins";
 ROUND_SURVIVOR_NORMAL_MOVEMENT_MULTIPLIER :: 0.90;
 DOWNED_SURVIVOR_MOVEMENT_MULTIPLIER :: 0.30;
@@ -190,15 +191,26 @@ DOWNED_BLEED_OUT_OVERLAY_PATH :: "bleedingout.png";
 DOWNED_BLEED_OUT_OVERLAY_LAYER :: -1;
 DOWNED_SCREAM_INTERVAL_SECONDS :: 10.0;
 ROUND_ENTITY_NORMAL_MOVEMENT_MULTIPLIER :: 0.84;
+ROUND_MINION_NORMAL_MOVEMENT_MULTIPLIER :: ROUND_SURVIVOR_NORMAL_MOVEMENT_MULTIPLIER;
+ENTITY_AFK_TIMEOUT_SECONDS :: 120.0;
+ENTITY_AFK_MOVED_DISTANCE :: 0.25;
+ENTITY_AFK_MOVED_DISTANCE_SQ :: ENTITY_AFK_MOVED_DISTANCE * ENTITY_AFK_MOVED_DISTANCE;
 HELD_ITEM_BONE_NAME :: "Finger_R2";
 HELD_ITEM_SCALE := v2.{0.35, 0.35};
 HELD_ITEM_RENDER_LAYER :: 1;
 
 ENTITY_OVERRIDE_RIG_PATH :: "Animations/Bacteria/Backrooms_Monster.spine";
+MINION_OVERRIDE_RIG_PATH :: "Animations/beast_minion/beast_minion.spine";
 // The Entity override spine is authored larger than the reusable player rig,
 // so keep it on its own scale and small downward offset.
 ENTITY_OVERRIDE_SCALE := v2.{1, 1};
 ENTITY_OVERRIDE_OFFSET := v2.{0.0, -0.30};
+MINION_OVERRIDE_SCALE := v2.{2.0, 2.0};
+MINION_OVERRIDE_OFFSET := v2.{0.0, -0.16};
+MINION_FLASHBANG_SHAKE_DISTANCE :: 0.085;
+MINION_FLASHBANG_SHAKE_SPEED :: 48.0;
+MINION_FLASHBANG_SCALE_PULSE :: 0.08;
+MINION_FLASHBANG_SCALE_PULSE_SPEED :: 18.0;
 
 VIEWFINDER_COLOR_FILTER := v3.{0.9, 0.9, 0.9};
 VIEWFINDER_SATURATION :: 1;
@@ -242,7 +254,7 @@ is_hidden_by_entity_local_view :: proc(player: Player) -> bool {
     local_player := get_local_player();
     if !#alive(local_player) return false;
     if local_player == player return false;
-    return local_player.is_round_entity();
+    return local_player.is_round_entity() || local_player.is_round_minion();
 }
 
 is_revealed_in_entity_local_view :: proc(player: Player) -> bool {
@@ -304,6 +316,8 @@ Player :: class : Player_Base {
     override_rig: Spine_Animator;
     entity_override_rig_asset: Spine_Asset;
     entity_override_state_machine: State_Machine;
+    minion_override_rig_asset: Spine_Asset;
+    minion_override_state_machine: State_Machine;
     weapon_target: Weapon_Target;
     equipped_weapon_type: Weapon_Type;
     equipped_item_def: Item_Definition;
@@ -324,8 +338,12 @@ Player :: class : Player_Base {
     sprint_input_held: bool;
     sprint_active: bool;
     entity_lurch_remaining: float;
+    minion_bite_hit_react_remaining: float;
     round_downed: bool;
     round_dead: bool;
+    round_minion: bool;
+    round_minion_hatch_request_id: s64;
+    round_minion_hatch_seen_request_id: s64;
     downed_revive_interactable: Downed_Revive_Interactable;
     round_dead_ghost_state_active: bool;
     local_voice_chat_enabled_range: float;
@@ -446,10 +464,68 @@ Player :: class : Player_Base {
         return true;
     }
 
+    ensure_minion_override_rig :: method() -> bool {
+        if minion_override_state_machine != null {
+            return #alive(override_rig) && override_rig.instance != null;
+        }
+
+        if minion_override_rig_asset == null {
+            minion_override_rig_asset = get_asset(Spine_Asset, MINION_OVERRIDE_RIG_PATH);
+        }
+
+        if minion_override_rig_asset == null || !#alive(override_rig) || override_rig.instance == null {
+            return false;
+        }
+
+        override_rig.instance.set_skeleton(minion_override_rig_asset);
+        override_rig.instance.disable_all_skins();
+        override_rig.instance.enable_skin("default");
+        override_rig.instance.refresh_skins();
+
+        sm := State_Machine.create();
+        minion_override_state_machine = sm;
+
+        layer := sm.create_layer("main", 0);
+        idle_state := layer.create_state("beast/idle", true);
+        run_state := layer.create_state("beast/run", true);
+        hatch_state := layer.create_state("beast/hatch", false);
+
+        layer.set_initial_state(idle_state);
+
+        is_moving_var := sm.create_variable("is_moving", .BOOL);
+        hatch_var := sm.create_variable("hatch", .TRIGGER);
+
+        layer.create_transition(idle_state, run_state, false).create_bool_condition(is_moving_var, true);
+        layer.create_transition(run_state, idle_state, false).create_bool_condition(is_moving_var, false);
+
+        to_hatch := layer.create_global_transition(hatch_state, true);
+        to_hatch.create_trigger_condition(hatch_var);
+        layer.create_transition(hatch_state, idle_state, true);
+
+        override_rig.instance.set_state_machine(sm, true);
+        return true;
+    }
+
     set_entity_override_active :: method(active: bool) {
         if #alive(override_rig) {
             override_rig.entity.set_local_enabled(active);
-            override_rig.entity.set_local_position(ENTITY_OVERRIDE_OFFSET);
+            if round_minion {
+                offset := MINION_OVERRIDE_OFFSET;
+                scale := MINION_OVERRIDE_SCALE;
+                if active && is_entity_flashbanged(this) {
+                    alpha := get_entity_flashbang_alpha(this);
+                    t := get_time();
+                    offset.x += sin(t * MINION_FLASHBANG_SHAKE_SPEED) * MINION_FLASHBANG_SHAKE_DISTANCE * alpha;
+                    offset.y += cos(t * MINION_FLASHBANG_SHAKE_SPEED * 1.37) * MINION_FLASHBANG_SHAKE_DISTANCE * 0.55 * alpha;
+                    pulse := 1.0 + sin(t * MINION_FLASHBANG_SCALE_PULSE_SPEED) * MINION_FLASHBANG_SCALE_PULSE * alpha;
+                    scale = v2.{MINION_OVERRIDE_SCALE.x * pulse, MINION_OVERRIDE_SCALE.y * pulse};
+                }
+                override_rig.entity.set_local_position(offset);
+                override_rig.entity.set_local_scale(scale);
+            } else {
+                override_rig.entity.set_local_position(ENTITY_OVERRIDE_OFFSET);
+                override_rig.entity.set_local_scale(ENTITY_OVERRIDE_SCALE);
+            }
         }
         if animator != null {
             animator.set_enabled(!active);
@@ -537,6 +613,9 @@ Player :: class : Player_Base {
         }
         UI.push_screen_draw_context();
         defer UI.pop_draw_context();
+
+        UI.push_layer(JUMPSCARE_OVERLAY_LAYER);
+        defer UI.pop_layer();
 
         screen := UI.get_safe_screen_rect();
         UI.spine(screen.center(), jumpscare_overlay_spine, JUMPSCARE_OVERLAY_SCALE, 0.0);
@@ -806,8 +885,12 @@ Player :: class : Player_Base {
         sprint_input_held = false;
         sprint_active = false;
         entity_lurch_remaining = 0.0;
+        minion_bite_hit_react_remaining = 0.0;
         round_downed = false;
         round_dead = false;
+        round_minion = false;
+        round_minion_hatch_request_id = 0;
+        round_minion_hatch_seen_request_id = 0;
         round_dead_ghost_state_active = false;
         local_voice_chat_enabled_range = 0.0;
         local_voice_chat_muted_for_round_dead = false;
@@ -889,12 +972,26 @@ Player :: class : Player_Base {
         return gm.is_entity_player(this);
     }
 
+    is_round_minion :: method() -> bool {
+        gm := get_game_manager();
+        if !#alive(gm) {
+            return false;
+        }
+        if gm.phase != .SURVIVOR_HEAD_START && gm.phase != .ACTIVE {
+            return false;
+        }
+        return round_minion && !round_dead;
+    }
+
     is_round_survivor :: method() -> bool {
         gm := get_game_manager();
         if !#alive(gm) {
             return false;
         }
         if round_dead {
+            return false;
+        }
+        if round_minion {
             return false;
         }
         if gm.phase != .SURVIVOR_HEAD_START && gm.phase != .ACTIVE {
@@ -914,7 +1011,7 @@ Player :: class : Player_Base {
     update_chat_mode :: proc(using this: Player) {
         desired := Chat.Mode.DEFAULT;
         // In-game: bubble-only chat for alive players (ghosts stay in default chat).
-        if this.is_round_entity() || this.is_round_survivor() {
+        if this.is_round_entity() || this.is_round_minion() || this.is_round_survivor() {
             desired = Chat.Mode.BUBBLE_ONLY;
         }
 
@@ -943,6 +1040,9 @@ Player :: class : Player_Base {
         this.clear_round_downed_state();
         footstep_stride_accum = 0.0;
         round_dead = false;
+        round_minion = false;
+        round_minion_hatch_request_id = 0;
+        round_minion_hatch_seen_request_id = 0;
         round_dead_ghost_state_active = false;
         this.set_local_round_dead_voice_chat_muted(false);
         entity_local_view_alpha = 0.0;
@@ -968,6 +1068,86 @@ Player :: class : Player_Base {
         if reset_animation && animator != null && animator.instance != null {
             animator.state_machine.set_trigger("RESET");
         }
+    }
+
+    clear_round_minion_state :: method() {
+        if !round_minion {
+            return;
+        }
+
+        round_minion = false;
+        round_minion_hatch_request_id = 0;
+        round_minion_hatch_seen_request_id = 0;
+        minion_override_state_machine = null;
+        sprint_input_held = false;
+        sprint_active = false;
+        current_stamina = SPRINT_STAMINA_MAX;
+        max_stamina = SPRINT_STAMINA_MAX;
+        sprint_lockout_remaining = 0.0;
+        entity_local_view_alpha = 0.0;
+        entity_local_view_is_active = false;
+        entity_scream_reveal_remaining = 0.0;
+        entity_scream_arrow_remaining = 0.0;
+        entity_target_ping_remaining = 0.0;
+        entity_target_ping_user_id = "";
+
+        if #alive(agent) {
+            agent.velocity = v2{0.0, 0.0};
+            agent.movement_speed = base_movement_speed;
+        }
+        this.set_entity_override_active(false);
+        lock_player_to_game_navmesh(this);
+    }
+
+    convert_to_minion :: method() -> bool {
+        gm := get_game_manager();
+        if !#alive(gm) || (gm.phase != .SURVIVOR_HEAD_START && gm.phase != .ACTIVE) {
+            return false;
+        }
+        if !#alive(entity) || round_dead || round_minion {
+            return false;
+        }
+        if gm.is_entity_player(this) {
+            return false;
+        }
+
+        was_survivor := this.is_round_survivor() || round_downed;
+        remove_all_effects(entity);
+        this.clear_round_downed_state(true);
+        clear_player_tasks(this);
+        this.clear_round_inventory();
+        this.force_viewfinder_off();
+        close_security_cameras_for_player(this);
+
+        round_minion = true;
+        round_dead = false;
+        round_dead_ghost_state_active = false;
+        round_minion_hatch_request_id += 1;
+        round_minion_hatch_seen_request_id = 0;
+        sprint_input_held = false;
+        sprint_active = false;
+        current_stamina = MINION_SPRINT_STAMINA_MAX;
+        max_stamina = MINION_SPRINT_STAMINA_MAX;
+        sprint_lockout_remaining = 0.0;
+        entity_lurch_remaining = 0.0;
+        entity_local_view_alpha = 0.0;
+        entity_local_view_is_active = false;
+        entity_scream_reveal_remaining = 0.0;
+        entity_scream_arrow_remaining = 0.0;
+        entity_target_ping_remaining = 0.0;
+        entity_target_ping_user_id = "";
+
+        if #alive(agent) {
+            agent.velocity = v2{0.0, 0.0};
+        }
+
+        if was_survivor {
+            gm.register_survivor_eliminated();
+        }
+
+        this.ensure_minion_override_rig();
+        this.set_entity_override_active(true);
+        return true;
     }
 
     mark_round_downed :: method() {
@@ -1030,6 +1210,7 @@ Player :: class : Player_Base {
 
         this.clear_round_downed_state();
         round_dead = true;
+        round_minion = false;
         round_dead_ghost_state_active = false;
         this.set_local_round_dead_voice_chat_muted(true);
         entity_local_view_alpha = 0.0;
@@ -1202,6 +1383,8 @@ Player :: class : Player_Base {
         should_use_entity_override := false;
         if this.is_round_entity() {
             should_use_entity_override = this.ensure_entity_override_rig();
+        } else if this.is_round_minion() {
+            should_use_entity_override = this.ensure_minion_override_rig();
         }
         this.set_entity_override_active(should_use_entity_override);
 
@@ -1224,6 +1407,13 @@ Player :: class : Player_Base {
             entity_override_state_machine.set_bool("is_moving", is_moving);
             entity_override_state_machine.set_bool("is_lurching", entity_lurch_remaining > 0.0);
         }
+        if should_use_entity_override && minion_override_state_machine != null {
+            minion_override_state_machine.set_bool("is_moving", is_moving);
+            if round_minion_hatch_request_id > round_minion_hatch_seen_request_id {
+                round_minion_hatch_seen_request_id = round_minion_hatch_request_id;
+                minion_override_state_machine.set_trigger("hatch");
+            }
+        }
 
         if this.is_round_entity() || round_dead || round_downed {
             sprint_input_held = false;
@@ -1238,21 +1428,46 @@ Player :: class : Player_Base {
             entity_lurch_remaining -= dt;
             entity_lurch_remaining = max(entity_lurch_remaining, 0.0);
         }
+        if minion_bite_hit_react_remaining > 0.0 {
+            minion_bite_hit_react_remaining -= dt;
+            minion_bite_hit_react_remaining = max(minion_bite_hit_react_remaining, 0.0);
+        }
+
+        desired_stamina_max := SPRINT_STAMINA_MAX;
+        stamina_drain_per_second := SPRINT_STAMINA_DRAIN_PER_SECOND;
+        stamina_regen_per_second := SPRINT_STAMINA_REGEN_PER_SECOND;
+        stamina_moving_regen_per_second := SPRINT_STAMINA_MOVING_REGEN_PER_SECOND;
+        sprint_exhaust_lockout_seconds := SPRINT_EXHAUST_LOCKOUT_SECONDS;
+        if this.is_round_minion() {
+            desired_stamina_max = MINION_SPRINT_STAMINA_MAX;
+            stamina_drain_per_second = MINION_SPRINT_STAMINA_DRAIN_PER_SECOND;
+            stamina_regen_per_second = MINION_SPRINT_STAMINA_REGEN_PER_SECOND;
+            stamina_moving_regen_per_second = MINION_SPRINT_STAMINA_MOVING_REGEN_PER_SECOND;
+            sprint_exhaust_lockout_seconds = MINION_SPRINT_EXHAUST_LOCKOUT_SECONDS;
+        }
+        if max_stamina != desired_stamina_max {
+            stamina_pct := 1.0;
+            if max_stamina > 0.0 {
+                stamina_pct = clamp(current_stamina / max_stamina, 0.0, 1.0);
+            }
+            max_stamina = desired_stamina_max;
+            current_stamina = max_stamina * stamina_pct;
+        }
 
         wants_sprint := !round_dead && !round_downed && sprint_input_held && sprint_lockout_remaining <= 0.0 && current_stamina > 0.0;
         sprint_active = wants_sprint && is_moving;
 
         if sprint_active {
-            current_stamina -= SPRINT_STAMINA_DRAIN_PER_SECOND * dt;
+            current_stamina -= stamina_drain_per_second * dt;
             if current_stamina <= 0.0 {
                 current_stamina = 0.0;
                 sprint_active = false;
-                sprint_lockout_remaining = SPRINT_EXHAUST_LOCKOUT_SECONDS;
+                sprint_lockout_remaining = sprint_exhaust_lockout_seconds;
             }
         } else if current_stamina < max_stamina {
-            regen_per_second := SPRINT_STAMINA_REGEN_PER_SECOND;
+            regen_per_second := stamina_regen_per_second;
             if is_moving && !sprint_input_held {
-                regen_per_second = SPRINT_STAMINA_MOVING_REGEN_PER_SECOND;
+                regen_per_second = stamina_moving_regen_per_second;
             }
             current_stamina += regen_per_second * dt;
             current_stamina = min(current_stamina, max_stamina);
@@ -1275,23 +1490,35 @@ Player :: class : Player_Base {
             } else if round_dead {
                 movement_speed_multiplier = SPRINT_MOVEMENT_MULTIPLIER;
             } else if sprint_active {
-                movement_speed_multiplier = SPRINT_MOVEMENT_MULTIPLIER;
+                if this.is_round_minion() {
+                    movement_speed_multiplier = MINION_SPRINT_MOVEMENT_MULTIPLIER;
+                } else {
+                    movement_speed_multiplier = SPRINT_MOVEMENT_MULTIPLIER;
+                }
             } else if this.is_round_entity() && entity_lurch_remaining > 0.0 {
                 movement_speed_multiplier = ENTITY_LURCH_MOVEMENT_MULTIPLIER;
             } else if this.is_round_entity() {
                 movement_speed_multiplier = ROUND_ENTITY_NORMAL_MOVEMENT_MULTIPLIER;
+            } else if this.is_round_minion() {
+                movement_speed_multiplier = ROUND_MINION_NORMAL_MOVEMENT_MULTIPLIER;
             } else if this.is_round_survivor() {
                 movement_speed_multiplier = ROUND_SURVIVOR_NORMAL_MOVEMENT_MULTIPLIER;
             }
-            if this.is_round_entity() && is_entity_flashbanged(this) {
+            if this.is_round_minion() && is_entity_flashbanged(this) {
+                movement_speed_multiplier *= MINION_FLASHBANG_MOVEMENT_MULTIPLIER;
+                agent.velocity = v2{0.0, 0.0};
+            } else if this.is_round_entity() && is_entity_flashbanged(this) {
                 movement_speed_multiplier *= ENTITY_FLASHBANG_MOVEMENT_MULTIPLIER;
             }
             if has_effect(entity, Stim_Speed_Effect) {
                 movement_speed_multiplier *= STIM_SPEED_BUFF_MULTIPLIER;
             }
+            if has_effect(entity, Minion_Bite_Slow_Effect) {
+                movement_speed_multiplier *= MINION_BITE_SLOW_MOVEMENT_MULTIPLIER;
+            }
 
             current_speed := agent.movement_speed;
-            if !sprint_has_applied_speed || abs(current_speed - sprint_last_applied_speed) > 0.001 {
+            if movement_speed_multiplier > 0.001 && (!sprint_has_applied_speed || abs(current_speed - sprint_last_applied_speed) > 0.001) {
                 base_movement_speed = current_speed / movement_speed_multiplier;
             }
 
@@ -1309,6 +1536,10 @@ Player :: class : Player_Base {
             animator.state_machine.set_bool("downed", round_downed);
             animator.state_machine.set_bool("round_dead", round_dead);
             animator.state_machine.set_bool("sprinting", sprint_active);
+            minion_slowed := has_effect(entity, Minion_Bite_Slow_Effect);
+            minion_bite_hit_reacting := minion_bite_hit_react_remaining > 0.0;
+            animator.state_machine.set_bool("minion_slowed", minion_slowed);
+            animator.state_machine.set_bool("minion_bite_hit_reacting", minion_bite_hit_reacting);
             animator.instance.speed_multiplier = 1.0;
             if round_dead_ghost_state_active {
                 animator.state_machine.set_bool("ghost_form", true);
@@ -1319,6 +1550,8 @@ Player :: class : Player_Base {
             override_rig.instance.speed_multiplier = 1.0;
             if this.is_round_entity() && entity_lurch_remaining > 0.0 && is_moving {
                 override_rig.instance.speed_multiplier = ENTITY_LURCH_ANIMATION_SPEED_MULTIPLIER;
+            } else if this.is_round_minion() && sprint_active && is_moving {
+                override_rig.instance.speed_multiplier = MINION_SPRINT_ANIMATION_SPEED_MULTIPLIER;
             }
         }
 
@@ -1342,7 +1575,7 @@ Player :: class : Player_Base {
     }
 
     ao_late_update :: method(dt: float) {
-        if this.is_local() && (this.is_round_entity() || security_cameras_open) {
+        if this.is_local() && (this.is_round_entity() || this.is_round_minion() || security_cameras_open) {
             this.apply_entity_local_post_processing();
         }
         if this.is_local() && this.is_lights_out_local_effect_active() {
@@ -1366,6 +1599,7 @@ Player :: class : Player_Base {
             draw_survivor_intro_static_ui(this);
             this.draw_warp_to_backrooms_static_ui();
             draw_intro_spawn_transition_ui(this);
+            draw_game_start_vignette_ui(this);
             draw_head_start_ui(this);
             draw_hunt_begin_banner_ui(this);
             draw_exit_unlocked_banner_ui(this);
@@ -1410,7 +1644,22 @@ Player :: class : Player_Base {
                     draw_entity_ability_button(this, Entity_Vomit_Ability, 2, ENTITY_VOMIT_ICON_PATH);
                     draw_entity_ability_button(this, Entity_Lurch_Ability, 3, "AbilityIcons/SprintIcon.png");
                     draw_entity_ability_button(this, Entity_Wall_Seep_Ability, 4, "AbilityIcons/Scream.png");
-                    draw_ability_button(this, Entity_Sabotage_Ability, 5);
+                    if is_entity_ability_type_unlocked(this, Entity_Convert_Minion_Ability) && find_downed_minion_conversion_target(this) != null {
+                        draw_ability_button(this, Entity_Convert_Minion_Ability, 5);
+                    } else {
+                        draw_ability_button(this, Entity_Sabotage_Ability, 5);
+                    }
+                }
+                if equipped_weapon_type != .NONE {
+                    weapon_unequip(this, equipped_weapon_type);
+                    equipped_weapon_type = .NONE;
+                    equipped_item_def = null;
+                    last_selected_index = -1;
+                }
+            } else if this.is_round_minion() {
+                if active_effect == null {
+                    draw_ability_button(this, Minion_Bite_Ability, 0);
+                    draw_ability_button(this, Minion_Sprint_Ability, 1);
                 }
                 if equipped_weapon_type != .NONE {
                     weapon_unequip(this, equipped_weapon_type);
@@ -1455,18 +1704,14 @@ Player :: class : Player_Base {
             }
         }
 
-        if !this.is_round_entity() &&
-            !round_downed &&
-            !round_dead &&
-            !is_hidden_by_entity_local_view(this) &&
-            (current_stamina < max_stamina || sprint_active || sprint_lockout_remaining > 0.0) {
+        if should_draw_stamina_bar_for_player(this) && (current_stamina < max_stamina || sprint_active || sprint_lockout_remaining > 0.0) {
             draw_stamina_bar(this);
         }
 
         this.draw_entity_status_debuff_icons();
         this.draw_jumpscare_overlay();
 
-        if this.is_local() && this.is_round_entity() && is_entity_flashbanged(this) {
+        if this.is_local() && (this.is_round_entity() || this.is_round_minion()) && is_entity_flashbanged(this) {
             this.draw_entity_flashbang_blackout_overlay();
         }
 
@@ -1524,13 +1769,16 @@ Player :: class : Player_Base {
         if round_dead || round_downed {
             return false;
         }
-        if this.is_round_entity() && is_entity_flashbanged(this) {
+        if (this.is_round_entity() || this.is_round_minion()) && is_entity_flashbanged(this) {
             return false;
         }
-        if this.is_round_entity() && ability.#type == Sprint_Ability {
+        if (this.is_round_entity() || this.is_round_minion()) && ability.#type == Sprint_Ability {
             return false;
         }
         if this.is_round_entity() && !is_entity_ability_unlocked(ability) {
+            return false;
+        }
+        if this.is_round_minion() && ability.#type != Minion_Bite_Ability && ability.#type != Minion_Sprint_Ability {
             return false;
         }
         return true;
@@ -1548,7 +1796,7 @@ Player :: class : Player_Base {
             return false;
         }
 
-        if this.is_round_entity() {
+        if this.is_round_entity() || this.is_round_minion() {
             listener := interactable.listener;
             if #alive(listener) && listener.#type == Dropped_Item {
                 return false;
@@ -2066,7 +2314,7 @@ Player :: class : Player_Base {
     }
 
     sync_entity_name_visibility :: proc(using this: Player) {
-        should_hide_name := this.is_round_entity() || is_hidden_by_round_dead_local_view(this) || (is_hidden_by_entity_local_view(this) && !is_revealed_in_entity_local_view(this));
+        should_hide_name := this.is_round_entity() || this.is_round_minion() || is_hidden_by_round_dead_local_view(this) || (is_hidden_by_entity_local_view(this) && !is_revealed_in_entity_local_view(this));
         if should_hide_name == entity_name_hidden {
             return;
         }
@@ -2083,7 +2331,7 @@ Player :: class : Player_Base {
     update_entity_local_nameplate_visibility :: proc(using this: Player) {
         this.sync_entity_name_visibility();
 
-        if this.is_round_entity() {
+        if this.is_round_entity() || this.is_round_minion() {
             do_name_color_override = false;
             return;
         }
@@ -2538,6 +2786,21 @@ Player :: class : Player_Base {
         }
     }
 
+}
+
+is_entity_ability_type_unlocked :: proc(player: Player, $T: typeid) -> bool {
+    if player == null {
+        return false;
+    }
+
+    for i: 0..player.abilities.count - 1 {
+        ability := player.abilities[i];
+        if ability.type == T {
+            return is_entity_ability_unlocked(ability);
+        }
+    }
+
+    return false;
 }
 
 draw_entity_ability_button :: proc(player: Player, $T: typeid, index: int, unlocked_icon_path: string) {

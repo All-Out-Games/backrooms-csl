@@ -3,14 +3,21 @@ import "core:ao"
 ENTITY_FLASHBANG_TRIGGER_RADIUS :: 8.0;
 ENTITY_FLASHBANG_EFFECT_SECONDS :: 2.5;
 ENTITY_FLASHBANG_MOVEMENT_MULTIPLIER :: 0.35;
+MINION_FLASHBANG_STUN_SECONDS :: 3.0;
+MINION_FLASHBANG_MOVEMENT_MULTIPLIER :: 0.0;
 ENTITY_FLASHBANG_FADE_IN_SECONDS :: 0.25;
 ENTITY_FLASHBANG_FADE_OUT_SECONDS :: 0.45;
 
 Entity_Flashbang_Effect :: class : Effect_Base {
     intensity: float;
+    duration_seconds: float;
 
     effect_start :: method() {
-        set_duration(ENTITY_FLASHBANG_EFFECT_SECONDS);
+        duration := duration_seconds;
+        if duration <= 0.0 {
+            duration = ENTITY_FLASHBANG_EFFECT_SECONDS;
+        }
+        set_duration(duration);
     }
 }
 
@@ -32,7 +39,11 @@ get_entity_flashbang_alpha :: proc(player: Player) -> float {
     }
 
     elapsed := effect.get_elapsed_time();
-    remaining := ENTITY_FLASHBANG_EFFECT_SECONDS - elapsed;
+    duration := effect.duration_seconds;
+    if duration <= 0.0 {
+        duration = ENTITY_FLASHBANG_EFFECT_SECONDS;
+    }
+    remaining := duration - elapsed;
     alpha := clamp(effect.intensity, 0.0, 1.0);
 
     if ENTITY_FLASHBANG_FADE_IN_SECONDS > 0.0 && elapsed < ENTITY_FLASHBANG_FADE_IN_SECONDS {
@@ -45,19 +56,30 @@ get_entity_flashbang_alpha :: proc(player: Player) -> float {
     return clamp(alpha, 0.0, 1.0);
 }
 
-apply_flashbang_effect_to_entity_player :: proc(explosion_pos: v2) {
-    entity_player := get_round_entity_player();
-    if !#alive(entity_player) || !#alive(entity_player.entity) {
+apply_flashbang_effect_to_monster_player :: proc(player: Player, explosion_pos: v2, duration_seconds: float) {
+    if !#alive(player) || !#alive(player.entity) {
         return;
     }
-    if !entity_player.is_round_entity() {
-        return;
-    }
-    if length(entity_player.entity.world_position - explosion_pos) > ENTITY_FLASHBANG_TRIGGER_RADIUS {
+    if length(player.entity.world_position - explosion_pos) > ENTITY_FLASHBANG_TRIGGER_RADIUS {
         return;
     }
 
     effect := new(Entity_Flashbang_Effect);
     effect.intensity = 1.0;
-    entity_player.entity.add_passive_effect(effect);
+    effect.duration_seconds = duration_seconds;
+    player.entity.add_passive_effect(effect);
+}
+
+apply_flashbang_effect_to_entity_player :: proc(explosion_pos: v2) {
+    entity_player := get_round_entity_player();
+    if #alive(entity_player) && entity_player.is_round_entity() {
+        apply_flashbang_effect_to_monster_player(entity_player, explosion_pos, ENTITY_FLASHBANG_EFFECT_SECONDS);
+    }
+
+    for player: component_iterator(Player) {
+        if !player.is_round_minion() {
+            continue;
+        }
+        apply_flashbang_effect_to_monster_player(player, explosion_pos, MINION_FLASHBANG_STUN_SECONDS);
+    }
 }

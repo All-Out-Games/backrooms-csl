@@ -1,0 +1,341 @@
+ENTITY_CONVERT_MINION_RANGE :: 2.4;
+ENTITY_CONVERT_MINION_EFFECT_SECONDS :: ENTITY_VOMIT_EFFECT_SECONDS;
+ENTITY_CONVERT_MINION_HIT_DELAY_SECONDS :: ENTITY_VOMIT_SPAWN_DELAY_SECONDS;
+ENTITY_CONVERT_MINION_COOLDOWN_SECONDS :: 35.0;
+
+MINION_BITE_RANGE :: 2.0;
+MINION_BITE_EFFECT_SECONDS :: ENTITY_BITE_EFFECT_SECONDS;
+MINION_BITE_COOLDOWN_SECONDS :: 6.0;
+MINION_BITE_SLOW_SECONDS :: 5.0;
+MINION_BITE_SLOW_MOVEMENT_MULTIPLIER :: 0.50;
+MINION_SPRINT_STAMINA_MAX :: 100.0;
+MINION_SPRINT_STAMINA_DRAIN_PER_SECOND :: 45.0;
+MINION_SPRINT_STAMINA_REGEN_PER_SECOND :: 20.0;
+MINION_SPRINT_STAMINA_MOVING_REGEN_PER_SECOND :: 5.0;
+MINION_SPRINT_MOVEMENT_MULTIPLIER :: 1.45;
+MINION_SPRINT_ANIMATION_SPEED_MULTIPLIER :: 1.20;
+MINION_SPRINT_EXHAUST_LOCKOUT_SECONDS :: 1.0;
+
+find_downed_minion_conversion_target :: proc(entity_player: Player) -> Player {
+    if entity_player == null || !#alive(entity_player.entity) {
+        return null;
+    }
+
+    best_target: Player;
+    best_distance_sq := ENTITY_CONVERT_MINION_RANGE * ENTITY_CONVERT_MINION_RANGE;
+    found_target := false;
+    origin := entity_player.entity.world_position;
+
+    for other: component_iterator(Player) {
+        if other == entity_player continue;
+        if !other.is_round_downed() continue;
+        if other.is_round_minion() continue;
+        if !#alive(other.entity) continue;
+        if !is_entity_reveal_active(other) continue;
+
+        delta := other.entity.world_position - origin;
+        distance_sq := delta.x * delta.x + delta.y * delta.y;
+        if distance_sq > ENTITY_CONVERT_MINION_RANGE * ENTITY_CONVERT_MINION_RANGE continue;
+
+        if !found_target || distance_sq < best_distance_sq {
+            best_target = other;
+            best_distance_sq = distance_sq;
+            found_target = true;
+        }
+    }
+
+    if !found_target {
+        return null;
+    }
+    return best_target;
+}
+
+convert_downed_player_to_minion :: proc(entity_player: Player, target: Player) -> bool {
+    if entity_player == null || !entity_player.is_round_entity() {
+        return false;
+    }
+    if target == null || !target.is_round_downed() || target.is_round_minion() {
+        return false;
+    }
+    if !#alive(entity_player.entity) || !#alive(target.entity) {
+        return false;
+    }
+    if !target.convert_to_minion() {
+        return false;
+    }
+
+    ping_survivor_with_entity_scream(entity_player, target);
+    return true;
+}
+
+Entity_Convert_Minion_Effect :: class : Effect_Base {
+    target: Player;
+    converted: bool;
+
+    effect_start :: method() {
+        player_specific.freeze_player = true;
+        set_duration(ENTITY_CONVERT_MINION_EFFECT_SECONDS);
+        converted = false;
+
+        if player == null {
+            return;
+        }
+        if #alive(player.agent) {
+            player.agent.velocity = v2{0.0, 0.0};
+        }
+        if !player.ensure_entity_override_rig() {
+            return;
+        }
+        if player.entity_override_state_machine == null {
+            return;
+        }
+
+        player.entity_override_state_machine.set_trigger("convertbreath");
+    }
+
+    effect_update :: method(dt: float) {
+        if player != null && #alive(player.agent) {
+            player.agent.velocity = v2{0.0, 0.0};
+        }
+
+        if converted || get_elapsed_time() < ENTITY_CONVERT_MINION_HIT_DELAY_SECONDS {
+            return;
+        }
+
+        converted = true;
+        if target == null {
+            target = find_downed_minion_conversion_target(player);
+        }
+        convert_downed_player_to_minion(player, target);
+    }
+}
+
+Entity_Convert_Minion_Ability :: class : Ability_Base {
+    on_init :: method() {
+        name = "Convert";
+        icon = get_asset(Texture_Asset, ENTITY_VOMIT_ICON_PATH);
+    }
+
+    can_use :: method() -> bool {
+        if player == null || !player.is_round_entity() {
+            return false;
+        }
+
+        gm := get_game_manager();
+        if !#alive(gm) || gm.phase != .ACTIVE {
+            return false;
+        }
+
+        if !player.ensure_entity_override_rig() {
+            return false;
+        }
+        if player.entity.get_active_effect() != null {
+            return false;
+        }
+
+        return find_downed_minion_conversion_target(player) != null;
+    }
+
+    on_update :: method(params: ref Ability_Update_Params) {
+        if !params.clicked || !params.can_use {
+            return;
+        }
+
+        effect := new(Entity_Convert_Minion_Effect);
+        effect.target = find_downed_minion_conversion_target(player);
+        player.entity.set_active_effect(effect);
+        play_entity_vomit_sfx(player);
+        current_cooldown = ENTITY_CONVERT_MINION_COOLDOWN_SECONDS;
+    }
+
+    on_draw_button :: proc(instance: Entity_Convert_Minion_Ability, rect: Rect) {
+        draw_ability_name_label(rect, "Convert");
+    }
+}
+
+find_minion_bite_target :: proc(minion: Player) -> Player {
+    if minion == null || !#alive(minion.entity) {
+        return null;
+    }
+
+    best_target: Player;
+    best_distance_sq := MINION_BITE_RANGE * MINION_BITE_RANGE;
+    found_target := false;
+    origin := minion.entity.world_position;
+
+    for other: component_iterator(Player) {
+        if other == minion continue;
+        if !other.is_round_survivor() continue;
+        if other.is_round_downed() || other.is_round_dead() continue;
+        if !#alive(other.entity) continue;
+        if other.entity_local_view_alpha <= 0.0 continue;
+
+        delta := other.entity.world_position - origin;
+        distance_sq := delta.x * delta.x + delta.y * delta.y;
+        if distance_sq > MINION_BITE_RANGE * MINION_BITE_RANGE continue;
+
+        if !found_target || distance_sq < best_distance_sq {
+            best_target = other;
+            best_distance_sq = distance_sq;
+            found_target = true;
+        }
+    }
+
+    if !found_target {
+        return null;
+    }
+    return best_target;
+}
+
+Minion_Bite_Slow_Effect :: class : Effect_Base {
+    effect_start :: method() {
+        set_duration(MINION_BITE_SLOW_SECONDS);
+        if player != null && player.animator != null && player.animator.state_machine != null {
+            player.minion_bite_hit_react_remaining = MINION_BITE_EFFECT_SECONDS;
+            player.animator.state_machine.set_trigger("minion_bite_hit");
+        }
+    }
+}
+
+apply_minion_bite_to_survivor :: proc(minion: Player, target: Player) -> bool {
+    if minion == null || !minion.is_round_minion() {
+        return false;
+    }
+    if target == null || !target.is_round_survivor() || target.is_round_downed() || target.is_round_dead() {
+        return false;
+    }
+    if !#alive(target.entity) {
+        return false;
+    }
+
+    slow := new(Minion_Bite_Slow_Effect);
+    target.entity.add_passive_effect(slow);
+
+    entity_player := get_round_entity_player();
+    ping_survivor_with_entity_scream(entity_player, target);
+    play_entity_bite_sfx(minion);
+    return true;
+}
+
+Minion_Bite_Effect :: class : Effect_Base {
+    effect_start :: method() {
+        player_specific.freeze_player = true;
+        set_duration(MINION_BITE_EFFECT_SECONDS);
+
+        if player == null {
+            return;
+        }
+        if !player.ensure_minion_override_rig() {
+            return;
+        }
+        if player.minion_override_state_machine != null {
+            player.minion_override_state_machine.set_trigger("hatch");
+        }
+
+        target := find_minion_bite_target(player);
+        if target == null {
+            return;
+        }
+
+        apply_minion_bite_to_survivor(player, target);
+    }
+}
+
+Minion_Bite_Ability :: class : Ability_Base {
+    on_init :: method() {
+        name = "Bite";
+        icon = get_asset(Texture_Asset, "AbilityIcons/Bite.png");
+    }
+
+    can_use :: method() -> bool {
+        if player == null || !player.is_round_minion() {
+            return false;
+        }
+
+        gm := get_game_manager();
+        if !#alive(gm) || gm.phase != .ACTIVE {
+            return false;
+        }
+
+        if !player.ensure_minion_override_rig() {
+            return false;
+        }
+
+        return player.entity.get_active_effect() == null && find_minion_bite_target(player) != null;
+    }
+
+    on_update :: method(params: ref Ability_Update_Params) {
+        if !params.clicked || !params.can_use {
+            return;
+        }
+
+        effect := new(Minion_Bite_Effect);
+        player.entity.set_active_effect(effect);
+        current_cooldown = MINION_BITE_COOLDOWN_SECONDS;
+    }
+
+    on_draw_button :: proc(instance: Minion_Bite_Ability, rect: Rect) {
+        draw_ability_name_label(rect, "Bite");
+    }
+}
+
+Minion_Sprint_Ability :: class : Ability_Base {
+    on_init :: method() {
+        ensure_sprint_resources();
+        name = "Sprint";
+        icon = get_asset(Texture_Asset, "AbilityIcons/SprintIcon.png");
+        disable_keybind = true;
+    }
+
+    can_use :: method() -> bool {
+        if player == null || player.agent == null {
+            return false;
+        }
+        if !player.is_round_minion() {
+            return false;
+        }
+
+        gm := get_game_manager();
+        if !#alive(gm) || gm.phase != .ACTIVE {
+            return false;
+        }
+
+        if player.entity.get_active_effect() != null {
+            return false;
+        }
+        if is_entity_flashbanged(player) {
+            return false;
+        }
+
+        return player.current_stamina > 0.0 && player.sprint_lockout_remaining <= 0.0;
+    }
+
+    on_update :: method(params: ref Ability_Update_Params) {
+        player.sprint_input_held = get_sprint_input_held(player, ref params) && params.can_use;
+    }
+
+    on_draw_button :: proc(instance: Minion_Sprint_Ability, rect: Rect) {
+        if instance.player.device_kind != .PC return;
+        if sprint_shift_icon == null return;
+
+        icon_rect := rect.top_left_rect().grow(35).offset(10, -10);
+        UI.quad(icon_rect.fit_aspect(sprint_shift_icon.get_aspect(), .KEEP_BIGGER), sprint_shift_icon);
+    }
+}
+
+minion :: proc(player: Player) {
+    gm := get_game_manager();
+    if !#alive(gm) || (gm.phase != .SURVIVOR_HEAD_START && gm.phase != .ACTIVE) {
+        Notifier.notify(player, "Start a round before using /minion.");
+        return;
+    }
+    if player.is_round_entity() {
+        Notifier.notify(player, "The Entity cannot become a minion.");
+        return;
+    }
+    if !player.convert_to_minion() {
+        Notifier.notify(player, "Could not convert to minion.");
+        return;
+    }
+    Notifier.notify(player, "Converted to minion.");
+} @chat_command

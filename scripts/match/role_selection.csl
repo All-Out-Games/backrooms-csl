@@ -204,7 +204,6 @@ draw_role_selection_ui :: proc(player: Player) {
     spine_rect = spine_rect.offset(0.0, -400.0);
 
     if player != null && target_role == .ENTITY && player.ensure_entity_override_rig() && #alive(player.override_rig) && player.override_rig.instance != null {
-        player.override_rig.set_animation("idle", true, 0);
         UI.spine(spine_rect.center(), player.override_rig.instance, v2{200.0, 200.0}, 0.0);
     } else if player != null && player.animator != null && player.animator.instance != null {
         UI.push_player_material(player);
