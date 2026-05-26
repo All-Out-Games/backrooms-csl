@@ -1,6 +1,7 @@
 import "core:ao"
 
-WARP_TO_BACKROOMS_PROMPT :: "Enter Backrooms";
+WARP_TO_BACKROOMS_PROMPT :: "Enter the Backrooms";
+WARP_TO_NEXT_LEVEL_PROMPT :: "To Next Level";
 
 WarpToBackrooms :: class : Interactable {
     destination_entity: Entity @ao_serialize;
@@ -8,7 +9,11 @@ WarpToBackrooms :: class : Interactable {
 
     ao_start :: method() {
         this.set_listener(this);
-        this.set_text(WARP_TO_BACKROOMS_PROMPT);
+        if RequireReconnectWires {
+            this.set_text(WARP_TO_NEXT_LEVEL_PROMPT);
+        } else {
+            this.set_text(WARP_TO_BACKROOMS_PROMPT);
+        }
         required_hold_time = 0.0;
         priority = 10;
     }

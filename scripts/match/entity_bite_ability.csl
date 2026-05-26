@@ -5,7 +5,7 @@ ENTITY_BITE_EFFECT_SECONDS :: 0.567;
 ENTITY_BITE_COOLDOWN_SECONDS :: 5.0;
 ENTITY_BITE_DEATH_FREEZE_SECONDS :: 2.0;
 DOWNED_SCREAM_EFFECT_SECONDS :: 0.9;
-DOWNED_SURVIVOR_SCREAM_SFX_PATH :: "scream_d7106e.wav";
+DOWNED_SURVIVOR_SCREAM_SFX_PATH :: "SFX/battle_cry.wav";
 
 play_entity_bite_sfx :: proc(player: Player) {
     if player == null || !#alive(player.entity) return;

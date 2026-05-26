@@ -3,7 +3,7 @@
 1795272222
 {
   "name": "almond_water.png",
-  "local_enabled": true,
+  "local_enabled": false,
   "local_position": {
     "X": -3.1272735595703125,
     "Y": 1.7070536613464355

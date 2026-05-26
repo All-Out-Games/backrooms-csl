@@ -95,6 +95,9 @@ draw_stamina_bar :: proc(player: Player) {
     UI.push_scale_factor(5.0 / 540.0);
     defer UI.pop_scale_factor();
 
+    UI.push_player_material(player);
+    defer UI.pop_material();
+
     stamina_rect := player.username_rect.top_center_rect().offset(0, 5);
     stamina_rect = stamina_rect.grow(13, 70, 0, 70);
     border_rect := stamina_rect.grow(5.5, 4, 5.5, 4).offset(0, -2);

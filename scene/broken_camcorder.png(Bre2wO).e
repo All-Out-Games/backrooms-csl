@@ -3,7 +3,7 @@
 1803250702
 {
   "name": "broken_camcorder.png",
-  "local_enabled": true,
+  "local_enabled": false,
   "local_position": {
     "X": -2.2877960205078125,
     "Y": 1.6902308464050293

@@ -69,8 +69,8 @@ consume_equipped_stim :: proc(player: Player) -> bool {
 
 Stim_Ability :: class : Ability_Base {
     on_init :: method() {
-        name = "Stim";
-        icon = get_asset(Texture_Asset, "AbilityIcons/syringe_front.png");
+        name = "Almond Water";
+        icon = get_asset(Texture_Asset, "sprites/Zone1b/almond_water.png");
         disable_keybind = true;
     }
 
@@ -83,14 +83,14 @@ Stim_Ability :: class : Ability_Base {
     }
 
     on_draw_button :: proc(instance: Stim_Ability, rect: Rect) {
-        draw_ability_name_label(rect, "Stim");
+        draw_ability_name_label(rect, "Almond Water");
     }
 }
 
 Stim_Boost_Ability :: class : Ability_Base {
     on_init :: method() {
-        name = "Boost";
-        icon = get_asset(Texture_Asset, "AbilityIcons/syringe_front.png");
+        name = "Almond Water";
+        icon = get_asset(Texture_Asset, "sprites/Zone1b/almond_water.png");
     }
 
     can_use :: method() -> bool {
@@ -126,6 +126,6 @@ Stim_Boost_Ability :: class : Ability_Base {
     }
 
     on_draw_button :: proc(instance: Stim_Boost_Ability, rect: Rect) {
-        draw_ability_name_label(rect, "Boost");
+        draw_ability_name_label(rect, "Almond Water");
     }
 }

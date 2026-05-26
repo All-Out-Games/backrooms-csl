@@ -25,6 +25,7 @@ setup_reusable_weapons_player_state_machine :: proc(player: Player) {
     }
     downed_var := sm.create_variable("downed", .BOOL);
     downed_hit_reacting_var := sm.create_variable("downed_hit_reacting", .BOOL);
+    end_game_cutscene_var := sm.create_variable("end_game_cutscene", .BOOL);
     sprint_state := base_layer.create_state("SL/Sprint", true);
 
     //--- Base Layer: IK variables ---//
@@ -36,6 +37,7 @@ setup_reusable_weapons_player_state_machine :: proc(player: Player) {
     idle_to_run.create_bool_condition(sprinting_var, false);
     idle_to_run.create_bool_condition(round_dead_var, false);
     idle_to_run.create_bool_condition(downed_var, false);
+    idle_to_run.create_bool_condition(end_game_cutscene_var, false);
     idle_to_run.create_bool_condition(use_2h_ik, false);
     idle_to_run.create_bool_condition(use_1h_ik, false);
 
@@ -44,6 +46,7 @@ setup_reusable_weapons_player_state_machine :: proc(player: Player) {
     to_normal_run.create_bool_condition(sprinting_var, false);
     to_normal_run.create_bool_condition(round_dead_var, false);
     to_normal_run.create_bool_condition(downed_var, false);
+    to_normal_run.create_bool_condition(end_game_cutscene_var, false);
     to_normal_run.create_bool_condition(use_2h_ik, false);
     to_normal_run.create_bool_condition(use_1h_ik, false);
 
@@ -51,6 +54,7 @@ setup_reusable_weapons_player_state_machine :: proc(player: Player) {
     idle_to_ghost_run.create_bool_condition(moving_var, true);
     idle_to_ghost_run.create_bool_condition(round_dead_var, true);
     idle_to_ghost_run.create_bool_condition(ghost_form_var, true);
+    idle_to_ghost_run.create_bool_condition(end_game_cutscene_var, false);
     idle_to_ghost_run.create_bool_condition(use_2h_ik, false);
     idle_to_ghost_run.create_bool_condition(use_1h_ik, false);
 
@@ -58,6 +62,7 @@ setup_reusable_weapons_player_state_machine :: proc(player: Player) {
     to_ghost_run.create_bool_condition(moving_var, true);
     to_ghost_run.create_bool_condition(round_dead_var, true);
     to_ghost_run.create_bool_condition(ghost_form_var, true);
+    to_ghost_run.create_bool_condition(end_game_cutscene_var, false);
     to_ghost_run.create_bool_condition(use_2h_ik, false);
     to_ghost_run.create_bool_condition(use_1h_ik, false);
 
@@ -114,6 +119,7 @@ setup_reusable_weapons_player_state_machine :: proc(player: Player) {
     to_sprint.create_bool_condition(moving_var, true);
     to_sprint.create_bool_condition(round_dead_var, false);
     to_sprint.create_bool_condition(downed_var, false);
+    to_sprint.create_bool_condition(end_game_cutscene_var, false);
     to_sprint.create_bool_condition(use_2h_ik, false);
     to_sprint.create_bool_condition(use_1h_ik, false);
 
@@ -122,6 +128,7 @@ setup_reusable_weapons_player_state_machine :: proc(player: Player) {
     back_to_run.create_bool_condition(moving_var, true);
     back_to_run.create_bool_condition(sprinting_var, false);
     back_to_run.create_bool_condition(round_dead_var, false);
+    back_to_run.create_bool_condition(end_game_cutscene_var, false);
     back_to_run.create_bool_condition(use_2h_ik, false);
     back_to_run.create_bool_condition(use_1h_ik, false);
 
@@ -132,10 +139,14 @@ setup_reusable_weapons_player_state_machine :: proc(player: Player) {
     sprint_to_aim_run_2h := base_layer.create_transition(sprint_state, aim_run_2h, false);
     sprint_to_aim_run_2h.create_bool_condition(moving_var, true);
     sprint_to_aim_run_2h.create_bool_condition(round_dead_var, false);
+    sprint_to_aim_run_2h.create_bool_condition(end_game_cutscene_var, false);
     sprint_to_aim_run_2h.create_bool_condition(use_2h_ik, true);
-    base_layer.create_transition(ao_idle, aim_idle_2h, false).create_bool_condition(use_2h_ik, true);
+    idle_to_aim_2h := base_layer.create_transition(ao_idle, aim_idle_2h, false);
+    idle_to_aim_2h.create_bool_condition(use_2h_ik, true);
+    idle_to_aim_2h.create_bool_condition(end_game_cutscene_var, false);
     run_to_aim_2h := base_layer.create_transition(ao_run, aim_run_2h, false);
     run_to_aim_2h.create_bool_condition(use_2h_ik, true);
+    run_to_aim_2h.create_bool_condition(end_game_cutscene_var, false);
     idle_to_aim_run_2h := base_layer.create_transition(aim_idle_2h, aim_run_2h, false);
     idle_to_aim_run_2h.create_bool_condition(moving_var, true);
     base_layer.create_transition(aim_run_2h, aim_idle_2h, false).create_bool_condition(moving_var, false);
@@ -149,10 +160,14 @@ setup_reusable_weapons_player_state_machine :: proc(player: Player) {
     sprint_to_aim_run_1h := base_layer.create_transition(sprint_state, aim_run_1h, false);
     sprint_to_aim_run_1h.create_bool_condition(moving_var, true);
     sprint_to_aim_run_1h.create_bool_condition(round_dead_var, false);
+    sprint_to_aim_run_1h.create_bool_condition(end_game_cutscene_var, false);
     sprint_to_aim_run_1h.create_bool_condition(use_1h_ik, true);
-    base_layer.create_transition(ao_idle, aim_idle_1h, false).create_bool_condition(use_1h_ik, true);
+    idle_to_aim_1h := base_layer.create_transition(ao_idle, aim_idle_1h, false);
+    idle_to_aim_1h.create_bool_condition(use_1h_ik, true);
+    idle_to_aim_1h.create_bool_condition(end_game_cutscene_var, false);
     run_to_aim_1h := base_layer.create_transition(ao_run, aim_run_1h, false);
     run_to_aim_1h.create_bool_condition(use_1h_ik, true);
+    run_to_aim_1h.create_bool_condition(end_game_cutscene_var, false);
     idle_to_aim_run_1h := base_layer.create_transition(aim_idle_1h, aim_run_1h, false);
     idle_to_aim_run_1h.create_bool_condition(moving_var, true);
     base_layer.create_transition(aim_run_1h, aim_idle_1h, false).create_bool_condition(moving_var, false);
@@ -244,11 +259,8 @@ setup_reusable_weapons_player_state_machine :: proc(player: Player) {
         dance_state = base_layer.create_state("Emote/Dance", true);
     }
     if dance_state != null {
-        dance_trigger := sm.try_get_variable("dance1");
-        if dance_trigger == null {
-            dance_trigger = sm.create_variable("dance1", .TRIGGER);
-        }
-        base_layer.create_global_transition(dance_state, true).create_trigger_condition(dance_trigger);
+        to_dance := base_layer.create_global_transition(dance_state, false);
+        to_dance.create_bool_condition(end_game_cutscene_var, true);
     }
 
     jumpscare_state := base_layer.try_get_state("Emote/Jumpscare");

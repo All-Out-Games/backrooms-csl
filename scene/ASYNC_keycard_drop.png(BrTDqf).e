@@ -3,7 +3,7 @@
 1800157855
 {
   "name": "ASYNC_keycard_drop.png",
-  "local_enabled": true,
+  "local_enabled": false,
   "local_position": {
     "X": -1.3347167968750000,
     "Y": 1.6721806526184082

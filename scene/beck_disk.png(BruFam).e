@@ -3,7 +3,7 @@
 1807242918
 {
   "name": "beck_disk.png",
-  "local_enabled": true,
+  "local_enabled": false,
   "local_position": {
     "X": -3.8771514892578125,
     "Y": 1.6532778739929199

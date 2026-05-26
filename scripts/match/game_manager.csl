@@ -1636,11 +1636,32 @@ Game_Manager :: class : Component {
     }
 
     spawn_async_corpse_loot :: method(position: v2) -> bool {
-        dropped_item := spawn_weighted_round_item_at_position(position);
-        if !#alive(dropped_item) {
+        init_weapon_items();
+        keycard_def := get_registered_item_def_by_id(ASYNC_KEYCARD_ITEM_ID);
+        if keycard_def == null {
             return false;
         }
 
+        item := Items.create_item_instance(keycard_def, 1);
+        dropped_item := Dropped_Item.spawn(position, item);
+        if !#alive(dropped_item) {
+            if #alive(item) {
+                Items.destroy_item_instance(item);
+            }
+            return false;
+        }
+
+        install_ghost_item_ping_listener(dropped_item);
+        if dropped_item.sprite != null {
+            dropped_item.sprite.mask_in_shadow = true;
+        }
+        if dropped_item.starburst != null {
+            dropped_item.starburst.mask_in_shadow = true;
+        }
+        if dropped_item.shadow != null {
+            dropped_item.shadow.mask_in_shadow = true;
+        }
+        dropped_item.despawn_time_start = get_time() + (ROUND_ITEM_DESPAWN_TOTAL_SECONDS - ROUND_ITEM_ENGINE_DESPAWN_WINDOW_SECONDS);
         spawned_round_items.append(dropped_item);
         return true;
     }

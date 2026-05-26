@@ -3,6 +3,7 @@ TASK_ID_ENTER_KEYCODE     :: "enter_keycode";
 TASK_ID_RESTART_GENERATOR :: "restart_generator";
 TASK_ID_LIGHTS_OUT_GENERATOR :: "lights_out_generator";
 TASK_ID_RECONNECT_WIRE    :: "reconnect_wire";
+TASK_ID_FIND_ASYNC_KEYCARDS :: "find_async_keycards";
 TASK_ID_REPAIR_LAPTOP     :: "repair_laptop";
 TASK_ID_FIX_CAMERA        :: "fix_camera";
 
@@ -229,6 +230,9 @@ is_task_unlocked_for_player :: proc(player: Player, task_id: string) -> bool {
     if task_id == TASK_ID_RECONNECT_WIRE {
         return is_task_completed(player, TASK_ID_FIX_CAMERA);
     }
+    if task_id == TASK_ID_FIND_ASYNC_KEYCARDS {
+        return is_task_completed(player, TASK_ID_RECONNECT_WIRE);
+    }
     if task_id == TASK_ID_REPAIR_LAPTOP {
         return true;
     }
@@ -345,6 +349,7 @@ get_task_display_name :: proc(task_id: string) -> string {
         case TASK_ID_RESTART_GENERATOR: return "Restart Generator";
         case TASK_ID_LIGHTS_OUT_GENERATOR: return "Restart Generator";
         case TASK_ID_RECONNECT_WIRE:    return "Viewfinder: Wires Panel";
+        case TASK_ID_FIND_ASYNC_KEYCARDS: return "Find Async Keycards";
         case TASK_ID_REPAIR_LAPTOP:     return "Repair Laptop";
         case TASK_ID_FIX_CAMERA:        return "Find and Fix handheld Camera";
     }
@@ -367,6 +372,9 @@ get_task_description :: proc(task_id: string) -> string {
         }
         case TASK_ID_RECONNECT_WIRE: {
             return "Use the Viewfinder to reveal the Wires panel, then repair the circuit powering the blast door.";
+        }
+        case TASK_ID_FIND_ASYNC_KEYCARDS: {
+            return "Search the facility for Async keycards.";
         }
         case TASK_ID_REPAIR_LAPTOP: {
             return "Drag each piece back into its correct slot on the laptop.";
@@ -516,6 +524,10 @@ update_survivor_task_progression :: proc(player: Player) {
         wire_task.started = true;
         wire_task.complete_attempt(player, true);
         return;
+    }
+
+    if is_task_completed_for_player(player, wire_task) {
+        ensure_task_assigned(player, TASK_ID_FIND_ASYNC_KEYCARDS);
     }
 
     gm := get_game_manager();

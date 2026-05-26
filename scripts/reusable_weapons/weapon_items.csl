@@ -1,6 +1,8 @@
 WEAPON_COUNT :: 31;
 AMMO_TYPE_COUNT :: 10;
-UTILITY_ITEM_COUNT :: 9;
+UTILITY_ITEM_COUNT :: 10;
+
+ASYNC_KEYCARD_ITEM_ID :: "async_keycard";
 
 g_weapon_item_defs: [WEAPON_COUNT]Item_Definition;
 g_ammo_item_defs: [AMMO_TYPE_COUNT]Item_Definition;
@@ -187,6 +189,12 @@ get_utility_item_info :: proc(index: s64) -> Utility_Item_Info {
             info.id = "tape_vhs_green";
             info.name = "Green VHS Tape";
             info.icon_path = "tapes/vhs_green.png";
+            info.stack_size = 1;
+        }
+        case 9: {
+            info.id = ASYNC_KEYCARD_ITEM_ID;
+            info.name = "Async Keycard";
+            info.icon_path = "sprites/Zone1b/ASYNC_keycard_drop.png";
             info.stack_size = 1;
         }
     }
