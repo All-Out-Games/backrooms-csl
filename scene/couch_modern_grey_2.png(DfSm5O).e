@@ -5,10 +5,10 @@
   "name": "couch_modern_grey_2.png",
   "local_enabled": true,
   "local_position": {
-    "X": -0.0166778564453125,
-    "Y": 3.0665206909179688
+    "X": -4.7719421386718750,
+    "Y": 24.5650024414062500
   },
-  "local_rotation": 0,
+  "local_rotation": -10.5646505355834961,
   "local_scale": {
     "X": 1,
     "Y": 1

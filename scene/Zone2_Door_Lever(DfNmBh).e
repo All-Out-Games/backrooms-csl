@@ -5,7 +5,7 @@
   "name": "Zone2_Door_Lever",
   "local_enabled": true,
   "local_position": {
-    "X": 14.8153686523437500,
+    "X": 15.3187713623046875,
     "Y": 54.4564514160156250
   },
   "local_rotation": 0,

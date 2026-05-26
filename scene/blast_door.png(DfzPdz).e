@@ -5,8 +5,8 @@
   "name": "blast_door.png",
   "local_enabled": true,
   "local_position": {
-    "X": 3.5702056884765625,
-    "Y": 6.5629119873046875
+    "X": 3.1031188964843750,
+    "Y": 5.5573272705078125
   },
   "local_rotation": 0,
   "local_scale": {
