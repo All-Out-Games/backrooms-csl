@@ -5,8 +5,8 @@
   "name": "Generator",
   "local_enabled": true,
   "local_position": {
-    "X": 172.6538543701171875,
-    "Y": 138.7872161865234375
+    "X": 171.3375701904296875,
+    "Y": 149.1277770996093750
   },
   "local_rotation": 0,
   "local_scale": {

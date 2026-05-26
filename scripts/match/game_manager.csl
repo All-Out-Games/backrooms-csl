@@ -899,6 +899,7 @@ Game_Manager :: class : Component {
     entity_next_zone_progression_unlocked: bool;
     entity_jumpscare_sabotage_unlocked: bool;
     round_tapes_collected: [8]bool;
+    async_keycard_pickup_notifications_sent: int;
     lights_out_active: bool;
     lights_out_cooldown_ends_at: float;
     lights_out_generator_was_solved: bool;
@@ -943,6 +944,7 @@ Game_Manager :: class : Component {
         task_zone_task_id = "";
         entity_next_zone_progression_unlocked = false;
         entity_jumpscare_sabotage_unlocked = false;
+        async_keycard_pickup_notifications_sent = 0;
         lights_out_active = false;
         lights_out_cooldown_ends_at = 0.0;
         lights_out_generator_was_solved = false;
@@ -2345,6 +2347,7 @@ Game_Manager :: class : Component {
         clear_all_corpses();
         clear_all_barricades();
         reset_round_tapes_collected();
+        async_keycard_pickup_notifications_sent = 0;
         reset_all_keycard_scanners_for_round();
         reset_all_door_levels_for_round();
         set_zone3_blast_doors_open(false);
@@ -2563,6 +2566,7 @@ Game_Manager :: class : Component {
         round_start_transition_finished = false;
         entity_next_zone_progression_unlocked = false;
         entity_jumpscare_sabotage_unlocked = false;
+        async_keycard_pickup_notifications_sent = 0;
         hide_task_zone();
     }
 

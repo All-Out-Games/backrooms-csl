@@ -92,6 +92,30 @@ is_alive_survivor_for_item_ping :: proc(player: Player) -> bool {
     return true;
 }
 
+notify_async_keycard_pickup_if_needed :: proc(player: Player, survivor_keycards_before: int, item_id: string) {
+    if item_id != ASYNC_KEYCARD_ITEM_ID || player == null || !player.is_round_survivor() {
+        return;
+    }
+
+    survivor_keycards_after := count_survivor_inventory_item_id(ASYNC_KEYCARD_ITEM_ID);
+    if survivor_keycards_after <= survivor_keycards_before {
+        return;
+    }
+
+    gm := get_game_manager();
+    if !#alive(gm) || gm.async_keycard_pickup_notifications_sent >= TASK_ASYNC_KEYCARDS_REQUIRED {
+        return;
+    }
+
+    gm.async_keycard_pickup_notifications_sent += 1;
+    for survivor: component_iterator(Player) {
+        if !gm.is_survivor_player(survivor) || survivor.is_round_entity() || survivor.is_round_minion() {
+            continue;
+        }
+        Notifier.notify(survivor, "% found an Async Keycard!", {player.get_username()});
+    }
+}
+
 get_dropped_item_prompt_text :: proc(dropped_item: Dropped_Item) -> string {
     if !#alive(dropped_item) || !#alive(dropped_item.item) {
         return "Pick up Item";
@@ -373,7 +397,16 @@ Ghost_Item_Ping_Interactable :: class : Component {
         if is_blocked_vhs_tape_pickup(player, dropped_item) {
             return;
         }
+        item_id := "";
+        if #alive(dropped_item.item) {
+            defn := dropped_item.item.get_definition();
+            if defn != null {
+                item_id = defn.get_id();
+            }
+        }
+        survivor_keycards_before := count_survivor_inventory_item_id(ASYNC_KEYCARD_ITEM_ID);
         dropped_item.on_interact(player);
+        notify_async_keycard_pickup_if_needed(player, survivor_keycards_before, item_id);
     }
 }
 
