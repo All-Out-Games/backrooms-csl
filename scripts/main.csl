@@ -1081,6 +1081,9 @@ Player :: class : Player_Base {
         minion_override_state_machine = null;
         sprint_input_held = false;
         sprint_active = false;
+        current_stamina = SPRINT_STAMINA_MAX;
+        max_stamina = SPRINT_STAMINA_MAX;
+        sprint_lockout_remaining = 0.0;
         entity_local_view_alpha = 0.0;
         entity_local_view_is_active = false;
         entity_scream_reveal_remaining = 0.0;
@@ -1123,6 +1126,9 @@ Player :: class : Player_Base {
         round_minion_hatch_seen_request_id = 0;
         sprint_input_held = false;
         sprint_active = false;
+        current_stamina = MINION_SPRINT_STAMINA_MAX;
+        max_stamina = MINION_SPRINT_STAMINA_MAX;
+        sprint_lockout_remaining = 0.0;
         entity_lurch_remaining = 0.0;
         entity_local_view_alpha = 0.0;
         entity_local_view_is_active = false;
@@ -1453,7 +1459,7 @@ Player :: class : Player_Base {
             }
         }
 
-        if this.is_round_entity() || this.is_round_minion() || round_dead || round_downed {
+        if this.is_round_entity() || round_dead || round_downed {
             sprint_input_held = false;
         }
 
@@ -1471,20 +1477,41 @@ Player :: class : Player_Base {
             minion_bite_hit_react_remaining = max(minion_bite_hit_react_remaining, 0.0);
         }
 
+        desired_stamina_max := SPRINT_STAMINA_MAX;
+        stamina_drain_per_second := SPRINT_STAMINA_DRAIN_PER_SECOND;
+        stamina_regen_per_second := SPRINT_STAMINA_REGEN_PER_SECOND;
+        stamina_moving_regen_per_second := SPRINT_STAMINA_MOVING_REGEN_PER_SECOND;
+        sprint_exhaust_lockout_seconds := SPRINT_EXHAUST_LOCKOUT_SECONDS;
+        if this.is_round_minion() {
+            desired_stamina_max = MINION_SPRINT_STAMINA_MAX;
+            stamina_drain_per_second = MINION_SPRINT_STAMINA_DRAIN_PER_SECOND;
+            stamina_regen_per_second = MINION_SPRINT_STAMINA_REGEN_PER_SECOND;
+            stamina_moving_regen_per_second = MINION_SPRINT_STAMINA_MOVING_REGEN_PER_SECOND;
+            sprint_exhaust_lockout_seconds = MINION_SPRINT_EXHAUST_LOCKOUT_SECONDS;
+        }
+        if max_stamina != desired_stamina_max {
+            stamina_pct := 1.0;
+            if max_stamina > 0.0 {
+                stamina_pct = clamp(current_stamina / max_stamina, 0.0, 1.0);
+            }
+            max_stamina = desired_stamina_max;
+            current_stamina = max_stamina * stamina_pct;
+        }
+
         wants_sprint := !round_dead && !round_downed && sprint_input_held && sprint_lockout_remaining <= 0.0 && current_stamina > 0.0;
         sprint_active = wants_sprint && is_moving;
 
         if sprint_active {
-            current_stamina -= SPRINT_STAMINA_DRAIN_PER_SECOND * dt;
+            current_stamina -= stamina_drain_per_second * dt;
             if current_stamina <= 0.0 {
                 current_stamina = 0.0;
                 sprint_active = false;
-                sprint_lockout_remaining = SPRINT_EXHAUST_LOCKOUT_SECONDS;
+                sprint_lockout_remaining = sprint_exhaust_lockout_seconds;
             }
         } else if current_stamina < max_stamina {
-            regen_per_second := SPRINT_STAMINA_REGEN_PER_SECOND;
+            regen_per_second := stamina_regen_per_second;
             if is_moving && !sprint_input_held {
-                regen_per_second = SPRINT_STAMINA_MOVING_REGEN_PER_SECOND;
+                regen_per_second = stamina_moving_regen_per_second;
             }
             current_stamina += regen_per_second * dt;
             current_stamina = min(current_stamina, max_stamina);
@@ -1507,7 +1534,11 @@ Player :: class : Player_Base {
             } else if round_dead {
                 movement_speed_multiplier = SPRINT_MOVEMENT_MULTIPLIER;
             } else if sprint_active {
-                movement_speed_multiplier = SPRINT_MOVEMENT_MULTIPLIER;
+                if this.is_round_minion() {
+                    movement_speed_multiplier = MINION_SPRINT_MOVEMENT_MULTIPLIER;
+                } else {
+                    movement_speed_multiplier = SPRINT_MOVEMENT_MULTIPLIER;
+                }
             } else if this.is_round_entity() && entity_lurch_remaining > 0.0 {
                 movement_speed_multiplier = ENTITY_LURCH_MOVEMENT_MULTIPLIER;
             } else if this.is_round_entity() {
@@ -1564,6 +1595,8 @@ Player :: class : Player_Base {
             override_rig.instance.speed_multiplier = 1.0;
             if this.is_round_entity() && entity_lurch_remaining > 0.0 && is_moving {
                 override_rig.instance.speed_multiplier = ENTITY_LURCH_ANIMATION_SPEED_MULTIPLIER;
+            } else if this.is_round_minion() && sprint_active && is_moving {
+                override_rig.instance.speed_multiplier = MINION_SPRINT_ANIMATION_SPEED_MULTIPLIER;
             }
         }
 
@@ -1669,6 +1702,7 @@ Player :: class : Player_Base {
             } else if this.is_round_minion() {
                 if active_effect == null {
                     draw_ability_button(this, Minion_Bite_Ability, 0);
+                    draw_ability_button(this, Minion_Sprint_Ability, 1);
                 }
                 if equipped_weapon_type != .NONE {
                     weapon_unequip(this, equipped_weapon_type);
@@ -1714,12 +1748,7 @@ Player :: class : Player_Base {
             }
         }
 
-        if !this.is_round_entity() &&
-            !this.is_round_minion() &&
-            !round_downed &&
-            !round_dead &&
-            !is_hidden_by_entity_local_view(this) &&
-            (current_stamina < max_stamina || sprint_active || sprint_lockout_remaining > 0.0) {
+        if should_draw_stamina_bar_for_player(this) && (current_stamina < max_stamina || sprint_active || sprint_lockout_remaining > 0.0) {
             draw_stamina_bar(this);
         }
 
@@ -1792,7 +1821,7 @@ Player :: class : Player_Base {
         if this.is_round_entity() && !is_entity_ability_unlocked(ability) {
             return false;
         }
-        if this.is_round_minion() && ability.#type != Minion_Bite_Ability {
+        if this.is_round_minion() && ability.#type != Minion_Bite_Ability && ability.#type != Minion_Sprint_Ability {
             return false;
         }
         return true;

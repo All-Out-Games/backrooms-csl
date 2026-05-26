@@ -8,6 +8,13 @@ MINION_BITE_EFFECT_SECONDS :: ENTITY_BITE_EFFECT_SECONDS;
 MINION_BITE_COOLDOWN_SECONDS :: 6.0;
 MINION_BITE_SLOW_SECONDS :: 5.0;
 MINION_BITE_SLOW_MOVEMENT_MULTIPLIER :: 0.50;
+MINION_SPRINT_STAMINA_MAX :: 100.0;
+MINION_SPRINT_STAMINA_DRAIN_PER_SECOND :: 45.0;
+MINION_SPRINT_STAMINA_REGEN_PER_SECOND :: 20.0;
+MINION_SPRINT_STAMINA_MOVING_REGEN_PER_SECOND :: 5.0;
+MINION_SPRINT_MOVEMENT_MULTIPLIER :: 1.45;
+MINION_SPRINT_ANIMATION_SPEED_MULTIPLIER :: 1.20;
+MINION_SPRINT_EXHAUST_LOCKOUT_SECONDS :: 1.0;
 
 find_downed_minion_conversion_target :: proc(entity_player: Player) -> Player {
     if entity_player == null || !#alive(entity_player.entity) {
@@ -269,6 +276,50 @@ Minion_Bite_Ability :: class : Ability_Base {
 
     on_draw_button :: proc(instance: Minion_Bite_Ability, rect: Rect) {
         draw_ability_name_label(rect, "Bite");
+    }
+}
+
+Minion_Sprint_Ability :: class : Ability_Base {
+    on_init :: method() {
+        ensure_sprint_resources();
+        name = "Sprint";
+        icon = get_asset(Texture_Asset, "AbilityIcons/SprintIcon.png");
+        disable_keybind = true;
+    }
+
+    can_use :: method() -> bool {
+        if player == null || player.agent == null {
+            return false;
+        }
+        if !player.is_round_minion() {
+            return false;
+        }
+
+        gm := get_game_manager();
+        if !#alive(gm) || gm.phase != .ACTIVE {
+            return false;
+        }
+
+        if player.entity.get_active_effect() != null {
+            return false;
+        }
+        if is_entity_flashbanged(player) {
+            return false;
+        }
+
+        return player.current_stamina > 0.0 && player.sprint_lockout_remaining <= 0.0;
+    }
+
+    on_update :: method(params: ref Ability_Update_Params) {
+        player.sprint_input_held = get_sprint_input_held(player, ref params) && params.can_use;
+    }
+
+    on_draw_button :: proc(instance: Minion_Sprint_Ability, rect: Rect) {
+        if instance.player.device_kind != .PC return;
+        if sprint_shift_icon == null return;
+
+        icon_rect := rect.top_left_rect().grow(35).offset(10, -10);
+        UI.quad(icon_rect.fit_aspect(sprint_shift_icon.get_aspect(), .KEEP_BIGGER), sprint_shift_icon);
     }
 }
 

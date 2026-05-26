@@ -55,6 +55,32 @@ get_sprint_input_held :: proc(player: Player, params: ref Ability_Update_Params)
     return false;
 }
 
+should_draw_stamina_bar_for_player :: proc(player: Player) -> bool {
+    if player == null || player.is_round_dead() || player.is_round_downed() {
+        return false;
+    }
+    if player.is_round_entity() {
+        return false;
+    }
+
+    local_player := get_local_player();
+    if !#alive(local_player) {
+        return false;
+    }
+    if local_player == player {
+        return true;
+    }
+
+    if player.is_round_minion() {
+        return local_player.is_round_entity() || local_player.is_round_minion();
+    }
+    if player.is_round_survivor() {
+        return local_player.is_round_survivor();
+    }
+
+    return false;
+}
+
 Sprint_Ability :: class : Ability_Base {
     on_init :: method() {
         ensure_sprint_resources();
@@ -107,5 +133,9 @@ draw_stamina_bar :: proc(player: Player) {
     stamina_pct := player.current_stamina / player.max_stamina;
     stamina_pct = clamp(stamina_pct, 0.0, 1.0);
     fill_rect := stamina_rect.subrect(0, 0, stamina_pct, 1);
-    UI.quad(fill_rect, sprint_bar_fill, {1, 1, 1, 1});
+    if player.is_round_minion() {
+        UI.quad(fill_rect, core_globals.white_sprite, {1, 1, 1, 1});
+    } else {
+        UI.quad(fill_rect, sprint_bar_fill, {1, 1, 1, 1});
+    }
 }
