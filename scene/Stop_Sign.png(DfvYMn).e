@@ -3,7 +3,7 @@
 3753739047
 {
   "name": "Stop_Sign.png",
-  "local_enabled": true,
+  "local_enabled": false,
   "local_position": {
     "X": -28.8504638671875000,
     "Y": -22.3897666931152344

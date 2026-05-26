@@ -5,17 +5,16 @@
   "name": "computer_desk.png",
   "local_enabled": true,
   "local_position": {
-    "X": 25.1707611083984375,
-    "Y": 5.1444940567016602
+    "X": -67.9571838378906250,
+    "Y": 12.0108108520507812
   },
   "local_rotation": 0,
   "local_scale": {
     "X": 1,
     "Y": 1
   },
-  "previous_sibling": 1805232986,
-  "next_sibling": 1807920916,
-  "parent": 1809603361
+  "next_sibling": 3744911038,
+  "parent": 3756173363
 },
 {
   "cid": 1,

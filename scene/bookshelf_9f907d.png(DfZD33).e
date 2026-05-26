@@ -24,6 +24,22 @@
   "internal_component_type": "Sprite_Renderer",
   "data": {
     "texture": "bookshelf_9f907d.png",
-    "depth_offset": -0.4868850708007812
+    "depth_offset": -0.2833480834960938
+  }
+},
+{
+  "cid": 2,
+  "aoid": 2963521269,
+  "component_type": "Internal_Component",
+  "internal_component_type": "Box_Collider",
+  "data": {
+    "size": {
+      "X": 1.1065216064453125,
+      "Y": 1.7460327148437500
+    },
+    "offset": {
+      "X": 0.0532608032226562,
+      "Y": -0.6055374145507812
+    }
   }
 }

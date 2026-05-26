@@ -3,7 +3,7 @@
 3754271112
 {
   "name": "server_3_126876.png",
-  "local_enabled": true,
+  "local_enabled": false,
   "local_position": {
     "X": -50.1544494628906250,
     "Y": 20.9870758056640625
@@ -33,13 +33,15 @@
   "component_type": "Internal_Component",
   "internal_component_type": "Box_Collider",
   "data": {
+    "make_navmesh_loop": true,
+    "flip_navmesh_loop": true,
     "size": {
       "X": 1.0400085449218750,
-      "Y": 0.2853317260742188
+      "Y": 0.3741760253906250
     },
     "offset": {
       "X": 0.0028533935546875,
-      "Y": -0.5917472839355469
+      "Y": -0.5388641357421875
     }
   }
 }

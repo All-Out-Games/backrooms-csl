@@ -1,0 +1,17 @@
+5bf71f6af5e01c38.png
+	size: 2048, 1024
+	filter: Linear, Linear
+desk/black_screen
+	bounds: 813, 281, 230, 146
+desk/blue_screen
+	bounds: 1350, 485, 473, 473
+	offsets: 85, 92, 649, 646
+desk/desk
+	bounds: 6, 189, 769, 801
+	rotate: 90
+desk/green_screen
+	bounds: 1350, 6, 473, 473
+	offsets: 85, 92, 649, 646
+desk/red_screen
+	bounds: 813, 433, 531, 525
+	offsets: 69, 63, 670, 651

@@ -3,7 +3,7 @@
 3753576407
 {
   "name": "radial_gradient.png",
-  "local_enabled": true,
+  "local_enabled": false,
   "local_position": {
     "X": 0.0057067871093750,
     "Y": -0.4652786254882812
