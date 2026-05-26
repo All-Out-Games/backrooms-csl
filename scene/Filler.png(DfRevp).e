@@ -5,8 +5,8 @@
   "name": "Filler.png",
   "local_enabled": true,
   "local_position": {
-    "X": -75.2675628662109375,
-    "Y": 147.1598205566406250
+    "X": -21.1542816162109375,
+    "Y": 199.2007751464843750
   },
   "local_rotation": 0,
   "local_scale": {
@@ -29,6 +29,21 @@
       "Y": 0.1060608178377151,
       "Z": 0.3049351274967194
     },
-    "layer": 2
+    "layer": 2,
+    "scale": {
+      "X": 5,
+      "Y": 3
+    }
+  }
+},
+{
+  "cid": 2,
+  "aoid": 2939738156,
+  "enabled": false,
+  "component_type": "Internal_Component",
+  "internal_component_type": "Box_Collider",
+  "data": {
+    "make_navmesh_loop": true,
+    "flip_navmesh_loop": true
   }
 }

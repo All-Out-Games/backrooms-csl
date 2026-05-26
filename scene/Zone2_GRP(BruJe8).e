@@ -5,7 +5,8 @@
   "name": "Zone2_GRP",
   "local_enabled": true,
   "local_position": {
-    "Y": -0.1653900146484375
+    "X": 4.7446594238281250,
+    "Y": 44.1782531738281250
   },
   "local_rotation": 0,
   "local_scale": {

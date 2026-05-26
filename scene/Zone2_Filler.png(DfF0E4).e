@@ -5,15 +5,16 @@
   "name": "Zone2_Filler.png",
   "local_enabled": true,
   "local_position": {
-    "X": 67.1596374511718750,
-    "Y": -91.8469772338867188
+    "X": 66.9940490722656250,
+    "Y": 0.5146436691284180
   },
   "local_rotation": 90,
   "local_scale": {
     "X": 120,
     "Y": 7
   },
-  "parent": 3748087678
+  "previous_sibling": 1811067637,
+  "parent": 1799249834
 },
 {
   "cid": 1,
