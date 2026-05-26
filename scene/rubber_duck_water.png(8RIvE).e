@@ -5,15 +5,16 @@
   "name": "rubber_duck_water.png",
   "local_enabled": true,
   "local_position": {
-    "X": 5.9370117187500000,
-    "Y": -17.1040954589843750
+    "X": 6.0013427734375000,
+    "Y": -17.5711059570312500
   },
   "local_rotation": 0,
   "local_scale": {
     "X": 0.7364461421966553,
     "Y": 0.7364461421966553
   },
-  "previous_sibling": 1010643884,
+  "previous_sibling": 1019819216,
+  "next_sibling": 1014913071,
   "parent": 1017799225
 },
 {
