@@ -13,7 +13,7 @@ ENTITY_SCREAM_UNLOCK_DELAY_SECONDS :: 120.0;
 ENTITY_NEXT_ZONE_UNLOCKED_ABILITY_COUNT :: 4;
 ENTITY_ABILITY_UNLOCK_NOTIFICATION :: "The Monster grows stronger...";
 ENTITY_LOCKED_ABILITY_ICON_PATH :: "lock_0572b2.png";
-HUNT_BEGIN_BANNER_SECONDS :: 2.0;
+HUNT_BEGIN_BANNER_SECONDS :: 4.0;
 EXIT_UNLOCK_BANNER_SECONDS :: 2.0;
 LAST_SURVIVOR_ENTITY_WIN_DELAY_SECONDS :: 5.0;
 ENDED_TO_LOBBY_SECONDS :: 10.0;
@@ -297,12 +297,17 @@ format_countdown_mm_ss :: proc(total_seconds: s64) -> string {
     minutes := total_seconds / 60;
     seconds := total_seconds % 60;
 
+    minutes_text := format_string("%", {minutes});
+    if minutes < 10 {
+        minutes_text = format_string("0%", {minutes});
+    }
+
     seconds_text := format_string("%", {seconds});
     if seconds < 10 {
         seconds_text = format_string("0%", {seconds});
     }
 
-    return format_string("%:%", {minutes, seconds_text});
+    return format_string("%:%", {minutes_text, seconds_text});
 }
 
 MATCH_TIMER_TOP_DOWN_OFFSET :: 90.0;
@@ -590,17 +595,46 @@ draw_match_timer_ui :: proc(player: Player) {
     shell.show_background = false;
     UIK.panel_begin(shell);
 
-    UIK.text("Time Remaining", UIK.text_title());
+    time_remaining_text := UIK.text_title();
+    UIK.text_set_word_wrap(&time_remaining_text, false);
+    UIK.text_set_color(&time_remaining_text, v4{1.0, 0.95, 0.60, 1.0});
+    UIK.text("Time Remaining", time_remaining_text);
     UIK.text(format_countdown_mm_ss(countdown), UIK.text_title());
     if gm.round_timer_paused {
         UIK.text("Paused", UIK.text_body());
     }
-    if player.is_round_survivor() && player.current_zone == .Zone1 {
+    if player.is_round_survivor() && (player.current_zone == .Zone1 || player.current_zone == .Zone2) {
         tapes_found := get_round_tapes_found_count(gm);
-        UIK.text(format_string("Tapes Found %/%", {tapes_found, ZONE1_TAPE_GOAL_COUNT}), UIK.text_body());
-    } else if player.is_round_survivor() && player.current_zone == .Zone2 {
-        tapes_found := get_round_tapes_found_count(gm);
-        UIK.text(format_string("Tapes Found %/%", {tapes_found, ZONE2_TAPE_GOAL_COUNT}), UIK.text_body());
+        goal_count := ZONE1_TAPE_GOAL_COUNT;
+        if player.current_zone == .Zone2 {
+            goal_count = ZONE2_TAPE_GOAL_COUNT;
+        }
+
+        tape_row := UIK.layout_row(UIK.fit(), UIK.fit(), 6);
+        tape_row.cross_align = .CENTER;
+        tape_row.main_align = .CENTER;
+        tape_row.show_background = false;
+        UIK.panel_begin(tape_row);
+
+        tape_icon := get_asset(Texture_Asset, "tapes/vhs_yellow.png");
+        if tape_icon != null {
+            tape_icon_panel := UIK.layout_column();
+            tape_icon_panel.width = UIK.pixels(26);
+            tape_icon_panel.height = UIK.pixels(26);
+            tape_icon_panel.cross_align = .CENTER;
+            tape_icon_panel.main_align = .CENTER;
+            tape_icon_panel.show_background = false;
+            UIK.panel_begin(tape_icon_panel);
+            UIK.image_fitted(tape_icon, UIK.image_desc(.CONTAIN));
+            UIK.panel_end();
+        }
+
+        tapes_text := UIK.text_title();
+        UIK.text_set_word_wrap(&tapes_text, false);
+        UIK.text_set_size_mult(&tapes_text, 0.55);
+        UIK.text(format_string("Tapes Found %/%", {tapes_found, goal_count}), tapes_text);
+
+        UIK.panel_end();
     }
 
     if player.is_local() && !player.is_round_entity() && player.entity_scream_reveal_remaining > 0.0 {
@@ -637,34 +671,58 @@ draw_hunt_begin_banner_ui :: proc(player: Player) {
     }
 
     t := clamp(elapsed / HUNT_BEGIN_BANNER_SECONDS, 0.0, 1.0);
-    fade_t := pow(t, 2.0);
-    alpha := lerp(1.0, 0.0, fade_t);
-    slide_y := lerp(0.0, 24.0, t);
+    fade_t := clamp((t - 0.7) / 0.3, 0.0, 1.0);
+    alpha := lerp(1.0, 0.0, pow(fade_t, 2.0));
+    slide_y := lerp(0.0, 24.0, fade_t);
 
     text := "Find the Beck Tapes!";
+    show_icon := true;
     if gm.is_entity_player(player) {
         text = "The Hunt Begins!";
+        show_icon = false;
     }
 
-    UI.push_screen_draw_context();
-    defer UI.pop_draw_context();
-
-    bg := get_asset(Texture_Asset, "$AO/white.png");
     box := UI.get_safe_screen_rect().center_rect().grow(70.0, 360.0, 70.0, 360.0).offset(0.0, slide_y);
-    glow := box.grow(8, 8, 8, 8);
 
-    UI.quad(glow, bg, v4{0.08, 0.08, 0.08, alpha * 0.22});
-    UI.quad(box, bg, v4{0.0, 0.0, 0.0, alpha * 0.82});
+    begin_desc: UIK.Begin_Desc;
+    begin_desc.rect = box;
+    begin_desc.layer = 0;
+    begin_desc.backdrop = false;
+    begin_desc.blocks_input = false;
+    UIK.begin(begin_desc);
 
-    ts := UI.default_text_settings();
-    ts.size = 42;
-    ts.color = v4{1.0, 1.0, 1.0, alpha};
-    ts.halign = .CENTER;
-    ts.valign = .CENTER;
-    ts.do_outline = true;
-    ts.outline_thickness = 2;
-    ts.outline_color = v4{0.0, 0.0, 0.0, alpha};
-    UI.text(box, ts, text);
+    shell := UIK.panel_styled(.MODAL_TRANSP_BLACK);
+    shell.axis = .HORIZONTAL;
+    shell.width = UIK.flex(1);
+    shell.height = UIK.flex(1);
+    shell.cross_align = .CENTER;
+    shell.main_align = .CENTER;
+    shell.gap = 18;
+    shell.padding = v4{10, 24, 10, 24};
+    shell.opacity = alpha;
+    UIK.panel_begin(shell);
+
+    if show_icon {
+        tape_tex := get_asset(Texture_Asset, "tapes/vhs_yellow.png");
+        if tape_tex != null {
+            icon_panel := UIK.layout_column();
+            icon_panel.width = UIK.pixels(80);
+            icon_panel.height = UIK.pixels(80);
+            icon_panel.cross_align = .CENTER;
+            icon_panel.main_align = .CENTER;
+            icon_panel.show_background = false;
+            UIK.panel_begin(icon_panel);
+            UIK.image_fitted(tape_tex, UIK.image_desc(.CONTAIN));
+            UIK.panel_end();
+        }
+    }
+
+    text_desc := UIK.text_title();
+    UIK.text_set_word_wrap(&text_desc, false);
+    UIK.text(text, text_desc);
+
+    UIK.panel_end();
+    UIK.end();
 }
 
 draw_exit_unlocked_banner_ui :: proc(player: Player) {
