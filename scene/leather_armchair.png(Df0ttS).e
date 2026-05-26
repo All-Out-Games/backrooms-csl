@@ -1,5 +1,5 @@
 14
-5385888989185
+6975026888705
 3755137874
 {
   "name": "leather_armchair.png",
@@ -13,7 +13,7 @@
     "X": 1,
     "Y": 1
   },
-  "previous_sibling": 3741883307,
+  "previous_sibling": 3753332262,
   "next_sibling": 3749907628,
   "parent": 3756173363
 },
