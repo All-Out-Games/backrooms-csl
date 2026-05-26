@@ -1,25 +1,25 @@
 14
-2465311227905
-1021558232
+906238099457
+1011348809
 {
   "name": "Step",
   "local_enabled": true,
   "local_position": {
-    "X": 28.6667480468750000,
-    "Y": -26.7725524902343750
+    "X": -5.4954223632812500,
+    "Y": -28.7714843750000000
   },
   "local_rotation": 0,
   "local_scale": {
-    "X": 6.8450164794921875,
-    "Y": 0.3400005996227264
+    "X": 4.4900212287902832,
+    "Y": 0.6700003147125244
   },
-  "previous_sibling": 1007859309,
-  "next_sibling": 1015897581,
+  "previous_sibling": 1015897581,
+  "next_sibling": 1021198308,
   "parent": 1016874829
 },
 {
   "cid": 1,
-  "aoid": 1011572224,
+  "aoid": 1018049880,
   "component_type": "Internal_Component",
   "internal_component_type": "Sprite_Renderer",
   "data": {
