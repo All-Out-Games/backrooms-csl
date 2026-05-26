@@ -4,6 +4,7 @@ TASK_ID_RESTART_GENERATOR :: "restart_generator";
 TASK_ID_LIGHTS_OUT_GENERATOR :: "lights_out_generator";
 TASK_ID_RECONNECT_WIRE    :: "reconnect_wire";
 TASK_ID_FIND_ASYNC_KEYCARDS :: "find_async_keycards";
+TASK_ID_SCAN_KEYCARDS :: "scan_keycards";
 TASK_ID_REPAIR_LAPTOP     :: "repair_laptop";
 TASK_ID_FIX_CAMERA        :: "fix_camera";
 
@@ -349,7 +350,8 @@ get_task_display_name :: proc(task_id: string) -> string {
         case TASK_ID_RESTART_GENERATOR: return "Restart Generator";
         case TASK_ID_LIGHTS_OUT_GENERATOR: return "Restart Generator";
         case TASK_ID_RECONNECT_WIRE:    return "Viewfinder: Wires Panel";
-        case TASK_ID_FIND_ASYNC_KEYCARDS: return "Find Async Keycards";
+        case TASK_ID_FIND_ASYNC_KEYCARDS: return "Find 2 Keycards";
+        case TASK_ID_SCAN_KEYCARDS: return "Scan Keycards at Doors";
         case TASK_ID_REPAIR_LAPTOP:     return "Repair Laptop";
         case TASK_ID_FIX_CAMERA:        return "Find and Fix handheld Camera";
     }
@@ -375,6 +377,9 @@ get_task_description :: proc(task_id: string) -> string {
         }
         case TASK_ID_FIND_ASYNC_KEYCARDS: {
             return "Search the facility for Async keycards.";
+        }
+        case TASK_ID_SCAN_KEYCARDS: {
+            return "Scan both collected keycards at the blast door scanners.";
         }
         case TASK_ID_REPAIR_LAPTOP: {
             return "Drag each piece back into its correct slot on the laptop.";
