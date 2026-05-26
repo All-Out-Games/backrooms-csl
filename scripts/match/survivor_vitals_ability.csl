@@ -23,18 +23,19 @@ Vitals_Row_Handles :: struct {
 }
 
 HUD_VITALS_LAYER :: 50;
-HUD_VITALS_WIDTH :: 238.0;
+HUD_VITALS_WIDTH :: 300.0;
 HUD_VITALS_TOP_MARGIN :: 180.0;
 HUD_VITALS_BOTTOM_MARGIN :: 200.0;
 HUD_VITALS_RIGHT_MARGIN :: 16.0;
-HUD_VITALS_ROW_HEIGHT :: 64.0;
-HUD_VITALS_AVATAR_SIZE :: 44.0;
-HUD_VITALS_MONITOR_WIDTH :: 80.0;
-HUD_VITALS_MONITOR_HEIGHT :: 40.0;
-HUD_VITALS_AVATAR_SPINE_SCALE := v2.{35.0, 35.0};
-HUD_VITALS_AVATAR_SPINE_OFFSET := v2.{0.0, -18.0};
-HUD_VITALS_MONITOR_SPINE_SCALE := v2.{13.0, 13.0};
-HUD_VITALS_MONITOR_SPINE_OFFSET := v2.{0.0, -6.0};
+HUD_VITALS_PTT_CLEARANCE :: 60.0;
+HUD_VITALS_ROW_HEIGHT :: 78.0;
+HUD_VITALS_AVATAR_SIZE :: 56.0;
+HUD_VITALS_MONITOR_WIDTH :: 100.0;
+HUD_VITALS_MONITOR_HEIGHT :: 50.0;
+HUD_VITALS_AVATAR_SPINE_SCALE := v2.{44.0, 44.0};
+HUD_VITALS_AVATAR_SPINE_OFFSET := v2.{0.0, -22.0};
+HUD_VITALS_MONITOR_SPINE_SCALE := v2.{16.5, 16.5};
+HUD_VITALS_MONITOR_SPINE_OFFSET := v2.{0.0, -7.0};
 
 get_vitals_spine_asset :: proc() -> Spine_Asset {
     return get_asset(Spine_Asset, VITALS_SPINE_ASSET_PATH);
@@ -247,9 +248,30 @@ draw_vitals_hud :: proc(player: Player, dt: float) {
     }
 
     screen := UI.get_safe_screen_rect();
+    scale := UI.get_current_scale_factor();
+    hud_width_px := HUD_VITALS_WIDTH * scale;
+    right_margin_px := HUD_VITALS_RIGHT_MARGIN * scale;
+    top_margin_px := HUD_VITALS_TOP_MARGIN * scale;
+    bottom_margin_px := HUD_VITALS_BOTTOM_MARGIN * scale;
+
+    hud_top_y := screen.max.y - top_margin_px;
+    hud_left_x := screen.max.x - hud_width_px - right_margin_px;
+    hud_right_x := screen.max.x - right_margin_px;
+
+    if player.is_ptt_button_visible() {
+        ptt_rect := player.get_ptt_rect();
+        horizontal_overlap := ptt_rect.max.x > hud_left_x && ptt_rect.min.x < hud_right_x;
+        if horizontal_overlap {
+            max_allowed_top := ptt_rect.min.y - HUD_VITALS_PTT_CLEARANCE * scale;
+            if hud_top_y > max_allowed_top {
+                hud_top_y = max_allowed_top;
+            }
+        }
+    }
+
     hud_rect := Rect{
-        min = v2{screen.max.x - HUD_VITALS_WIDTH - HUD_VITALS_RIGHT_MARGIN, screen.min.y + HUD_VITALS_BOTTOM_MARGIN},
-        max = v2{screen.max.x - HUD_VITALS_RIGHT_MARGIN, screen.max.y - HUD_VITALS_TOP_MARGIN}
+        min = v2{hud_left_x, screen.min.y + bottom_margin_px},
+        max = v2{hud_right_x, hud_top_y}
     };
 
     UIK.begin(UIK.window(hud_rect));

@@ -14,6 +14,8 @@ ENTITY_NEXT_ZONE_UNLOCKED_ABILITY_COUNT :: 4;
 ENTITY_ABILITY_UNLOCK_NOTIFICATION :: "The Monster grows stronger...";
 ENTITY_LOCKED_ABILITY_ICON_PATH :: "lock_0572b2.png";
 HUNT_BEGIN_BANNER_SECONDS :: 4.0;
+GAME_START_VIGNETTE_PATH :: "UI/gamestart.png";
+GAME_START_VIGNETTE_LAYER :: 9850;
 EXIT_UNLOCK_BANNER_SECONDS :: 2.0;
 LAST_SURVIVOR_ENTITY_WIN_DELAY_SECONDS :: 5.0;
 ENDED_TO_LOBBY_SECONDS :: 10.0;
@@ -651,6 +653,45 @@ draw_match_timer_ui :: proc(player: Player) {
     draw_danger_ping_arrows_ui(player);
     draw_entity_scream_arrow_ui(player);
     draw_entity_target_ping_arrow_ui(player);
+}
+
+draw_game_start_vignette_ui :: proc(player: Player) {
+    gm := get_game_manager();
+    if !#alive(gm) {
+        return;
+    }
+    if gm.phase != .SURVIVOR_HEAD_START {
+        return;
+    }
+    if gm.role_selection_started_at <= 0.0 || gm.role_selection_ends_at <= 0.0 {
+        return;
+    }
+
+    duration := gm.role_selection_ends_at - gm.role_selection_started_at;
+    if duration <= 0.0 {
+        return;
+    }
+
+    elapsed := get_time() - gm.role_selection_started_at;
+    if elapsed < 0.0 || elapsed >= duration {
+        return;
+    }
+
+    tex := get_asset(Texture_Asset, GAME_START_VIGNETTE_PATH);
+    if tex == null {
+        return;
+    }
+
+    t := clamp(elapsed / duration, 0.0, 1.0);
+    alpha := sin(t * PI);
+
+    UI.push_screen_draw_context();
+    defer UI.pop_draw_context();
+    UI.push_layer(GAME_START_VIGNETTE_LAYER);
+    defer UI.pop_layer();
+
+    screen := UI.get_screen_rect();
+    UI.quad(screen, tex, v4{1.0, 1.0, 1.0, alpha});
 }
 
 draw_hunt_begin_banner_ui :: proc(player: Player) {
