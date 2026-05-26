@@ -1503,7 +1503,10 @@ Player :: class : Player_Base {
             } else if this.is_round_survivor() {
                 movement_speed_multiplier = ROUND_SURVIVOR_NORMAL_MOVEMENT_MULTIPLIER;
             }
-            if (this.is_round_entity() || this.is_round_minion()) && is_entity_flashbanged(this) {
+            if this.is_round_minion() && is_entity_flashbanged(this) {
+                movement_speed_multiplier *= MINION_FLASHBANG_MOVEMENT_MULTIPLIER;
+                agent.velocity = v2{0.0, 0.0};
+            } else if this.is_round_entity() && is_entity_flashbanged(this) {
                 movement_speed_multiplier *= ENTITY_FLASHBANG_MOVEMENT_MULTIPLIER;
             }
             if has_effect(entity, Stim_Speed_Effect) {
@@ -1514,7 +1517,7 @@ Player :: class : Player_Base {
             }
 
             current_speed := agent.movement_speed;
-            if !sprint_has_applied_speed || abs(current_speed - sprint_last_applied_speed) > 0.001 {
+            if movement_speed_multiplier > 0.001 && (!sprint_has_applied_speed || abs(current_speed - sprint_last_applied_speed) > 0.001) {
                 base_movement_speed = current_speed / movement_speed_multiplier;
             }
 
