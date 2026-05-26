@@ -5,7 +5,7 @@
   "name": "leather_armchair.png",
   "local_enabled": true,
   "local_position": {
-    "X": 15.7853851318359375,
+    "X": 15.9465484619140625,
     "Y": 45.5172576904296875
   },
   "local_rotation": 0,
@@ -36,6 +36,8 @@
   "component_type": "Internal_Component",
   "internal_component_type": "Polygon_Collider",
   "data": {
+    "make_navmesh_loop": true,
+    "flip_navmesh_loop": true,
     "points": [
       {
         "X": -0.4360504448413849,

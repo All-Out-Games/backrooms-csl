@@ -20,6 +20,7 @@
 {
   "cid": 1,
   "aoid": 3745274848,
+  "enabled": false,
   "component_type": "Internal_Component",
   "internal_component_type": "Sprite_Renderer",
   "data": {

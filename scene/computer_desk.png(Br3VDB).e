@@ -23,7 +23,13 @@
   "internal_component_type": "Sprite_Renderer",
   "data": {
     "texture": "sprites/Zone1b/computer_desk.png",
-    "depth_offset": 0.9019231796264648
+    "depth_offset": 0.9019231796264648,
+    "tint": {
+      "X": 0.7464441061019897,
+      "Y": 0.8886827826499939,
+      "Z": 0.5609157681465149,
+      "W": 0.6474955677986145
+    }
   }
 },
 {
@@ -32,6 +38,8 @@
   "component_type": "Internal_Component",
   "internal_component_type": "Box_Collider",
   "data": {
+    "make_navmesh_loop": true,
+    "flip_navmesh_loop": true,
     "size": {
       "X": 0.7302093505859375,
       "Y": 1.4364514350891113

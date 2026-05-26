@@ -5,8 +5,8 @@
   "name": "barricade_diagonal.png",
   "local_enabled": true,
   "local_position": {
-    "X": -57.2863922119140625,
-    "Y": -10.4103240966796875
+    "X": -57.4844207763671875,
+    "Y": -10.3360671997070312
   },
   "local_rotation": 0,
   "local_scale": {
@@ -33,6 +33,8 @@
   "component_type": "Internal_Component",
   "internal_component_type": "Polygon_Collider",
   "data": {
+    "make_navmesh_loop": true,
+    "flip_navmesh_loop": true,
     "points": [
       {
         "X": -0.5654144287109375,

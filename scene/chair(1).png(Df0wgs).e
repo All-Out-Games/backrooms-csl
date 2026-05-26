@@ -33,13 +33,15 @@
   "component_type": "Internal_Component",
   "internal_component_type": "Box_Collider",
   "data": {
+    "make_navmesh_loop": true,
+    "flip_navmesh_loop": true,
     "size": {
-      "X": 0.5852508544921875,
-      "Y": 0.5341663360595703
+      "X": 0.7503814697265625,
+      "Y": 1.2237262725830078
     },
     "offset": {
-      "X": 0.0000076293945312,
-      "Y": -0.3612737655639648
+      "X": -0.0107650756835938,
+      "Y": -0.6270437240600586
     }
   }
 }

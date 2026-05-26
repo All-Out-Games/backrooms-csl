@@ -3,7 +3,7 @@
 3746227769
 {
   "name": "chair (1).png",
-  "local_enabled": true,
+  "local_enabled": false,
   "local_position": {
     "X": -65.1533660888671875,
     "Y": 34.7234802246093750
