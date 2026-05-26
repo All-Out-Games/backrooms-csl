@@ -1,0 +1,1184 @@
+// =============================================================================
+// Dev backup / restore (testing aid)
+//
+// `/backup` toggles auto-snapshot. Polls during an active round and recaptures
+// whenever a tracked field changes. Each capture is JSON-serialized to a
+// game-level save string so the snapshot survives a full process restart.
+//
+// `/restore` applies the latest snapshot. Connected players are keyed by
+// user_id. World entities (corpses, dropped items, async deads, mold
+// tripmines) are destroyed and rebuilt from the snapshot.
+//
+// Auto-snapshot is NOT persisted across reboots — after a restart you must
+// re-run `/backup` to resume polling. The snapshot itself is persisted.
+//
+// All absolute timestamps are re-anchored on restore: saved values are
+// stored as-is and `get_time() - captured_at_s` is added at restore time,
+// so timers keep their remaining duration after a long pause or restart.
+//
+// Snapshot scope:
+//   Game_Manager : phase, result, entity_user_id, survivors_alive,
+//                  every match-timer, lobby countdown, unlocked entity
+//                  ability count, task zone task id, tape collection,
+//                  lights-out state, emergency systems flag.
+//   Player       : position, opt-in, current zone, downed/dead, stamina,
+//                  all cooldown timers, scream/lurch/target-ping state,
+//                  inventory contents (slot, item id, quantity),
+//                  completed + started task ids, last selected hotbar.
+//   World        : corpses (owner + pos), dropped items (pos + item +
+//                  qty + despawn timer), async deads (pos + looted),
+//                  mold tripmines (pos + owner + DontDelete).
+//   Puzzles      : Generator / Keypad_Puzzle / Wire_Puzzle / Radio_Puzzle
+//                  `solved` flags, matched by world position.
+// =============================================================================
+
+BACKUP_POLL_INTERVAL :: 0.5;
+RR_BACKUP_SAVE_KEY :: "br_backup_snapshot_v1";
+RR_BACKUP_SCHEMA_VERSION :: 6;
+RR_BACKUP_MAX_SAVE_BYTES :: 200000;
+
+Backup_Inventory_Item :: class {
+	slot_index: int @ao_serialize;
+	item_id: string @ao_serialize;
+	quantity: int @ao_serialize;
+}
+
+Backup_Player_Entry :: class {
+	user_id: string @ao_serialize;
+	entity_opt_in: bool @ao_serialize;
+	current_zone_i: int @ao_serialize;
+
+	world_pos: v2 @ao_serialize;
+
+	round_downed: bool @ao_serialize;
+	round_dead: bool @ao_serialize;
+
+	current_stamina: float @ao_serialize;
+	max_stamina: float @ao_serialize;
+	sprint_lockout_remaining: float @ao_serialize;
+
+	// Absolute timestamps captured as-is; re-anchored on restore.
+	downed_bleed_out_ends_at: float @ao_serialize;
+	vent_cooldown_ends_at: float @ao_serialize;
+	jumpscare_cooldown_ends_at: float @ao_serialize;
+	ghost_item_ping_cooldown_ends_at: float @ao_serialize;
+
+	// Already deltas (countdown floats) — restored verbatim.
+	entity_lurch_remaining: float @ao_serialize;
+	entity_scream_reveal_remaining: float @ao_serialize;
+	entity_scream_arrow_remaining: float @ao_serialize;
+	entity_target_ping_remaining: float @ao_serialize;
+	entity_target_ping_user_id: string @ao_serialize;
+
+	completed_task_ids: [..]string @ao_serialize;
+	started_task_ids: [..]string @ao_serialize;
+
+	inventory: [..]Backup_Inventory_Item @ao_serialize;
+	last_selected_index: int @ao_serialize;
+}
+
+Backup_Corpse_Entry :: class {
+	owner_user_id: string @ao_serialize;
+	world_pos: v2 @ao_serialize;
+	spawned_at: float @ao_serialize;
+}
+
+Backup_Dropped_Item_Entry :: class {
+	world_pos: v2 @ao_serialize;
+	item_id: string @ao_serialize;
+	quantity: int @ao_serialize;
+	despawn_time_start: float @ao_serialize;
+}
+
+Backup_Async_Dead_Entry :: class {
+	world_pos: v2 @ao_serialize;
+	looted: bool @ao_serialize;
+}
+
+Backup_Mold_Tripmine_Entry :: class {
+	world_pos: v2 @ao_serialize;
+	owner_user_id: string @ao_serialize;
+	dont_delete: bool @ao_serialize;
+}
+
+// type_i: 0=Generator, 1=Keypad_Puzzle, 2=Wire_Puzzle, 3=Radio_Puzzle.
+// Matched at restore time by closest world_pos within type.
+Backup_Puzzle_Entry :: class {
+	type_i: int @ao_serialize;
+	world_pos: v2 @ao_serialize;
+	solved: bool @ao_serialize;
+}
+
+Backup_Snapshot :: class {
+	version: int @ao_serialize;
+	// Monotonic seconds-since-boot at capture, rounded down. Stored as int to
+	// avoid CSL's f32 → string conversion emitting precision-junk digits.
+	captured_at_s: int @ao_serialize;
+
+	// --- Game_Manager ---
+	gm_phase_i: int @ao_serialize;
+	gm_result_i: int @ao_serialize;
+	gm_entity_user_id: string @ao_serialize;
+	gm_survivors_alive: int @ao_serialize;
+	gm_emergency_systems_online: bool @ao_serialize;
+
+	gm_head_start_ends_at: float @ao_serialize;
+	gm_role_selection_started_at: float @ao_serialize;
+	gm_role_selection_ends_at: float @ao_serialize;
+	gm_hunt_started_at: float @ao_serialize;
+	gm_next_entity_ability_unlock_at: float @ao_serialize;
+	gm_unlocked_entity_ability_count: int @ao_serialize;
+	gm_exit_unlocked_at: float @ao_serialize;
+	gm_match_ends_at: float @ao_serialize;
+	gm_round_timer_paused: bool @ao_serialize;
+	gm_round_timer_paused_remaining_seconds: float @ao_serialize;
+	gm_round_timer_pause_started_at: float @ao_serialize;
+	gm_entity_win_delay_ends_at: float @ao_serialize;
+	gm_ended_at: float @ao_serialize;
+	gm_end_game_cutscene_ends_at: float @ao_serialize;
+	gm_lobby_countdown_ends_at: float @ao_serialize;
+
+	gm_round_start_positions_applied: bool @ao_serialize;
+	gm_round_start_transition_finished: bool @ao_serialize;
+	gm_task_zone_task_id: string @ao_serialize;
+	gm_entity_next_zone_progression_unlocked: bool @ao_serialize;
+	gm_entity_jumpscare_sabotage_unlocked: bool @ao_serialize;
+	gm_round_tapes_collected: [..]bool @ao_serialize;
+
+	gm_lights_out_active: bool @ao_serialize;
+	gm_lights_out_cooldown_ends_at: float @ao_serialize;
+	gm_lights_out_generator_was_solved: bool @ao_serialize;
+	gm_lights_out_previous_task_zone_task_id: string @ao_serialize;
+	gm_lights_out_had_previous_task_zone: bool @ao_serialize;
+	gm_lights_out_previous_task_zone_pos: v2 @ao_serialize;
+
+	entries: [..]Backup_Player_Entry @ao_serialize;
+	corpses: [..]Backup_Corpse_Entry @ao_serialize;
+	dropped_items: [..]Backup_Dropped_Item_Entry @ao_serialize;
+	async_deads: [..]Backup_Async_Dead_Entry @ao_serialize;
+	mold_tripmines: [..]Backup_Mold_Tripmine_Entry @ao_serialize;
+	puzzles: [..]Backup_Puzzle_Entry @ao_serialize;
+}
+
+rr_backup_enabled: bool;
+rr_backup_snapshot: Backup_Snapshot;
+rr_backup_last_poll_at: float;
+rr_backup_boot_loaded: bool;
+rr_backup_last_saved_bytes: int;
+
+// --- Persistence (game-level save string, JSON-encoded) -----------------------
+//
+// JSON.serialize emits pretty-printed output. Strip structural whitespace AND
+// replace all `"` with `'` — the save backend validates strings it stores and
+// rejects raw JSON-like values. Apostrophes are rare in our data (user_ids,
+// item ids, task ids), and we swap them back before deserializing on load.
+
+RR_BACKUP_QUOTE_SENTINEL :: "'";
+
+rr_backup_encode_for_save :: proc(s: string) -> string {
+	no_ws := s;
+	parts := string_split(no_ws, "\n");
+	no_ws = "";
+	for i: 0..parts.count-1 {
+		no_ws = format_string("%0%", .{no_ws, parts[i]});
+	}
+	parts = string_split(no_ws, "\r");
+	no_ws = "";
+	for i: 0..parts.count-1 {
+		no_ws = format_string("%0%", .{no_ws, parts[i]});
+	}
+	parts = string_split(no_ws, "\t");
+	no_ws = "";
+	for i: 0..parts.count-1 {
+		no_ws = format_string("%0%", .{no_ws, parts[i]});
+	}
+
+	q_parts := string_split(no_ws, "\"");
+	result := "";
+	for i: 0..q_parts.count-1 {
+		if i == 0 {
+			result = q_parts[i];
+		} else {
+			result = format_string("%0%0%", .{result, RR_BACKUP_QUOTE_SENTINEL, q_parts[i]});
+		}
+	}
+	return result;
+}
+
+rr_backup_decode_from_save :: proc(s: string) -> string {
+	parts := string_split(s, RR_BACKUP_QUOTE_SENTINEL);
+	result := "";
+	for i: 0..parts.count-1 {
+		if i == 0 {
+			result = parts[i];
+		} else {
+			result = format_string("%0\"%", .{result, parts[i]});
+		}
+	}
+	return result;
+}
+
+rr_backup_save_to_api :: proc() {
+	if rr_backup_snapshot == null return;
+	rr_backup_snapshot.version = RR_BACKUP_SCHEMA_VERSION;
+	json := JSON.serialize(ref rr_backup_snapshot);
+	if json.count > RR_BACKUP_MAX_SAVE_BYTES {
+		// Dev-tool guard: don't write a payload large enough to make the next
+		// load expensive or arena-heavy.
+		rr_backup_last_saved_bytes = json.count;
+		return;
+	}
+	payload := rr_backup_encode_for_save(json);
+	if payload.count > RR_BACKUP_MAX_SAVE_BYTES {
+		rr_backup_last_saved_bytes = payload.count;
+		return;
+	}
+	rr_backup_last_saved_bytes = payload.count;
+	Save.set_game_string(RR_BACKUP_SAVE_KEY, payload);
+}
+
+// Result codes so /restore can tell us exactly which step failed instead of
+// silently surfacing "no snapshot".
+Backup_Load_Result :: enum {
+	OK;
+	EMPTY_PAYLOAD;
+	OVERSIZE_PAYLOAD;
+	JSON_PARSE_FAILED;
+	NULL_AFTER_PARSE;
+	VERSION_MISMATCH;
+}
+
+rr_backup_last_load_result: Backup_Load_Result;
+rr_backup_last_load_payload_bytes: int;
+rr_backup_last_load_version: int;
+
+rr_backup_load_from_api :: proc() -> bool {
+	payload := Save.get_game_string(RR_BACKUP_SAVE_KEY, "");
+	rr_backup_last_load_payload_bytes = payload.count.(int);
+	rr_backup_last_load_version = 0;
+
+	if payload.count == 0 {
+		rr_backup_last_load_result = Backup_Load_Result.EMPTY_PAYLOAD;
+		return false;
+	}
+	if payload.count > RR_BACKUP_MAX_SAVE_BYTES {
+		rr_backup_last_load_result = Backup_Load_Result.OVERSIZE_PAYLOAD;
+		return false;
+	}
+
+	json := rr_backup_decode_from_save(payload);
+	loaded: Backup_Snapshot;
+	if !JSON.try_deserialize(json, ref loaded) {
+		rr_backup_last_load_result = Backup_Load_Result.JSON_PARSE_FAILED;
+		return false;
+	}
+	if loaded == null {
+		rr_backup_last_load_result = Backup_Load_Result.NULL_AFTER_PARSE;
+		return false;
+	}
+	rr_backup_last_load_version = loaded.version;
+	if loaded.version != RR_BACKUP_SCHEMA_VERSION {
+		rr_backup_last_load_result = Backup_Load_Result.VERSION_MISMATCH;
+		return false;
+	}
+
+	rr_backup_snapshot = loaded;
+	rr_backup_last_load_result = Backup_Load_Result.OK;
+	return true;
+}
+
+// Load persisted snapshot once per process boot. Enabled flag is NOT persisted.
+rr_backup_ensure_loaded :: proc() {
+	if rr_backup_boot_loaded return;
+	rr_backup_boot_loaded = true;
+	rr_backup_load_from_api();
+}
+
+// --- Capture ------------------------------------------------------------------
+
+rr_backup_capture_inventory :: proc(p: Player, out: ref [..]Backup_Inventory_Item) {
+	out.clear();
+	inv := p.default_inventory;
+	if inv == null return;
+	slot: s64 = 0;
+	while slot < inv.capacity {
+		item := inv.get_item(slot);
+		if item != null {
+			def := item.get_definition();
+			if def != null {
+				entry := new(Backup_Inventory_Item);
+				entry.slot_index = slot.(int);
+				entry.item_id = def.get_id();
+				entry.quantity = item.quantity.(int);
+				append(ref out, entry);
+			}
+		}
+		slot += 1;
+	}
+}
+
+rr_backup_fill_player_entry :: proc(e: Backup_Player_Entry, p: Player) {
+	e.user_id = p.get_user_id();
+	e.entity_opt_in = p.entity_opt_in;
+	e.current_zone_i = p.current_zone.(int);
+	if #alive(p.entity) e.world_pos = p.entity.world_position;
+
+	e.round_downed = p.round_downed;
+	e.round_dead = p.round_dead;
+
+	e.current_stamina = p.current_stamina;
+	e.max_stamina = p.max_stamina;
+	e.sprint_lockout_remaining = p.sprint_lockout_remaining;
+
+	e.downed_bleed_out_ends_at = p.downed_bleed_out_ends_at;
+	e.vent_cooldown_ends_at = p.vent_cooldown_ends_at;
+	e.jumpscare_cooldown_ends_at = p.jumpscare_cooldown_ends_at;
+	e.ghost_item_ping_cooldown_ends_at = p.ghost_item_ping_cooldown_ends_at;
+
+	e.entity_lurch_remaining = p.entity_lurch_remaining;
+	e.entity_scream_reveal_remaining = p.entity_scream_reveal_remaining;
+	e.entity_scream_arrow_remaining = p.entity_scream_arrow_remaining;
+	e.entity_target_ping_remaining = p.entity_target_ping_remaining;
+	e.entity_target_ping_user_id = p.entity_target_ping_user_id;
+
+	e.last_selected_index = p.last_selected_index.(int);
+
+	e.completed_task_ids.clear();
+	e.started_task_ids.clear();
+	for j: 0..p.active_tasks.elements.count-1 {
+		t := p.active_tasks.elements[j];
+		if t == null continue;
+		if t.completed {
+			append(ref e.completed_task_ids, t.id);
+		} else if t.started {
+			append(ref e.started_task_ids, t.id);
+		}
+	}
+
+	rr_backup_capture_inventory(p, ref e.inventory);
+}
+
+rr_backup_count_inventory :: proc(p: Player) -> int {
+	inv := p.default_inventory;
+	if inv == null return 0;
+	count := 0;
+	slot: s64 = 0;
+	while slot < inv.capacity {
+		if inv.get_item(slot) != null count += 1;
+		slot += 1;
+	}
+	return count;
+}
+
+rr_backup_count_completed_tasks :: proc(p: Player) -> int {
+	count := 0;
+	for j: 0..p.active_tasks.elements.count-1 {
+		t := p.active_tasks.elements[j];
+		if t == null continue;
+		if t.completed count += 1;
+	}
+	return count;
+}
+
+rr_backup_capture :: proc() {
+	gm := get_game_manager();
+	if !#alive(gm) return;
+
+	if rr_backup_snapshot == null {
+		rr_backup_snapshot = new(Backup_Snapshot);
+	}
+	snap := rr_backup_snapshot;
+	snap.version = RR_BACKUP_SCHEMA_VERSION;
+	snap.captured_at_s = get_time().(int);
+
+	// --- Game_Manager ---
+	snap.gm_phase_i = gm.phase.(int);
+	snap.gm_result_i = gm.result.(int);
+	snap.gm_entity_user_id = gm.entity_user_id;
+	snap.gm_survivors_alive = gm.survivors_alive;
+	snap.gm_emergency_systems_online = gm.emergency_systems_online;
+	snap.gm_head_start_ends_at = gm.head_start_ends_at;
+	snap.gm_role_selection_started_at = gm.role_selection_started_at;
+	snap.gm_role_selection_ends_at = gm.role_selection_ends_at;
+	snap.gm_hunt_started_at = gm.hunt_started_at;
+	snap.gm_next_entity_ability_unlock_at = gm.next_entity_ability_unlock_at;
+	snap.gm_unlocked_entity_ability_count = gm.unlocked_entity_ability_count.(int);
+	snap.gm_exit_unlocked_at = gm.exit_unlocked_at;
+	snap.gm_match_ends_at = gm.match_ends_at;
+	snap.gm_round_timer_paused = gm.round_timer_paused;
+	snap.gm_round_timer_paused_remaining_seconds = gm.round_timer_paused_remaining_seconds;
+	snap.gm_round_timer_pause_started_at = gm.round_timer_pause_started_at;
+	snap.gm_entity_win_delay_ends_at = gm.entity_win_delay_ends_at;
+	snap.gm_ended_at = gm.ended_at;
+	snap.gm_end_game_cutscene_ends_at = gm.end_game_cutscene_ends_at;
+	snap.gm_lobby_countdown_ends_at = gm.lobby_countdown_ends_at;
+	snap.gm_round_start_positions_applied = gm.round_start_positions_applied;
+	snap.gm_round_start_transition_finished = gm.round_start_transition_finished;
+	snap.gm_task_zone_task_id = gm.task_zone_task_id;
+	snap.gm_entity_next_zone_progression_unlocked = gm.entity_next_zone_progression_unlocked;
+	snap.gm_entity_jumpscare_sabotage_unlocked = gm.entity_jumpscare_sabotage_unlocked;
+	snap.gm_round_tapes_collected.clear();
+	for i: 0..TASK_TAPE_COUNT-1 {
+		append(ref snap.gm_round_tapes_collected, gm.round_tapes_collected[i]);
+	}
+	snap.gm_lights_out_active = gm.lights_out_active;
+	snap.gm_lights_out_cooldown_ends_at = gm.lights_out_cooldown_ends_at;
+	snap.gm_lights_out_generator_was_solved = gm.lights_out_generator_was_solved;
+	snap.gm_lights_out_previous_task_zone_task_id = gm.lights_out_previous_task_zone_task_id;
+	snap.gm_lights_out_had_previous_task_zone = gm.lights_out_had_previous_task_zone;
+	snap.gm_lights_out_previous_task_zone_pos = gm.lights_out_previous_task_zone_position;
+
+	// --- Players ---
+	snap.entries.clear();
+	for p: component_iterator(Player) {
+		if p == null continue;
+		entry := new(Backup_Player_Entry);
+		rr_backup_fill_player_entry(entry, p);
+		append(ref snap.entries, entry);
+	}
+
+	// --- Corpses ---
+	snap.corpses.clear();
+	for c: component_iterator(Corpse) {
+		if c == null continue;
+		if !#alive(c.entity) continue;
+		ce := new(Backup_Corpse_Entry);
+		ce.owner_user_id = c.owner_user_id;
+		ce.world_pos = c.entity.world_position;
+		ce.spawned_at = c.spawned_at;
+		append(ref snap.corpses, ce);
+	}
+
+	// --- Dropped items in world ---
+	snap.dropped_items.clear();
+	for d: component_iterator(Dropped_Item) {
+		if d == null continue;
+		if !#alive(d.entity) continue;
+		if d.claimed continue;
+		if d.item == null continue;
+		def := d.item.get_definition();
+		if def == null continue;
+		de := new(Backup_Dropped_Item_Entry);
+		de.world_pos = d.entity.world_position;
+		de.item_id = def.get_id();
+		de.quantity = d.item.quantity.(int);
+		de.despawn_time_start = d.despawn_time_start;
+		append(ref snap.dropped_items, de);
+	}
+
+	// --- Async dead loot corpses ---
+	snap.async_deads.clear();
+	for a: component_iterator(DeadAsync) {
+		if a == null continue;
+		if !#alive(a.entity) continue;
+		ae := new(Backup_Async_Dead_Entry);
+		ae.world_pos = a.entity.world_position;
+		ae.looted = a.looted;
+		append(ref snap.async_deads, ae);
+	}
+
+	// --- Mold vomit tripmines ---
+	snap.mold_tripmines.clear();
+	for m: component_iterator(Mold_Vomit_Tripmine) {
+		if m == null continue;
+		if !#alive(m.entity) continue;
+		me := new(Backup_Mold_Tripmine_Entry);
+		me.world_pos = m.entity.world_position;
+		me.owner_user_id = m.owner_user_id;
+		me.dont_delete = m.DontDelete;
+		append(ref snap.mold_tripmines, me);
+	}
+
+	// --- Puzzles (solved flags, matched by position on restore) ---
+	snap.puzzles.clear();
+	for g: component_iterator(Generator) {
+		if g == null || !#alive(g.entity) continue;
+		pe := new(Backup_Puzzle_Entry);
+		pe.type_i = 0;
+		pe.world_pos = g.entity.world_position;
+		pe.solved = g.solved;
+		append(ref snap.puzzles, pe);
+	}
+	for k: component_iterator(Keypad_Puzzle) {
+		if k == null || !#alive(k.entity) continue;
+		pe := new(Backup_Puzzle_Entry);
+		pe.type_i = 1;
+		pe.world_pos = k.entity.world_position;
+		pe.solved = k.solved;
+		append(ref snap.puzzles, pe);
+	}
+	for w: component_iterator(Wire_Puzzle) {
+		if w == null || !#alive(w.entity) continue;
+		pe := new(Backup_Puzzle_Entry);
+		pe.type_i = 2;
+		pe.world_pos = w.entity.world_position;
+		pe.solved = w.solved;
+		append(ref snap.puzzles, pe);
+	}
+	for r: component_iterator(Radio_Puzzle) {
+		if r == null || !#alive(r.entity) continue;
+		pe := new(Backup_Puzzle_Entry);
+		pe.type_i = 3;
+		pe.world_pos = r.entity.world_position;
+		pe.solved = r.solved;
+		append(ref snap.puzzles, pe);
+	}
+
+	rr_backup_save_to_api();
+}
+
+// Cheap surrogate digest. Not a rigorous diff; intentionally misses some
+// world-state changes (item drift, mold trip records) that the next poll will
+// pick up anyway. Triggers recapture on meaningful state shifts.
+rr_backup_state_changed :: proc() -> bool {
+	if rr_backup_snapshot == null return true;
+	snap := rr_backup_snapshot;
+	gm := get_game_manager();
+	if !#alive(gm) return false;
+
+	if snap.gm_phase_i != gm.phase.(int) return true;
+	if snap.gm_result_i != gm.result.(int) return true;
+	if snap.gm_entity_user_id != gm.entity_user_id return true;
+	if snap.gm_survivors_alive != gm.survivors_alive return true;
+	if snap.gm_emergency_systems_online != gm.emergency_systems_online return true;
+	if snap.gm_unlocked_entity_ability_count != gm.unlocked_entity_ability_count.(int) return true;
+	if snap.gm_task_zone_task_id != gm.task_zone_task_id return true;
+	if snap.gm_lights_out_active != gm.lights_out_active return true;
+	if snap.gm_round_timer_paused != gm.round_timer_paused return true;
+	if snap.gm_entity_next_zone_progression_unlocked != gm.entity_next_zone_progression_unlocked return true;
+
+	live_tapes := 0;
+	for i: 0..TASK_TAPE_COUNT-1 {
+		if gm.round_tapes_collected[i] live_tapes += 1;
+	}
+	saved_tapes := 0;
+	for i: 0..snap.gm_round_tapes_collected.count-1 {
+		if snap.gm_round_tapes_collected[i] saved_tapes += 1;
+	}
+	if live_tapes != saved_tapes return true;
+
+	// Player presence + per-player digest.
+	live_players := 0;
+	for p: component_iterator(Player) { if p != null live_players += 1; }
+	if live_players != snap.entries.count return true;
+
+	for p: component_iterator(Player) {
+		if p == null continue;
+		uid := p.get_user_id();
+		found := false;
+		for i: 0..snap.entries.count-1 {
+			e := snap.entries[i];
+			if e == null || e.user_id != uid continue;
+			found = true;
+			if e.round_dead != p.round_dead return true;
+			if e.round_downed != p.round_downed return true;
+			if e.entity_opt_in != p.entity_opt_in return true;
+			if e.current_zone_i != p.current_zone.(int) return true;
+			if e.inventory.count != rr_backup_count_inventory(p) return true;
+			if e.completed_task_ids.count != rr_backup_count_completed_tasks(p) return true;
+			// Position drift: recapture when any player has moved > ~0.5 units
+			// so /restore doesn't snap players back to wherever they happened
+			// to be at the last non-positional state change.
+			if #alive(p.entity) {
+				dp := p.entity.world_position - e.world_pos;
+				if dp.x*dp.x + dp.y*dp.y > 0.25 return true;
+			}
+			break;
+		}
+		if !found return true;
+	}
+
+	// World counts.
+	corpse_count := 0;
+	for c: component_iterator(Corpse) { if c != null && #alive(c.entity) corpse_count += 1; }
+	if corpse_count != snap.corpses.count return true;
+
+	dropped_count := 0;
+	for d: component_iterator(Dropped_Item) {
+		if d == null || !#alive(d.entity) continue;
+		if d.claimed continue;
+		dropped_count += 1;
+	}
+	if dropped_count != snap.dropped_items.count return true;
+
+	mold_count := 0;
+	for m: component_iterator(Mold_Vomit_Tripmine) {
+		if m != null && #alive(m.entity) mold_count += 1;
+	}
+	if mold_count != snap.mold_tripmines.count return true;
+
+	async_count := 0;
+	for a: component_iterator(DeadAsync) {
+		if a != null && #alive(a.entity) async_count += 1;
+	}
+	if async_count != snap.async_deads.count return true;
+
+	return false;
+}
+
+rr_backup_maybe_auto :: proc() {
+	if !rr_backup_enabled return;
+	rr_backup_ensure_loaded();
+
+	gm := get_game_manager();
+	if !#alive(gm) return;
+	// Only poll once the round is in progress — outside a round, save data
+	// from a fresh process boot may not be fully loaded yet, and capturing
+	// the lobby state has no useful restore semantics anyway.
+	if !gm.is_round_in_progress() return;
+
+	now := get_time();
+	if now - rr_backup_last_poll_at < BACKUP_POLL_INTERVAL return;
+	rr_backup_last_poll_at = now;
+
+	if rr_backup_snapshot == null {
+		rr_backup_capture();
+		return;
+	}
+	if rr_backup_state_changed() {
+		rr_backup_capture();
+	}
+}
+
+// --- Restore ------------------------------------------------------------------
+
+rr_backup_find_entry :: proc(uid: string) -> Backup_Player_Entry {
+	if rr_backup_snapshot == null return null;
+	for i: 0..rr_backup_snapshot.entries.count-1 {
+		e := rr_backup_snapshot.entries[i];
+		if e == null continue;
+		if e.user_id == uid return e;
+	}
+	return null;
+}
+
+rr_backup_find_player_by_user_id :: proc(uid: string) -> Player {
+	if uid.count == 0 return null;
+	for p: component_iterator(Player) {
+		if p == null continue;
+		if p.get_user_id() == uid return p;
+	}
+	return null;
+}
+
+rr_backup_clear_dropped_items :: proc() {
+	for d: component_iterator(Dropped_Item) {
+		if d == null || !#alive(d.entity) continue;
+		// Only destroy world-owned instances. Items that already migrated into a
+		// player's inventory carry a non-null inventory ref and must be left alone.
+		if d.item != null && d.item.inventory == null {
+			Items.destroy_item_instance(d.item);
+		}
+		d.entity.destroy();
+	}
+}
+
+rr_backup_clear_async_deads :: proc() {
+	for a: component_iterator(DeadAsync) {
+		if a == null || !#alive(a.entity) continue;
+		a.entity.destroy();
+	}
+}
+
+rr_backup_clear_mold_tripmines :: proc() {
+	for m: component_iterator(Mold_Vomit_Tripmine) {
+		if m == null || !#alive(m.entity) continue;
+		m.entity.destroy();
+	}
+}
+
+rr_backup_clear_corpses :: proc() {
+	for c: component_iterator(Corpse) {
+		if c == null || !#alive(c.entity) continue;
+		c.entity.destroy();
+	}
+}
+
+rr_backup_restore_inventory :: proc(p: Player, items: [..]Backup_Inventory_Item) {
+	p.clear_round_inventory();
+	inv := p.default_inventory;
+	if inv == null return;
+
+	for i: 0..items.count-1 {
+		entry := items[i];
+		if entry == null continue;
+		if entry.item_id.count == 0 continue;
+
+		def := get_registered_item_def_by_id(entry.item_id);
+		if def == null continue;
+
+		qty := entry.quantity;
+		if qty <= 0 qty = 1;
+
+		item := Items.create_item_instance(def, qty.(s64));
+		if item == null continue;
+
+		will_destroy: bool;
+		if !Items.can_move_item_to_inventory(item, inv, ref will_destroy) {
+			Items.destroy_item_instance(item);
+			continue;
+		}
+		Items.move_item_to_inventory(item, inv);
+	}
+}
+
+rr_backup_restore_player :: proc(p: Player, e: Backup_Player_Entry, time_delta: float) {
+	p.entity_opt_in = e.entity_opt_in;
+	p.current_zone = e.current_zone_i.(CurrentZone);
+
+	if #alive(p.entity) {
+		p.entity.set_local_position(e.world_pos);
+		p.entity.mark_teleported();
+		if #alive(p.agent) {
+			p.agent.velocity = v2{0.0, 0.0};
+		}
+	}
+
+	p.current_stamina = e.current_stamina;
+	if e.max_stamina > 0.0 p.max_stamina = e.max_stamina;
+	p.sprint_lockout_remaining = e.sprint_lockout_remaining;
+	p.entity_lurch_remaining = e.entity_lurch_remaining;
+	p.entity_scream_reveal_remaining = e.entity_scream_reveal_remaining;
+	p.entity_scream_arrow_remaining = e.entity_scream_arrow_remaining;
+	p.entity_target_ping_remaining = e.entity_target_ping_remaining;
+	p.entity_target_ping_user_id = e.entity_target_ping_user_id;
+	p.last_selected_index = e.last_selected_index.(s64);
+
+	// Re-anchor absolute timestamps so remaining durations are preserved.
+	if e.downed_bleed_out_ends_at > 0.0 {
+		p.downed_bleed_out_ends_at = e.downed_bleed_out_ends_at + time_delta;
+	} else {
+		p.downed_bleed_out_ends_at = 0.0;
+	}
+	if e.vent_cooldown_ends_at > 0.0 {
+		p.vent_cooldown_ends_at = e.vent_cooldown_ends_at + time_delta;
+	} else {
+		p.vent_cooldown_ends_at = 0.0;
+	}
+	if e.jumpscare_cooldown_ends_at > 0.0 {
+		p.jumpscare_cooldown_ends_at = e.jumpscare_cooldown_ends_at + time_delta;
+	} else {
+		p.jumpscare_cooldown_ends_at = 0.0;
+	}
+	if e.ghost_item_ping_cooldown_ends_at > 0.0 {
+		p.ghost_item_ping_cooldown_ends_at = e.ghost_item_ping_cooldown_ends_at + time_delta;
+	} else {
+		p.ghost_item_ping_cooldown_ends_at = 0.0;
+	}
+
+	// Reconcile downed/dead state via existing handlers so animation, voice
+	// chat, and navmesh side effects stay consistent with normal transitions.
+	if e.round_dead {
+		if !p.round_dead p.mark_round_dead(false);
+	} else {
+		if p.round_dead p.clear_round_death_state(true);
+		if e.round_downed {
+			if !p.round_downed p.mark_round_downed();
+		} else {
+			if p.round_downed p.clear_round_downed_state(true);
+		}
+	}
+
+	// Stamp completion + started flags onto matching active tasks.
+	for j: 0..p.active_tasks.elements.count-1 {
+		t := p.active_tasks.elements[j];
+		if t == null continue;
+		completed := false;
+		for k: 0..e.completed_task_ids.count-1 {
+			if t.id == e.completed_task_ids[k] { completed = true; break; }
+		}
+		started := completed;
+		if !completed {
+			for k: 0..e.started_task_ids.count-1 {
+				if t.id == e.started_task_ids[k] { started = true; break; }
+			}
+		}
+		t.completed = completed;
+		t.started = started;
+	}
+
+	rr_backup_restore_inventory(p, e.inventory);
+}
+
+rr_backup_restore_corpses :: proc() {
+	if rr_backup_snapshot == null return;
+	rr_backup_clear_corpses();
+
+	for i: 0..rr_backup_snapshot.corpses.count-1 {
+		ce := rr_backup_snapshot.corpses[i];
+		if ce == null continue;
+		owner := rr_backup_find_player_by_user_id(ce.owner_user_id);
+		if owner == null continue;
+
+		// spawn_corpse_for_player snapshots the owner's current pose; we
+		// overwrite the position immediately to match the saved location.
+		c := spawn_corpse_for_player(owner);
+		if c == null continue;
+		if !#alive(c.entity) continue;
+		c.entity.set_local_position(ce.world_pos);
+		c.entity.mark_teleported();
+		c.spawned_at = ce.spawned_at;
+	}
+}
+
+rr_backup_restore_dropped_items :: proc(time_delta: float) {
+	if rr_backup_snapshot == null return;
+	rr_backup_clear_dropped_items();
+
+	// Make sure item definitions are registered before we try to look them up.
+	init_weapon_items();
+
+	for i: 0..rr_backup_snapshot.dropped_items.count-1 {
+		de := rr_backup_snapshot.dropped_items[i];
+		if de == null continue;
+		if de.item_id.count == 0 continue;
+
+		def := get_registered_item_def_by_id(de.item_id);
+		if def == null continue;
+
+		qty := de.quantity;
+		if qty <= 0 qty = 1;
+
+		item := Items.create_item_instance(def, qty.(s64));
+		if item == null continue;
+
+		dropped := Dropped_Item.spawn(de.world_pos, item);
+		if dropped == null continue;
+		if !#alive(dropped.entity) {
+			Items.destroy_item_instance(item);
+			continue;
+		}
+		dropped.despawn_time_start = de.despawn_time_start + time_delta;
+	}
+}
+
+rr_backup_restore_async_deads :: proc() {
+	if rr_backup_snapshot == null return;
+	rr_backup_clear_async_deads();
+
+	prefab := get_asset(Prefab_Asset, "AsyncDead.prefab");
+	if prefab == null return;
+
+	for i: 0..rr_backup_snapshot.async_deads.count-1 {
+		ae := rr_backup_snapshot.async_deads[i];
+		if ae == null continue;
+
+		ent := Scene.instantiate(prefab, ae.world_pos);
+		if !#alive(ent) continue;
+		ent.mark_teleported();
+		dead := ent.get_component(DeadAsync);
+		if dead == null dead = ent.add_component(DeadAsync);
+		dead.looted = ae.looted;
+		if dead.looted dead.set_text("Looted");
+	}
+}
+
+rr_backup_restore_mold_tripmines :: proc() {
+	if rr_backup_snapshot == null return;
+	rr_backup_clear_mold_tripmines();
+
+	prefab := get_asset(Prefab_Asset, ENTITY_VOMIT_PREFAB_PATH);
+	if prefab == null return;
+
+	for i: 0..rr_backup_snapshot.mold_tripmines.count-1 {
+		me := rr_backup_snapshot.mold_tripmines[i];
+		if me == null continue;
+
+		ent := Scene.instantiate(prefab, me.world_pos);
+		if !#alive(ent) continue;
+		ent.mark_teleported();
+		tm := ent.get_component(Mold_Vomit_Tripmine);
+		if tm == null tm = ent.add_component(Mold_Vomit_Tripmine);
+		tm.DontDelete = me.dont_delete;
+		tm.set_owner_user_id(me.owner_user_id);
+	}
+}
+
+// Find the puzzle of `type_i` whose entity sits closest to `target_pos`.
+// Position match is robust to entity id churn across process restarts.
+rr_backup_apply_puzzle_solved :: proc(pe: Backup_Puzzle_Entry) {
+	if pe == null return;
+
+	if pe.type_i == 0 {
+		best: Generator = null;
+		best_d_sq: float = 0.0;
+		first := true;
+		for g: component_iterator(Generator) {
+			if g == null || !#alive(g.entity) continue;
+			d := g.entity.world_position - pe.world_pos;
+			d_sq := d.x*d.x + d.y*d.y;
+			if first || d_sq < best_d_sq { first = false; best_d_sq = d_sq; best = g; }
+		}
+		if best != null best.solved = pe.solved;
+		return;
+	}
+	if pe.type_i == 1 {
+		best: Keypad_Puzzle = null;
+		best_d_sq: float = 0.0;
+		first := true;
+		for k: component_iterator(Keypad_Puzzle) {
+			if k == null || !#alive(k.entity) continue;
+			d := k.entity.world_position - pe.world_pos;
+			d_sq := d.x*d.x + d.y*d.y;
+			if first || d_sq < best_d_sq { first = false; best_d_sq = d_sq; best = k; }
+		}
+		if best != null best.solved = pe.solved;
+		return;
+	}
+	if pe.type_i == 2 {
+		best: Wire_Puzzle = null;
+		best_d_sq: float = 0.0;
+		first := true;
+		for w: component_iterator(Wire_Puzzle) {
+			if w == null || !#alive(w.entity) continue;
+			d := w.entity.world_position - pe.world_pos;
+			d_sq := d.x*d.x + d.y*d.y;
+			if first || d_sq < best_d_sq { first = false; best_d_sq = d_sq; best = w; }
+		}
+		if best != null best.solved = pe.solved;
+		return;
+	}
+	if pe.type_i == 3 {
+		best: Radio_Puzzle = null;
+		best_d_sq: float = 0.0;
+		first := true;
+		for r: component_iterator(Radio_Puzzle) {
+			if r == null || !#alive(r.entity) continue;
+			d := r.entity.world_position - pe.world_pos;
+			d_sq := d.x*d.x + d.y*d.y;
+			if first || d_sq < best_d_sq { first = false; best_d_sq = d_sq; best = r; }
+		}
+		if best != null best.solved = pe.solved;
+		return;
+	}
+}
+
+rr_backup_restore_puzzles :: proc() {
+	if rr_backup_snapshot == null return;
+	for i: 0..rr_backup_snapshot.puzzles.count-1 {
+		rr_backup_apply_puzzle_solved(rr_backup_snapshot.puzzles[i]);
+	}
+}
+
+rr_backup_restore_game_manager :: proc(time_delta: float) {
+	if rr_backup_snapshot == null return;
+	gm := get_game_manager();
+	if !#alive(gm) return;
+	snap := rr_backup_snapshot;
+
+	gm.phase = snap.gm_phase_i.(Match_Phase);
+	gm.result = snap.gm_result_i.(Match_Result);
+	gm.entity_user_id = snap.gm_entity_user_id;
+	gm.survivors_alive = snap.gm_survivors_alive;
+	gm.emergency_systems_online = snap.gm_emergency_systems_online;
+
+	if snap.gm_head_start_ends_at > 0.0 {
+		gm.head_start_ends_at = snap.gm_head_start_ends_at + time_delta;
+	} else {
+		gm.head_start_ends_at = 0.0;
+	}
+	if snap.gm_role_selection_started_at > 0.0 {
+		gm.role_selection_started_at = snap.gm_role_selection_started_at + time_delta;
+	} else {
+		gm.role_selection_started_at = 0.0;
+	}
+	if snap.gm_role_selection_ends_at > 0.0 {
+		gm.role_selection_ends_at = snap.gm_role_selection_ends_at + time_delta;
+	} else {
+		gm.role_selection_ends_at = 0.0;
+	}
+	if snap.gm_hunt_started_at > 0.0 {
+		gm.hunt_started_at = snap.gm_hunt_started_at + time_delta;
+	} else {
+		gm.hunt_started_at = 0.0;
+	}
+	if snap.gm_next_entity_ability_unlock_at > 0.0 {
+		gm.next_entity_ability_unlock_at = snap.gm_next_entity_ability_unlock_at + time_delta;
+	} else {
+		gm.next_entity_ability_unlock_at = 0.0;
+	}
+	if snap.gm_exit_unlocked_at > 0.0 {
+		gm.exit_unlocked_at = snap.gm_exit_unlocked_at + time_delta;
+	} else {
+		gm.exit_unlocked_at = 0.0;
+	}
+	if snap.gm_match_ends_at > 0.0 {
+		gm.match_ends_at = snap.gm_match_ends_at + time_delta;
+	} else {
+		gm.match_ends_at = 0.0;
+	}
+	if snap.gm_round_timer_pause_started_at > 0.0 {
+		gm.round_timer_pause_started_at = snap.gm_round_timer_pause_started_at + time_delta;
+	} else {
+		gm.round_timer_pause_started_at = 0.0;
+	}
+	if snap.gm_entity_win_delay_ends_at > 0.0 {
+		gm.entity_win_delay_ends_at = snap.gm_entity_win_delay_ends_at + time_delta;
+	} else {
+		gm.entity_win_delay_ends_at = 0.0;
+	}
+	if snap.gm_ended_at > 0.0 {
+		gm.ended_at = snap.gm_ended_at + time_delta;
+	} else {
+		gm.ended_at = 0.0;
+	}
+	if snap.gm_end_game_cutscene_ends_at > 0.0 {
+		gm.end_game_cutscene_ends_at = snap.gm_end_game_cutscene_ends_at + time_delta;
+	} else {
+		gm.end_game_cutscene_ends_at = 0.0;
+	}
+	if snap.gm_lobby_countdown_ends_at > 0.0 {
+		gm.lobby_countdown_ends_at = snap.gm_lobby_countdown_ends_at + time_delta;
+	} else {
+		gm.lobby_countdown_ends_at = 0.0;
+	}
+	if snap.gm_lights_out_cooldown_ends_at > 0.0 {
+		gm.lights_out_cooldown_ends_at = snap.gm_lights_out_cooldown_ends_at + time_delta;
+	} else {
+		gm.lights_out_cooldown_ends_at = 0.0;
+	}
+
+	gm.unlocked_entity_ability_count = snap.gm_unlocked_entity_ability_count.(s64);
+	gm.round_timer_paused = snap.gm_round_timer_paused;
+	gm.round_timer_paused_remaining_seconds = snap.gm_round_timer_paused_remaining_seconds;
+	gm.round_start_positions_applied = snap.gm_round_start_positions_applied;
+	gm.round_start_transition_finished = snap.gm_round_start_transition_finished;
+	gm.task_zone_task_id = snap.gm_task_zone_task_id;
+	gm.entity_next_zone_progression_unlocked = snap.gm_entity_next_zone_progression_unlocked;
+	gm.entity_jumpscare_sabotage_unlocked = snap.gm_entity_jumpscare_sabotage_unlocked;
+
+	for i: 0..TASK_TAPE_COUNT-1 {
+		if i < snap.gm_round_tapes_collected.count {
+			gm.round_tapes_collected[i] = snap.gm_round_tapes_collected[i];
+		}
+	}
+
+	gm.lights_out_active = snap.gm_lights_out_active;
+	gm.lights_out_generator_was_solved = snap.gm_lights_out_generator_was_solved;
+	gm.lights_out_previous_task_zone_task_id = snap.gm_lights_out_previous_task_zone_task_id;
+	gm.lights_out_had_previous_task_zone = snap.gm_lights_out_had_previous_task_zone;
+	gm.lights_out_previous_task_zone_position = snap.gm_lights_out_previous_task_zone_pos;
+}
+
+// --- Chat commands -----------------------------------------------------------
+
+// /backup — toggles auto-snapshot. Can be flipped on any time (it's a
+// session-long flag); the immediate one-shot capture only runs if a round
+// is in progress so we don't clobber a prior snapshot with empty lobby
+// state. Auto-poll is gated on is_round_in_progress() too.
+backup :: proc(player: Player) {
+	rr_backup_enabled = !rr_backup_enabled;
+
+	if rr_backup_enabled {
+		rr_backup_last_poll_at = 0.0;
+		gm := get_game_manager();
+		round_active := #alive(gm) && gm.is_round_in_progress();
+		if !round_active {
+			Chat.server_send_message("Backup ENABLED. Will start capturing once a round is in progress (/start to begin).", player);
+			return;
+		}
+		rr_backup_capture();
+		if rr_backup_snapshot == null {
+			Chat.server_send_message("Backup ENABLED but capture failed.", player);
+			return;
+		}
+		Chat.server_send_message(
+			format_string("Backup ENABLED. Captured % players, % corpses, % items, % async, % molds. JSON=%b.",
+				.{rr_backup_snapshot.entries.count, rr_backup_snapshot.corpses.count,
+				  rr_backup_snapshot.dropped_items.count, rr_backup_snapshot.async_deads.count,
+				  rr_backup_snapshot.mold_tripmines.count, rr_backup_last_saved_bytes}),
+			player);
+		return;
+	}
+	Chat.server_send_message("Backup DISABLED. Last snapshot retained on disk; /restore still works.", player);
+} @chat_command @youtuber
+
+// /restore — applies the latest snapshot. Re-anchors timestamps to current time.
+// Requires an in-progress round so save data is guaranteed loaded and the
+// game manager is in a state that can accept the restored timers/phase.
+restore :: proc(player: Player) {
+	gm := get_game_manager();
+	if !#alive(gm) || !gm.is_round_in_progress() {
+		Chat.server_send_message("/restore needs an active round. Start the game with /start first.", player);
+		return;
+	}
+
+	// Always re-pull from the save api so /restore doesn't get stuck on a
+	// stale "boot load already attempted" cache. Cheap dev tool, not hot path.
+	rr_backup_boot_loaded = true;
+	rr_backup_load_from_api();
+
+	if rr_backup_snapshot == null {
+		reason := "unknown";
+		switch rr_backup_last_load_result {
+			case .EMPTY_PAYLOAD:     reason = format_string("save key '%' is empty", .{RR_BACKUP_SAVE_KEY});
+			case .OVERSIZE_PAYLOAD:  reason = format_string("payload %b > max %b", .{rr_backup_last_load_payload_bytes, RR_BACKUP_MAX_SAVE_BYTES});
+			case .JSON_PARSE_FAILED: reason = format_string("JSON parse failed on %b payload", .{rr_backup_last_load_payload_bytes});
+			case .NULL_AFTER_PARSE:  reason = "deserialize returned null";
+			case .VERSION_MISMATCH:  reason = format_string("schema v% on disk, code expects v%", .{rr_backup_last_load_version, RR_BACKUP_SCHEMA_VERSION});
+			case .OK: reason = "loaded ok but snapshot still null (bug)";
+		}
+		Chat.server_send_message(format_string("No backup snapshot — %.", .{reason}), player);
+		return;
+	}
+	if rr_backup_snapshot.entries.count == 0 {
+		Chat.server_send_message(
+			format_string("Snapshot loaded (v%, %b) but contains 0 player entries.",
+				.{rr_backup_snapshot.version, rr_backup_last_load_payload_bytes}),
+			player);
+		return;
+	}
+	// Shift all absolute timestamps from snapshot time to now.
+	time_delta := get_time() - rr_backup_snapshot.captured_at_s.(float);
+
+	// Order matters: GM state first (phase drives ability gating + UI), then
+	// rebuild world entities, then per-player so player restore can find the
+	// rebuilt corpses/items if needed.
+	rr_backup_restore_game_manager(time_delta);
+	rr_backup_restore_dropped_items(time_delta);
+	rr_backup_restore_async_deads();
+	rr_backup_restore_mold_tripmines();
+	rr_backup_restore_corpses();
+	rr_backup_restore_puzzles();
+
+	restored := 0;
+	skipped := 0;
+	for p: component_iterator(Player) {
+		if p == null continue;
+		uid := p.get_user_id();
+		e := rr_backup_find_entry(uid);
+		if e == null { skipped += 1; continue; }
+		rr_backup_restore_player(p, e, time_delta);
+		restored += 1;
+	}
+
+	age := get_time().(int) - rr_backup_snapshot.captured_at_s;
+	Chat.server_send_message(
+		format_string("Restored % players, % corpses, % items, % async, % molds (% skipped, %s old).",
+			.{restored, rr_backup_snapshot.corpses.count, rr_backup_snapshot.dropped_items.count,
+			  rr_backup_snapshot.async_deads.count, rr_backup_snapshot.mold_tripmines.count,
+			  skipped, age}),
+		player);
+} @chat_command @youtuber
+
+// /backup_inspect — dump what the script can actually see from Save.* so we
+// can compare against any external inspector view.
+backup_inspect :: proc(player: Player) {
+	direct := Save.get_game_string(RR_BACKUP_SAVE_KEY, "");
+	all := Save.get_all_game_strings();
+
+	found_in_list := false;
+	listed_bytes := 0;
+	for i: 0..all.count-1 {
+		if all[i].key == RR_BACKUP_SAVE_KEY {
+			found_in_list = true;
+			listed_bytes = all[i].value.count.(int);
+			break;
+		}
+	}
+
+	Chat.server_send_message(
+		format_string("is_server=% key='%' direct_get=%0b list_count=% found_in_list=% list_value=%0b",
+			.{Game.is_server(), RR_BACKUP_SAVE_KEY, direct.count, all.count, found_in_list, listed_bytes}),
+		player);
+} @chat_command @youtuber

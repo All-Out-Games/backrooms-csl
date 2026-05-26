@@ -84,6 +84,7 @@ ao_start :: proc() {
 }
 
 ao_update :: proc(dt: float) {
+    rr_backup_maybe_auto();
     round_audio_active := is_round_audio_active();
 
     if round_audio_active {
