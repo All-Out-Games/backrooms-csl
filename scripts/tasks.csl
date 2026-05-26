@@ -5,8 +5,10 @@ TASK_ID_LIGHTS_OUT_GENERATOR :: "lights_out_generator";
 TASK_ID_RECONNECT_WIRE    :: "reconnect_wire";
 TASK_ID_FIND_ASYNC_KEYCARDS :: "find_async_keycards";
 TASK_ID_SCAN_KEYCARDS :: "scan_keycards";
+TASK_ID_PULL_BOTH_LEVERS :: "pull_both_levers";
 TASK_ID_REPAIR_LAPTOP     :: "repair_laptop";
 TASK_ID_FIX_CAMERA        :: "fix_camera";
+TASK_ASYNC_KEYCARDS_REQUIRED :: 2;
 
 // --- Task SFX helpers copied with the Repair Laptop task ---
 RR_TASK_SFX_TILE_CLICK   :: "task_click_tile_8ba441.wav";
@@ -234,6 +236,12 @@ is_task_unlocked_for_player :: proc(player: Player, task_id: string) -> bool {
     if task_id == TASK_ID_FIND_ASYNC_KEYCARDS {
         return is_task_completed(player, TASK_ID_RECONNECT_WIRE);
     }
+    if task_id == TASK_ID_SCAN_KEYCARDS {
+        return is_task_completed(player, TASK_ID_FIND_ASYNC_KEYCARDS);
+    }
+    if task_id == TASK_ID_PULL_BOTH_LEVERS {
+        return is_task_completed(player, TASK_ID_SCAN_KEYCARDS);
+    }
     if task_id == TASK_ID_REPAIR_LAPTOP {
         return true;
     }
@@ -300,6 +308,35 @@ complete_task_for_survivors :: proc(task_id: string) {
     if #alive(gm) {
         gm.handle_completed_team_task(task_id);
     }
+}
+
+assign_task_to_survivors :: proc(task_id: string) {
+    for player: component_iterator(Player) {
+        if !player.is_round_survivor() || player.is_round_entity() {
+            continue;
+        }
+        ensure_task_assigned(player, task_id);
+    }
+}
+
+is_task_completed_for_survivors :: proc(task_id: string) -> bool {
+    found_task := false;
+    for player: component_iterator(Player) {
+        if !player.is_round_survivor() || player.is_round_entity() {
+            continue;
+        }
+
+        task := find_task(player, task_id);
+        if task == null {
+            return false;
+        }
+
+        found_task = true;
+        if !is_task_completed_for_player(player, task) {
+            return false;
+        }
+    }
+    return found_task;
 }
 
 assign_lights_out_generator_tasks :: proc() {
@@ -516,6 +553,7 @@ complete_current_assigned_task_cheat :: proc(player: Player) -> string {
         if !complete_keycard_find_task_cheat(player, current_task) {
             return "";
         }
+        update_survivor_task_progression(player);
         return current_task.id;
     }
 
@@ -554,6 +592,7 @@ get_task_display_name :: proc(task_id: string) -> string {
         case TASK_ID_RECONNECT_WIRE:    return "Viewfinder: Wires Panel";
         case TASK_ID_FIND_ASYNC_KEYCARDS: return "Find 2 Keycards";
         case TASK_ID_SCAN_KEYCARDS: return "Scan Keycards at Doors";
+        case TASK_ID_PULL_BOTH_LEVERS: return "Pull Both Levers";
         case TASK_ID_REPAIR_LAPTOP:     return "Repair Laptop";
         case TASK_ID_FIX_CAMERA:        return "Find and Fix handheld Camera";
     }
@@ -582,6 +621,9 @@ get_task_description :: proc(task_id: string) -> string {
         }
         case TASK_ID_SCAN_KEYCARDS: {
             return "Scan both collected keycards at the blast door scanners.";
+        }
+        case TASK_ID_PULL_BOTH_LEVERS: {
+            return "Pull both blast door levers within 5 seconds.";
         }
         case TASK_ID_REPAIR_LAPTOP: {
             return "Drag each piece back into its correct slot on the laptop.";
@@ -705,6 +747,26 @@ collect_tape_inventory_items :: proc(player: Player) {
     }
 }
 
+update_keycard_task_progression :: proc() {
+    if count_survivor_inventory_item_id(ASYNC_KEYCARD_ITEM_ID) < TASK_ASYNC_KEYCARDS_REQUIRED {
+        return;
+    }
+
+    assign_task_to_survivors(TASK_ID_FIND_ASYNC_KEYCARDS);
+    if !is_task_completed_for_survivors(TASK_ID_FIND_ASYNC_KEYCARDS) {
+        complete_task_for_survivors(TASK_ID_FIND_ASYNC_KEYCARDS);
+    }
+
+    assign_task_to_survivors(TASK_ID_SCAN_KEYCARDS);
+    if are_all_keycard_scanners_scanned() && !is_task_completed_for_survivors(TASK_ID_SCAN_KEYCARDS) {
+        complete_task_for_survivors(TASK_ID_SCAN_KEYCARDS);
+    }
+
+    if is_task_completed_for_survivors(TASK_ID_SCAN_KEYCARDS) {
+        assign_task_to_survivors(TASK_ID_PULL_BOTH_LEVERS);
+    }
+}
+
 update_survivor_task_progression :: proc(player: Player) {
     if player == null {
         return;
@@ -735,6 +797,7 @@ update_survivor_task_progression :: proc(player: Player) {
 
     if is_task_completed_for_player(player, wire_task) {
         ensure_task_assigned(player, TASK_ID_FIND_ASYNC_KEYCARDS);
+        update_keycard_task_progression();
     }
 
     gm := get_game_manager();
@@ -1234,6 +1297,35 @@ count_player_inventory_item_id :: proc(player: Player, item_id: string) -> int {
 		i += 1;
 	}
 	return count;
+}
+
+count_survivor_inventory_item_id :: proc(item_id: string) -> int {
+    count := 0;
+    for player: component_iterator(Player) {
+        if !player.is_round_survivor() || player.is_round_entity() {
+            continue;
+        }
+        count += count_player_inventory_item_id(player, item_id);
+    }
+    return count;
+}
+
+get_keycard_scanner_counts :: proc(total: ref int, scanned: ref int) {
+    total = 0;
+    scanned = 0;
+    for scanner: component_iterator(KeycardScanner) {
+        total += 1;
+        if scanner.scanned {
+            scanned += 1;
+        }
+    }
+}
+
+are_all_keycard_scanners_scanned :: proc() -> bool {
+    total := 0;
+    scanned := 0;
+    get_keycard_scanner_counts(ref total, ref scanned);
+    return total > 0 && scanned >= total;
 }
 
 find_workshop_repair_task :: proc(player: Player) -> Task_Repair_Laptop {

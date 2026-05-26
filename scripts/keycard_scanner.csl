@@ -3,18 +3,44 @@ import "core:ao"
 KEYCARD_SCANNER_PROMPT :: "Scan Keycard";
 KEYCARD_SCANNER_COMPLETE_PROMPT :: "Keycard Scanned";
 KEYCARD_SCANNER_HOLD_SECONDS :: 0.5;
+KEYCARD_SCANNER_SCAN_SFX_PATH :: "task_click_tile_8ba441.wav";
+
+play_keycard_scanner_sfx :: proc(scanner: KeycardScanner, player: Player) {
+    if player == null || !player.is_local() {
+        return;
+    }
+    if scanner == null || !#alive(scanner.entity) {
+        return;
+    }
+
+    asset := get_asset(SFX_Asset, KEYCARD_SCANNER_SCAN_SFX_PATH);
+    if asset == null {
+        return;
+    }
+
+    desc := SFX.default_sfx_desc();
+    desc.entity_to_follow = scanner.entity.id;
+    desc.volume = 0.38;
+    desc.volume_perturb = 0.05;
+    desc.speed_perturb = 0.04;
+    SFX.play(asset, desc);
+}
 
 KeycardScanner :: class : Interactable {
     scanned: bool;
 
     ao_start :: method() {
         this.set_listener(this);
-        this.set_text(KEYCARD_SCANNER_PROMPT);
         required_hold_time = KEYCARD_SCANNER_HOLD_SECONDS;
         radius = 1.35;
         prompt_offset = v2{0.0, 0.85};
         priority = 10;
+        reset_for_round();
+    }
+
+    reset_for_round :: method() {
         scanned = false;
+        this.set_text(KEYCARD_SCANNER_PROMPT);
     }
 
     can_use :: method(player: Player) -> bool {
@@ -27,6 +53,10 @@ KeycardScanner :: class : Interactable {
         if !player.is_round_survivor() || player.is_round_dead() || player.is_round_downed() {
             return false;
         }
+        scan_task := find_task(player, TASK_ID_SCAN_KEYCARDS);
+        if scan_task == null || scan_task.completed {
+            return false;
+        }
         return true;
     }
 
@@ -37,5 +67,13 @@ KeycardScanner :: class : Interactable {
 
         scanned = true;
         this.set_text(KEYCARD_SCANNER_COMPLETE_PROMPT);
+        play_keycard_scanner_sfx(this, player);
+        update_keycard_task_progression();
+    }
+}
+
+reset_all_keycard_scanners_for_round :: proc() {
+    for scanner: component_iterator(KeycardScanner) {
+        scanner.reset_for_round();
     }
 }

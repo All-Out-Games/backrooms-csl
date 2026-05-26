@@ -2336,6 +2336,8 @@ Game_Manager :: class : Component {
         clear_all_footstep_echoes();
         clear_all_corpses();
         reset_round_tapes_collected();
+        reset_all_keycard_scanners_for_round();
+        reset_all_door_levels_for_round();
         hide_round_spawn_sprites_for_round();
         set_blast_door_sprite_enabled(true);
 
@@ -2515,6 +2517,8 @@ Game_Manager :: class : Component {
         reset_all_radio_puzzles_for_round(0);
         reset_generator_for_round(0);
         reset_all_wire_puzzles_for_round(0);
+        reset_all_keycard_scanners_for_round();
+        reset_all_door_levels_for_round();
         set_blast_door_sprite_enabled(true);
         lights_out_active = false;
         lights_out_cooldown_ends_at = 0.0;

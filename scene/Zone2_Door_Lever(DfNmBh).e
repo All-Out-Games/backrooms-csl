@@ -48,4 +48,17 @@
       "Y": -0.2096786499023438
     }
   }
+},
+{
+  "cid": 3,
+  "aoid": 2943059531,
+  "component_type": "Internal_Component",
+  "internal_component_type": "DoorLevel",
+  "data": {
+    "radius": 2,
+    "required_hold_time": 0.6000000238418579,
+    "prompt_offset": {
+      "Y": 1
+    }
+  }
 }

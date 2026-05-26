@@ -1,0 +1,185 @@
+import "core:ao"
+
+DOOR_LEVEL_PROMPT :: "Pull Lever";
+DOOR_LEVEL_PULLED_PROMPT :: "Lever Pulled";
+DOOR_LEVEL_SYNC_WINDOW_SECONDS :: 5.0;
+DOOR_LEVEL_IDLE_ANIM :: "idle";
+DOOR_LEVEL_SWITCH_ANIM :: "switch";
+DOOR_LEVEL_SFX_PATH :: "mouse_click_cee011.wav";
+
+DoorLevel :: class : Interactable {
+    pulled: bool;
+    pulled_at: float;
+    animator: Spine_Animator;
+
+    ao_start :: method() {
+        this.set_listener(this);
+        required_hold_time = 0.25;
+        radius = 1.2;
+        prompt_offset = v2{0.0, 0.8};
+        priority = 10;
+        animator = entity.get_component(Spine_Animator);
+        reset_for_round();
+    }
+
+    ao_update :: method(dt: float) {
+        if is_pull_both_levers_task_complete() {
+            return;
+        }
+        if is_door_level_pull_window_expired() {
+            reset_all_door_levels_for_attempt();
+        }
+    }
+
+    reset_for_round :: method() {
+        pulled = false;
+        pulled_at = 0.0;
+        this.set_text(DOOR_LEVEL_PROMPT);
+        play_idle_animation();
+    }
+
+    reset_attempt :: method() {
+        pulled = false;
+        pulled_at = 0.0;
+        this.set_text(DOOR_LEVEL_PROMPT);
+        play_idle_animation();
+    }
+
+    play_idle_animation :: method() {
+        if animator == null {
+            animator = entity.get_component(Spine_Animator);
+        }
+        if animator != null {
+            animator.set_animation(DOOR_LEVEL_IDLE_ANIM, true, 0);
+        }
+    }
+
+    play_switch_animation :: method() {
+        if animator == null {
+            animator = entity.get_component(Spine_Animator);
+        }
+        if animator != null {
+            animator.set_animation(DOOR_LEVEL_SWITCH_ANIM, false, 0);
+        }
+    }
+
+    play_pull_sfx :: method(player: Player) {
+        if player == null || !player.is_local() {
+            return;
+        }
+
+        asset := get_asset(SFX_Asset, DOOR_LEVEL_SFX_PATH);
+        if asset == null {
+            return;
+        }
+
+        desc := SFX.default_sfx_desc();
+        desc.entity_to_follow = entity.id;
+        desc.volume = 0.32;
+        desc.volume_perturb = 0.05;
+        desc.speed_perturb = 0.08;
+        SFX.play(asset, desc);
+    }
+
+    can_use :: method(player: Player) -> bool {
+        if pulled {
+            return false;
+        }
+        if player == null || !#alive(player.entity) {
+            return false;
+        }
+        if !player.is_round_survivor() || player.is_round_dead() || player.is_round_downed() {
+            return false;
+        }
+
+        task := find_task(player, TASK_ID_PULL_BOTH_LEVERS);
+        if task == null || task.completed {
+            return false;
+        }
+        return is_task_unlocked_for_player(player, TASK_ID_PULL_BOTH_LEVERS);
+    }
+
+    on_interact :: method(player: Player) {
+        if !can_use(player) {
+            return;
+        }
+
+        pulled = true;
+        pulled_at = get_time();
+        this.set_text(DOOR_LEVEL_PULLED_PROMPT);
+        play_switch_animation();
+        play_pull_sfx(player);
+
+        if are_all_door_levels_pulled_within_window() {
+            complete_task_for_survivors(TASK_ID_PULL_BOTH_LEVERS);
+        }
+    }
+}
+
+is_pull_both_levers_task_complete :: proc() -> bool {
+    return is_task_completed_for_survivors(TASK_ID_PULL_BOTH_LEVERS);
+}
+
+get_door_level_pull_counts :: proc(total: ref int, pulled_count: ref int) {
+    total = 0;
+    pulled_count = 0;
+    for lever: component_iterator(DoorLevel) {
+        total += 1;
+        if lever.pulled {
+            pulled_count += 1;
+        }
+    }
+}
+
+are_all_door_levels_pulled_within_window :: proc() -> bool {
+    total := 0;
+    pulled_count := 0;
+    earliest := 9999999.0;
+    latest := 0.0;
+
+    for lever: component_iterator(DoorLevel) {
+        total += 1;
+        if !lever.pulled {
+            continue;
+        }
+
+        pulled_count += 1;
+        if lever.pulled_at < earliest {
+            earliest = lever.pulled_at;
+        }
+        if lever.pulled_at > latest {
+            latest = lever.pulled_at;
+        }
+    }
+
+    return total > 0 && pulled_count >= total && latest - earliest <= DOOR_LEVEL_SYNC_WINDOW_SECONDS;
+}
+
+is_door_level_pull_window_expired :: proc() -> bool {
+    any_pulled := false;
+    earliest := 9999999.0;
+    for lever: component_iterator(DoorLevel) {
+        if !lever.pulled {
+            continue;
+        }
+
+        any_pulled = true;
+        if lever.pulled_at < earliest {
+            earliest = lever.pulled_at;
+        }
+    }
+
+    return any_pulled && get_time() - earliest > DOOR_LEVEL_SYNC_WINDOW_SECONDS;
+}
+
+reset_all_door_levels_for_attempt :: proc() {
+    for lever: component_iterator(DoorLevel) {
+        lever.reset_attempt();
+    }
+}
+
+reset_all_door_levels_for_round :: proc() {
+    for lever: component_iterator(DoorLevel) {
+        lever.reset_for_round();
+    }
+}

@@ -129,6 +129,7 @@ ao_update :: proc(dt: float) {
         entity_ambience_desc.local_only = false;
         entity_ambience_desc.loop = true;
         entity_ambience_desc.volume = 1;
+        entity_ambience_desc.channel = .MUSIC;
         entity_ambience_desc.range_multiplier = 2.0;
         entity_ambience_desc.entity_to_follow = entity_player.entity.id;
         entity_ambience_sound_id = SFX.play(get_asset(SFX_Asset, "SFX/entityambience.wav"), entity_ambience_desc);
