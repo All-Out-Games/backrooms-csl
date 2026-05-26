@@ -1,22 +1,16 @@
 import "core:ao"
 
-BARRICADE_PLACE_DISTANCE :: 1.25;
+BARRICADE_CRATE_TEXTURE_PATH :: "Barriers/BarrierCrate.png";
+BARRICADE_PLACE_RANGE :: 2.8;
+BARRICADE_MIN_PLACE_DISTANCE :: 0.35;
 BARRICADE_PICKUP_HOLD_SECONDS :: 0.45;
 BARRICADE_MONSTER_BREAK_HOLD_SECONDS :: 5.0;
 BARRICADE_PLACE_COOLDOWN_SECONDS :: 0.25;
 BARRICADE_SPRITE_LAYER :: 0;
-BARRICADE_SPRITE_SCALE :: v2{2.5, 2.5};
-BARRICADE_OBSTACLE_HALF_LONG :: 0.75;
-BARRICADE_OBSTACLE_HALF_SHORT :: 0.28;
+BARRICADE_SPRITE_SCALE :: v2{2.0, 2.0};
+BARRICADE_OBSTACLE_HALF_EXTENT :: 0.75;
 BARRICADE_PLAYER_BLOCK_RADIUS :: 0.32;
 BARRICADE_PREVIEW_ALPHA :: 0.48;
-
-Barricade_Direction :: enum {
-    UP;
-    DOWN;
-    LEFT;
-    RIGHT;
-}
 
 is_barricade_item_def :: proc(item_def: Item_Definition) -> bool {
     return item_def != null && item_def.get_id() == BARRICADE_ITEM_ID;
@@ -38,49 +32,30 @@ player_has_selected_barricade :: proc(player: Player) -> bool {
     return is_barricade_item_def(item.get_definition());
 }
 
-get_barricade_direction_from_aim :: proc(direction: v2) -> Barricade_Direction {
-    if abs(direction.x) > abs(direction.y) {
-        if direction.x < 0.0 {
-            return .LEFT;
+get_barricade_half_extents :: proc() -> v2 {
+    return v2{BARRICADE_OBSTACLE_HALF_EXTENT, BARRICADE_OBSTACLE_HALF_EXTENT};
+}
+
+get_barricade_selected_position :: proc(player: Player, params: ref Ability_Update_Params, aim_direction: v2) -> v2 {
+    start_position := player.entity.world_position;
+
+    if player.device_kind == .PC {
+        offset := get_mouse_world_position() - start_position;
+        distance := length(offset);
+        if distance <= BARRICADE_MIN_PLACE_DISTANCE {
+            return start_position + v2{1.0, 0.0} * BARRICADE_MIN_PLACE_DISTANCE;
         }
-        return .RIGHT;
+        distance = min(distance, BARRICADE_PLACE_RANGE);
+        return start_position + normalize(offset) * distance;
     }
 
-    if direction.y < 0.0 {
-        return .DOWN;
+    drag_t := clamp(length(params.drag_offset), 0.0, 1.0);
+    distance := max(BARRICADE_MIN_PLACE_DISTANCE, BARRICADE_PLACE_RANGE * drag_t);
+    direction := aim_direction;
+    if length_squared(direction) <= 0.0001 {
+        direction = v2{1.0, 0.0};
     }
-    return .UP;
-}
-
-get_barricade_direction_vector :: proc(direction: Barricade_Direction) -> v2 {
-    switch direction {
-        case .UP: return v2{0.0, 1.0};
-        case .DOWN: return v2{0.0, -1.0};
-        case .LEFT: return v2{-1.0, 0.0};
-        case .RIGHT: return v2{1.0, 0.0};
-    }
-    return v2{1.0, 0.0};
-}
-
-get_barricade_texture_path :: proc(direction: Barricade_Direction) -> string {
-    switch direction {
-        case .UP: return "Barriers/BarrierUp.png";
-        case .DOWN: return "Barriers/BarrierDown.png";
-        case .LEFT: return "Barriers/BarrierLeft.png";
-        case .RIGHT: return "Barriers/BarrierRight.png";
-    }
-    return "Barriers/BarrierUp.png";
-}
-
-is_barricade_horizontal :: proc(direction: Barricade_Direction) -> bool {
-    return direction == .UP || direction == .DOWN;
-}
-
-get_barricade_half_extents :: proc(direction: Barricade_Direction) -> v2 {
-    if is_barricade_horizontal(direction) {
-        return v2{BARRICADE_OBSTACLE_HALF_LONG, BARRICADE_OBSTACLE_HALF_SHORT};
-    }
-    return v2{BARRICADE_OBSTACLE_HALF_SHORT, BARRICADE_OBSTACLE_HALF_LONG};
+    return start_position + normalize(direction) * distance;
 }
 
 play_barricade_sfx :: proc(path: string, entity_to_follow: Entity) {
@@ -121,7 +96,6 @@ give_barricade_item_to_player :: proc(player: Player) -> bool {
 }
 
 Barricade :: class : Component {
-    direction: Barricade_Direction @ao_serialize;
     navmesh: Navmesh;
 
     ao_start :: method() {
@@ -135,7 +109,7 @@ Barricade :: class : Component {
     sync_visuals :: method() {
         sprite := entity.get_component(Sprite_Renderer);
         if sprite != null {
-            sprite.set_texture(get_asset(Texture_Asset, get_barricade_texture_path(direction)));
+            sprite.set_texture(get_asset(Texture_Asset, BARRICADE_CRATE_TEXTURE_PATH));
             sprite.layer = BARRICADE_SPRITE_LAYER;
             sprite.mask_in_shadow = true;
         }
@@ -152,7 +126,7 @@ Barricade :: class : Component {
     }
 
     block_players :: method() {
-        half := get_barricade_half_extents(direction);
+        half := get_barricade_half_extents();
         half.x += BARRICADE_PLAYER_BLOCK_RADIUS;
         half.y += BARRICADE_PLAYER_BLOCK_RADIUS;
         center := entity.world_position;
@@ -293,7 +267,7 @@ Barricade_Monster_Interactable :: class : Interactable {
     }
 }
 
-spawn_barricade :: proc(player: Player, position: v2, direction: Barricade_Direction) -> Barricade {
+spawn_barricade :: proc(player: Player, position: v2) -> Barricade {
     gm := get_game_manager();
 
     e := Scene.create_entity();
@@ -301,12 +275,11 @@ spawn_barricade :: proc(player: Player, position: v2, direction: Barricade_Direc
     e.set_local_scale(BARRICADE_SPRITE_SCALE);
 
     sprite := e.add_component(Sprite_Renderer);
-    sprite.set_texture(get_asset(Texture_Asset, get_barricade_texture_path(direction)));
+    sprite.set_texture(get_asset(Texture_Asset, BARRICADE_CRATE_TEXTURE_PATH));
     sprite.layer = BARRICADE_SPRITE_LAYER;
     sprite.mask_in_shadow = true;
 
     barrier := e.add_component(Barricade);
-    barrier.direction = direction;
     barrier.sync_visuals();
     survivor_interactable := e.add_component(Barricade_Survivor_Interactable);
     survivor_interactable.setup(barrier);
@@ -317,14 +290,12 @@ spawn_barricade :: proc(player: Player, position: v2, direction: Barricade_Direc
     return barrier;
 }
 
-draw_barricade_preview :: proc(player: Player, direction: Barricade_Direction) {
+draw_barricade_preview :: proc(player: Player, position: v2) {
     if player == null || !#alive(player.entity) {
         return;
     }
 
-    dir := get_barricade_direction_vector(direction);
-    pos := player.entity.world_position + dir * BARRICADE_PLACE_DISTANCE;
-    tex := get_asset(Texture_Asset, get_barricade_texture_path(direction));
+    tex := get_asset(Texture_Asset, BARRICADE_CRATE_TEXTURE_PATH);
     if tex == null {
         return;
     }
@@ -334,13 +305,13 @@ draw_barricade_preview :: proc(player: Player, direction: Barricade_Direction) {
     UI.push_layer(BARRICADE_SPRITE_LAYER + 10);
     defer UI.pop_layer();
 
-    half := get_barricade_half_extents(direction);
-    rect := Rect{pos - half, pos + half};
+    half := get_barricade_half_extents();
+    rect := Rect{position - half, position + half};
     rect = rect.fit_aspect(tex.get_aspect(), .KEEP_BIGGER);
     UI.quad(rect, tex, v4{1.0, 1.0, 1.0, BARRICADE_PREVIEW_ALPHA});
 }
 
-place_selected_barricade :: proc(player: Player, aim_direction: v2) -> bool {
+place_selected_barricade :: proc(player: Player, position: v2) -> bool {
     if player == null || !#alive(player.entity) {
         return false;
     }
@@ -350,9 +321,7 @@ place_selected_barricade :: proc(player: Player, aim_direction: v2) -> bool {
         return false;
     }
 
-    direction := get_barricade_direction_from_aim(aim_direction);
-    dir := get_barricade_direction_vector(direction);
-    spawn_barricade(player, player.entity.world_position + dir * BARRICADE_PLACE_DISTANCE, direction);
+    spawn_barricade(player, position);
 
     Items.destroy_item_instance(item, 1);
     player.handle_equipped_item_changing(player.last_selected_index);
@@ -370,7 +339,7 @@ clear_all_barricades :: proc() {
 Place_Barricade_Ability :: class : Ability_Base {
     on_init :: method() {
         name = "Place";
-        icon = get_asset(Texture_Asset, "Barriers/BarrierUp.png");
+        icon = get_asset(Texture_Asset, BARRICADE_CRATE_TEXTURE_PATH);
         is_aimed_ability = true;
     }
 
@@ -386,17 +355,17 @@ Place_Barricade_Ability :: class : Ability_Base {
 
     on_update :: method(params: ref Ability_Update_Params) {
         aiming := Ability_Utilities.full_update_aimed_ability(player, ref params);
-        if length_squared(aiming.direction) > 0.0001 {
-            direction := get_barricade_direction_from_aim(aiming.direction);
-            icon = get_asset(Texture_Asset, get_barricade_texture_path(direction));
-            draw_barricade_preview(player, direction);
+        if length_squared(aiming.direction) > 0.0001 && player != null && #alive(player.entity) {
+            position := get_barricade_selected_position(player, ref params, aiming.direction);
+            draw_barricade_preview(player, position);
         }
 
         if !aiming.activate || !params.can_use {
             return;
         }
 
-        place_selected_barricade(player, aiming.direction);
+        position := get_barricade_selected_position(player, ref params, aiming.direction);
+        place_selected_barricade(player, position);
         current_cooldown = BARRICADE_PLACE_COOLDOWN_SECONDS;
     }
 

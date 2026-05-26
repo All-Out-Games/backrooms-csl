@@ -201,7 +201,7 @@ get_utility_item_info :: proc(index: s64) -> Utility_Item_Info {
         case 10: {
             info.id = BARRICADE_ITEM_ID;
             info.name = "Barricade";
-            info.icon_path = "Barriers/BarrierUp.png";
+            info.icon_path = "Barriers/BarrierCrate.png";
             info.stack_size = 1;
         }
     }
