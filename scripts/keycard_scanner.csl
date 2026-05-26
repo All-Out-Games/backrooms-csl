@@ -1,0 +1,41 @@
+import "core:ao"
+
+KEYCARD_SCANNER_PROMPT :: "Scan Keycard";
+KEYCARD_SCANNER_COMPLETE_PROMPT :: "Keycard Scanned";
+KEYCARD_SCANNER_HOLD_SECONDS :: 0.5;
+
+KeycardScanner :: class : Interactable {
+    scanned: bool;
+
+    ao_start :: method() {
+        this.set_listener(this);
+        this.set_text(KEYCARD_SCANNER_PROMPT);
+        required_hold_time = KEYCARD_SCANNER_HOLD_SECONDS;
+        radius = 1.35;
+        prompt_offset = v2{0.0, 0.85};
+        priority = 10;
+        scanned = false;
+    }
+
+    can_use :: method(player: Player) -> bool {
+        if scanned {
+            return false;
+        }
+        if player == null || !#alive(player.entity) {
+            return false;
+        }
+        if !player.is_round_survivor() || player.is_round_dead() || player.is_round_downed() {
+            return false;
+        }
+        return true;
+    }
+
+    on_interact :: method(player: Player) {
+        if !can_use(player) {
+            return;
+        }
+
+        scanned = true;
+        this.set_text(KEYCARD_SCANNER_COMPLETE_PROMPT);
+    }
+}
