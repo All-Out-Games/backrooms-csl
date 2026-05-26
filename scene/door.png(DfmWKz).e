@@ -3,7 +3,7 @@
 3751371443
 {
   "name": "door.png",
-  "local_enabled": true,
+  "local_enabled": false,
   "local_position": {
     "X": -14.6761016845703125,
     "Y": 6.3658752441406250

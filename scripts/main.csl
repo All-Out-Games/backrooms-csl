@@ -946,7 +946,7 @@ Player :: class : Player_Base {
         }
     }
 
-    clear_round_death_state :: method() {
+    clear_round_death_state :: method(reset_animation: bool = true) {
         this.clear_round_downed_state();
         footstep_stride_accum = 0.0;
         round_dead = false;
@@ -972,7 +972,7 @@ Player :: class : Player_Base {
             animator.state_machine.set_bool("ghost_form", false);
             animator.state_machine.set_bool("sprinting", false);
         }
-        if animator != null && animator.instance != null {
+        if reset_animation && animator != null && animator.instance != null {
             animator.state_machine.set_trigger("RESET");
         }
     }
@@ -2266,7 +2266,7 @@ Player :: class : Player_Base {
         if animator != null && animator.state_machine != null {
             animator.state_machine.set_bool("end_game_cutscene", true);
         }
-        this.clear_round_death_state();
+        this.clear_round_death_state(false);
         sprint_input_held = false;
         sprint_active = false;
         entity_lurch_remaining = 0.0;
@@ -2287,7 +2287,7 @@ Player :: class : Player_Base {
         this.set_facing_right(position.x < look_at.x);
         entity_cached_facing_right = position.x < look_at.x;
         this.add_disable_movement_input_reason(END_GAME_CUTSCENE_REASON);
-        end_game_cutscene_dance_triggered = false;
+        end_game_cutscene_dance_triggered = true;
     }
 
     cleanup_end_game_cutscene :: method() {

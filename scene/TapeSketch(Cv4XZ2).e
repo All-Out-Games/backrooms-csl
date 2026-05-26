@@ -1,25 +1,24 @@
 14
-5536212844545
-2947356334
+2993592205314
+2950788726
 {
   "name": "TapeSketch",
   "local_enabled": true,
   "local_position": {
-    "X": 9.9409332275390625,
-    "Y": 55.6225471496582031
+    "X": 21.3878326416015625,
+    "Y": 120.0364608764648438
   },
   "local_rotation": 351.2736206054687500,
   "local_scale": {
     "X": 1,
     "Y": 1
   },
-  "previous_sibling": 2939415734,
-  "next_sibling": 2947536492,
+  "previous_sibling": 2941895984,
   "parent": 2945128414
 },
 {
   "cid": 1,
-  "aoid": 2947907812,
+  "aoid": 2939611982,
   "component_type": "Internal_Component",
   "internal_component_type": "Sprite_Renderer",
   "data": {

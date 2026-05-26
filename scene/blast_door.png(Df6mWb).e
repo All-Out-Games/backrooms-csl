@@ -3,7 +3,7 @@
 3756680603
 {
   "name": "blast_door.png",
-  "local_enabled": true,
+  "local_enabled": false,
   "local_position": {
     "X": -61.2710571289062500,
     "Y": 49.5660552978515625
