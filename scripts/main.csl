@@ -329,6 +329,7 @@ Player :: class : Player_Base {
     sprint_input_held: bool;
     sprint_active: bool;
     entity_lurch_remaining: float;
+    minion_bite_hit_react_remaining: float;
     round_downed: bool;
     round_dead: bool;
     round_minion: bool;
@@ -867,6 +868,7 @@ Player :: class : Player_Base {
         sprint_input_held = false;
         sprint_active = false;
         entity_lurch_remaining = 0.0;
+        minion_bite_hit_react_remaining = 0.0;
         round_downed = false;
         round_dead = false;
         round_minion = false;
@@ -1450,6 +1452,10 @@ Player :: class : Player_Base {
             entity_lurch_remaining -= dt;
             entity_lurch_remaining = max(entity_lurch_remaining, 0.0);
         }
+        if minion_bite_hit_react_remaining > 0.0 {
+            minion_bite_hit_react_remaining -= dt;
+            minion_bite_hit_react_remaining = max(minion_bite_hit_react_remaining, 0.0);
+        }
 
         wants_sprint := !round_dead && !round_downed && sprint_input_held && sprint_lockout_remaining <= 0.0 && current_stamina > 0.0;
         sprint_active = wants_sprint && is_moving;
@@ -1527,6 +1533,10 @@ Player :: class : Player_Base {
             animator.state_machine.set_bool("downed", round_downed);
             animator.state_machine.set_bool("round_dead", round_dead);
             animator.state_machine.set_bool("sprinting", sprint_active);
+            minion_slowed := has_effect(entity, Minion_Bite_Slow_Effect);
+            minion_bite_hit_reacting := minion_bite_hit_react_remaining > 0.0;
+            animator.state_machine.set_bool("minion_slowed", minion_slowed);
+            animator.state_machine.set_bool("minion_bite_hit_reacting", minion_bite_hit_reacting);
             animator.instance.speed_multiplier = 1.0;
             if round_dead_ghost_state_active {
                 animator.state_machine.set_bool("ghost_form", true);

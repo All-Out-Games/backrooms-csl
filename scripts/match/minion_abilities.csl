@@ -183,6 +183,10 @@ find_minion_bite_target :: proc(minion: Player) -> Player {
 Minion_Bite_Slow_Effect :: class : Effect_Base {
     effect_start :: method() {
         set_duration(MINION_BITE_SLOW_SECONDS);
+        if player != null && player.animator != null && player.animator.state_machine != null {
+            player.minion_bite_hit_react_remaining = MINION_BITE_EFFECT_SECONDS;
+            player.animator.state_machine.set_trigger("minion_bite_hit");
+        }
     }
 }
 
@@ -216,6 +220,9 @@ Minion_Bite_Effect :: class : Effect_Base {
         }
         if !player.ensure_minion_override_rig() {
             return;
+        }
+        if player.minion_override_state_machine != null {
+            player.minion_override_state_machine.set_trigger("hatch");
         }
 
         target := find_minion_bite_target(player);
