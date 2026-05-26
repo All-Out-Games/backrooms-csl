@@ -1687,7 +1687,7 @@ Player :: class : Player_Base {
                     draw_entity_ability_button(this, Entity_Vomit_Ability, 2, ENTITY_VOMIT_ICON_PATH);
                     draw_entity_ability_button(this, Entity_Lurch_Ability, 3, "AbilityIcons/SprintIcon.png");
                     draw_entity_ability_button(this, Entity_Wall_Seep_Ability, 4, "AbilityIcons/Scream.png");
-                    if find_downed_minion_conversion_target(this) != null {
+                    if is_entity_ability_type_unlocked(this, Entity_Convert_Minion_Ability) && find_downed_minion_conversion_target(this) != null {
                         draw_ability_button(this, Entity_Convert_Minion_Ability, 5);
                     } else {
                         draw_ability_button(this, Entity_Sabotage_Ability, 5);
@@ -2789,6 +2789,21 @@ Player :: class : Player_Base {
         }
     }
 
+}
+
+is_entity_ability_type_unlocked :: proc(player: Player, $T: typeid) -> bool {
+    if player == null {
+        return false;
+    }
+
+    for i: 0..player.abilities.count - 1 {
+        ability := player.abilities[i];
+        if ability.type == T {
+            return is_entity_ability_unlocked(ability);
+        }
+    }
+
+    return false;
 }
 
 draw_entity_ability_button :: proc(player: Player, $T: typeid, index: int, unlocked_icon_path: string) {

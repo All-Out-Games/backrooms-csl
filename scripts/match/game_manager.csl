@@ -139,6 +139,8 @@ put_entity_abilities_on_standard_cooldown :: proc(player: Player) {
             ability.current_cooldown = ENTITY_LURCH_COOLDOWN_SECONDS;
         } else if ability.#type == Entity_Vomit_Ability {
             ability.current_cooldown = ENTITY_VOMIT_COOLDOWN_SECONDS;
+        } else if ability.#type == Entity_Convert_Minion_Ability {
+            ability.current_cooldown = ENTITY_CONVERT_MINION_COOLDOWN_SECONDS;
         } else if ability.#type == Entity_Wall_Seep_Ability {
             ability.current_cooldown = ENTITY_WALL_SEEP_COOLDOWN_SECONDS;
         }
@@ -163,6 +165,9 @@ get_entity_ability_unlock_step :: proc(ability: Ability_Base) -> s64 {
         return 3;
     }
     if ability.#type == Entity_Lurch_Ability {
+        return 4;
+    }
+    if ability.#type == Entity_Convert_Minion_Ability {
         return 4;
     }
     if ability.#type == Entity_Wall_Seep_Ability {
