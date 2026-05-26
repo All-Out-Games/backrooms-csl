@@ -53,15 +53,6 @@ convert_downed_player_to_minion :: proc(entity_player: Player, target: Player) -
     if !#alive(entity_player.entity) || !#alive(target.entity) {
         return false;
     }
-    if !is_entity_reveal_active(target) {
-        return false;
-    }
-
-    delta := target.entity.world_position - entity_player.entity.world_position;
-    if length_squared(delta) > ENTITY_CONVERT_MINION_RANGE * ENTITY_CONVERT_MINION_RANGE {
-        return false;
-    }
-
     if !target.convert_to_minion() {
         return false;
     }
