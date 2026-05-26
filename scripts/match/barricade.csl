@@ -11,6 +11,10 @@ BARRICADE_SPRITE_LAYER :: 0;
 BARRICADE_SPRITE_SCALE :: v2{2.0, 2.0};
 BARRICADE_OBSTACLE_HALF_EXTENT :: 0.75;
 BARRICADE_PREVIEW_ALPHA :: 0.48;
+BARRICADE_BREAK_VFX_SPINE_PATH :: "016ARP_Destroy_FX_93ab22/016ARP_Destroy_FX.spine";
+BARRICADE_BREAK_VFX_ANIM :: "016ARP/Small_Break";
+BARRICADE_BREAK_VFX_LIFETIME :: 0.55;
+BARRICADE_BREAK_VFX_SCALE :: v2{1.15, 1.15};
 
 is_barricade_item_def :: proc(item_def: Item_Definition) -> bool {
     return item_def != null && item_def.get_id() == BARRICADE_ITEM_ID;
@@ -74,6 +78,10 @@ play_barricade_sfx :: proc(path: string, entity_to_follow: Entity) {
     SFX.play(sound, desc);
 }
 
+spawn_barricade_break_vfx :: proc(position: v2) {
+    spawn_simple_vfx(BARRICADE_BREAK_VFX_SPINE_PATH, "default", position, BARRICADE_BREAK_VFX_SCALE, BARRICADE_BREAK_VFX_ANIM, BARRICADE_BREAK_VFX_LIFETIME);
+}
+
 get_barricade_navmesh :: proc() -> Navmesh {
     gm := get_game_manager();
     if #alive(gm) && #alive(gm.navmesh_to_lock_to) {
@@ -83,10 +91,11 @@ get_barricade_navmesh :: proc() -> Navmesh {
 }
 
 mark_barricade_navmesh_for_rebuild :: proc() {
-    navmesh := get_barricade_navmesh();
-    if #alive(navmesh) {
-        navmesh.mark_for_rebuild();
-    }
+    // Temporarily disabled while waiting on the editor navmesh rebuild fix.
+    // navmesh := get_barricade_navmesh();
+    // if #alive(navmesh) {
+    //     navmesh.mark_for_rebuild();
+    // }
 }
 
 give_barricade_item_to_player :: proc(player: Player) -> bool {
@@ -145,6 +154,7 @@ Barricade :: class : Component {
 
     break_permanently :: method() {
         play_barricade_sfx("reusable_weapons/sounds/reusable-weapons/ice_cube_break.wav", entity);
+        spawn_barricade_break_vfx(entity.world_position);
         entity.destroy();
         mark_barricade_navmesh_for_rebuild();
     }
