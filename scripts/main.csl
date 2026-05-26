@@ -186,9 +186,6 @@ DOWNED_SURVIVOR_MOVEMENT_MULTIPLIER :: 0.30;
 DOWNED_BLEED_OUT_SECONDS :: 30.0;
 DOWNED_SCREAM_INTERVAL_SECONDS :: 10.0;
 ROUND_ENTITY_NORMAL_MOVEMENT_MULTIPLIER :: 0.84;
-ENTITY_AFK_TIMEOUT_SECONDS :: 120.0;
-ENTITY_AFK_MOVED_DISTANCE :: 0.25;
-ENTITY_AFK_MOVED_DISTANCE_SQ :: ENTITY_AFK_MOVED_DISTANCE * ENTITY_AFK_MOVED_DISTANCE;
 HELD_ITEM_BONE_NAME :: "Finger_R2";
 HELD_ITEM_SCALE := v2.{0.35, 0.35};
 HELD_ITEM_RENDER_LAYER :: 1;
@@ -334,10 +331,6 @@ Player :: class : Player_Base {
     vent_cooldown_ends_at: float;
     warp_to_backrooms_static_started_at: float;
     end_game_cutscene_dance_triggered: bool;
-    entity_afk_last_position: v2;
-    entity_afk_last_move_at: float;
-    entity_afk_has_position: bool;
-    entity_afk_kick_issued: bool;
     entity_cached_facing_right: bool;
     playerWins: s64;
 
@@ -820,9 +813,6 @@ Player :: class : Player_Base {
         vent_cooldown_ends_at = 0.0;
         warp_to_backrooms_static_started_at = 0.0;
         end_game_cutscene_dance_triggered = false;
-        entity_afk_has_position = false;
-        entity_afk_last_move_at = get_time();
-        entity_afk_kick_issued = false;
         entity_cached_facing_right = true;
         playerWins = Save.get_int(this, PLAYER_WINS_SAVE_KEY, 0);
         this.sync_player_wins_leaderboard();
@@ -1165,50 +1155,6 @@ Player :: class : Player_Base {
         animator.state_machine.set_trigger("RESET");
     }
 
-    reset_entity_afk_state :: method() {
-        if #alive(entity) {
-            entity_afk_last_position = entity.world_position;
-            entity_afk_has_position = true;
-        } else {
-            entity_afk_last_position = v2{0.0, 0.0};
-            entity_afk_has_position = false;
-        }
-        entity_afk_last_move_at = get_time();
-        entity_afk_kick_issued = false;
-    }
-
-    tick_entity_afk_round_state :: method() {
-        gm := get_game_manager();
-        if !#alive(gm) || gm.phase != .ACTIVE || !this.is_round_entity() || !#alive(entity) {
-            entity_afk_has_position = false;
-            entity_afk_kick_issued = false;
-            return;
-        }
-
-        if !entity_afk_has_position {
-            this.reset_entity_afk_state();
-            return;
-        }
-
-        delta := entity.world_position - entity_afk_last_position;
-        if length_squared(delta) >= ENTITY_AFK_MOVED_DISTANCE_SQ {
-            this.reset_entity_afk_state();
-            return;
-        }
-
-        if entity_afk_kick_issued {
-            return;
-        }
-
-        if get_time() < entity_afk_last_move_at + ENTITY_AFK_TIMEOUT_SECONDS {
-            return;
-        }
-
-        entity_afk_kick_issued = true;
-        log_info("Player: Entity % timed out after % seconds without moving", {this.get_user_id(), ENTITY_AFK_TIMEOUT_SECONDS});
-        gm.end_match_survivors_win();
-    }
-
     tick_end_game_cutscene_dance_state :: method() {
         gm := get_game_manager();
         if !#alive(gm) || !gm.is_end_game_cutscene_active() {
@@ -1353,7 +1299,6 @@ Player :: class : Player_Base {
         }
 
         this.tick_downed_scream_state(dt);
-        this.tick_entity_afk_round_state();
         process_entity_jumpscare_sabotage_request(this);
         this.update_jumpscare_overlay(dt);
 

@@ -308,6 +308,7 @@ format_countdown_mm_ss :: proc(total_seconds: s64) -> string {
 MATCH_TIMER_TOP_DOWN_OFFSET :: 90.0;
 INTRO_SPAWN_TRANSITION_UI_LAYER :: 10000;
 ZONE1_TAPE_GOAL_COUNT :: 3;
+ZONE2_TAPE_GOAL_COUNT :: 6;
 
 draw_match_status_ui :: proc(title: string, value: string) {
     UIK.begin(UIK.window(UIK.rect_topbar().offset(0.0, -MATCH_TIMER_TOP_DOWN_OFFSET)));
@@ -597,6 +598,9 @@ draw_match_timer_ui :: proc(player: Player) {
     if player.is_round_survivor() && player.current_zone == .Zone1 {
         tapes_found := get_round_tapes_found_count(gm);
         UIK.text(format_string("Tapes Found %/%", {tapes_found, ZONE1_TAPE_GOAL_COUNT}), UIK.text_body());
+    } else if player.is_round_survivor() && player.current_zone == .Zone2 {
+        tapes_found := get_round_tapes_found_count(gm);
+        UIK.text(format_string("Tapes Found %/%", {tapes_found, ZONE2_TAPE_GOAL_COUNT}), UIK.text_body());
     }
 
     if player.is_local() && !player.is_round_entity() && player.entity_scream_reveal_remaining > 0.0 {
