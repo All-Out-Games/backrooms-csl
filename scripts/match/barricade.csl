@@ -10,7 +10,6 @@ BARRICADE_PLACE_COOLDOWN_SECONDS :: 0.25;
 BARRICADE_SPRITE_LAYER :: 0;
 BARRICADE_SPRITE_SCALE :: v2{2.0, 2.0};
 BARRICADE_OBSTACLE_HALF_EXTENT :: 0.75;
-BARRICADE_PLAYER_BLOCK_RADIUS :: 0.32;
 BARRICADE_PREVIEW_ALPHA :: 0.48;
 
 is_barricade_item_def :: proc(item_def: Item_Definition) -> bool {
@@ -75,6 +74,21 @@ play_barricade_sfx :: proc(path: string, entity_to_follow: Entity) {
     SFX.play(sound, desc);
 }
 
+get_barricade_navmesh :: proc() -> Navmesh {
+    gm := get_game_manager();
+    if #alive(gm) && #alive(gm.navmesh_to_lock_to) {
+        return gm.navmesh_to_lock_to;
+    }
+    return find_scene_navmesh();
+}
+
+mark_barricade_navmesh_for_rebuild :: proc() {
+    navmesh := get_barricade_navmesh();
+    if #alive(navmesh) {
+        navmesh.mark_for_rebuild();
+    }
+}
+
 give_barricade_item_to_player :: proc(player: Player) -> bool {
     if player == null {
         return false;
@@ -103,69 +117,12 @@ Barricade :: class : Component {
         sync_visuals();
     }
 
-    ao_update :: method(dt: float) {
-        block_players();
-    }
-
     sync_visuals :: method() {
         sprite := entity.get_component(Sprite_Renderer);
         if sprite != null {
             sprite.set_texture(get_asset(Texture_Asset, BARRICADE_CRATE_TEXTURE_PATH));
             sprite.layer = BARRICADE_SPRITE_LAYER;
             sprite.mask_in_shadow = true;
-        }
-    }
-
-    should_block_player :: method(player: Player) -> bool {
-        if player == null || !#alive(player.entity) {
-            return false;
-        }
-        if player.is_round_dead() {
-            return false;
-        }
-        return player.is_round_survivor() || player.is_round_entity() || player.is_round_minion();
-    }
-
-    block_players :: method() {
-        half := get_barricade_half_extents();
-        half.x += BARRICADE_PLAYER_BLOCK_RADIUS;
-        half.y += BARRICADE_PLAYER_BLOCK_RADIUS;
-        center := entity.world_position;
-
-        for player: component_iterator(Player) {
-            if !should_block_player(player) {
-                continue;
-            }
-
-            delta := player.entity.world_position - center;
-            if abs(delta.x) > half.x || abs(delta.y) > half.y {
-                continue;
-            }
-
-            push_x := half.x - abs(delta.x);
-            push_y := half.y - abs(delta.y);
-            new_pos := player.entity.world_position;
-            if push_x < push_y {
-                if delta.x < 0.0 {
-                    new_pos.x = center.x - half.x;
-                } else {
-                    new_pos.x = center.x + half.x;
-                }
-                if #alive(player.agent) {
-                    player.agent.velocity = v2{0.0, player.agent.velocity.y};
-                }
-            } else {
-                if delta.y < 0.0 {
-                    new_pos.y = center.y - half.y;
-                } else {
-                    new_pos.y = center.y + half.y;
-                }
-                if #alive(player.agent) {
-                    player.agent.velocity = v2{player.agent.velocity.x, 0.0};
-                }
-            }
-
-            player.entity.set_local_position(new_pos);
         }
     }
 
@@ -183,11 +140,13 @@ Barricade :: class : Component {
 
         play_barricade_sfx("reusable_weapons/sounds/reusable-weapons/drop_item.wav", entity);
         entity.destroy();
+        mark_barricade_navmesh_for_rebuild();
     }
 
     break_permanently :: method() {
         play_barricade_sfx("reusable_weapons/sounds/reusable-weapons/ice_cube_break.wav", entity);
         entity.destroy();
+        mark_barricade_navmesh_for_rebuild();
     }
 
     ao_end :: method() {
@@ -285,6 +244,11 @@ spawn_barricade_from_prefab :: proc(position: v2) -> Barricade {
         return null;
     }
 
+    navmesh := get_barricade_navmesh();
+    if #alive(navmesh) && #alive(navmesh.entity) {
+        e.set_parent(navmesh.entity, true);
+    }
+
     barrier := e.get_component(Barricade);
     if barrier == null {
         barrier = e.add_component(Barricade);
@@ -303,6 +267,7 @@ spawn_barricade_from_prefab :: proc(position: v2) -> Barricade {
     }
     monster_interactable.setup(barrier);
 
+    mark_barricade_navmesh_for_rebuild();
     return barrier;
 }
 
@@ -372,10 +337,15 @@ place_selected_barricade :: proc(player: Player, position: v2) -> bool {
 }
 
 clear_all_barricades :: proc() {
+    destroyed_any := false;
     for barrier: component_iterator(Barricade) {
         if #alive(barrier.entity) {
             barrier.entity.destroy();
+            destroyed_any = true;
         }
+    }
+    if destroyed_any {
+        mark_barricade_navmesh_for_rebuild();
     }
 }
 

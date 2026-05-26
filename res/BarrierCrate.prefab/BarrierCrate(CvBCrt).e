@@ -30,6 +30,33 @@
 },
 {
   "cid": 2,
+  "aoid": 2949107715,
+  "component_type": "Internal_Component",
+  "internal_component_type": "Navmesh_Loop",
+  "data": {
+    "flip_inside_outside": true,
+    "points": [
+      {
+        "X": -0.75,
+        "Y": -0.75
+      },
+      {
+        "X": 0.75,
+        "Y": -0.75
+      },
+      {
+        "X": 0.75,
+        "Y": 0.75
+      },
+      {
+        "X": -0.75,
+        "Y": 0.75
+      }
+    ]
+  }
+},
+{
+  "cid": 3,
   "aoid": 2949107716,
   "component_type": "Internal_Component",
   "internal_component_type": "Barricade",
@@ -38,7 +65,7 @@
   }
 },
 {
-  "cid": 3,
+  "cid": 4,
   "aoid": 2949107717,
   "component_type": "Internal_Component",
   "internal_component_type": "Barricade_Survivor_Interactable",
@@ -49,7 +76,7 @@
   }
 },
 {
-  "cid": 4,
+  "cid": 5,
   "aoid": 2949107718,
   "component_type": "Internal_Component",
   "internal_component_type": "Barricade_Monster_Interactable",
