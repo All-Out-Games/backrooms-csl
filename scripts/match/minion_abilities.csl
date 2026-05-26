@@ -90,7 +90,7 @@ Entity_Convert_Minion_Effect :: class : Effect_Base {
             return;
         }
 
-        player.entity_override_state_machine.set_trigger("vomit");
+        player.entity_override_state_machine.set_trigger("convertbreath");
     }
 
     effect_update :: method(dt: float) {
