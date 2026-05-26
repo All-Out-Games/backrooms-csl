@@ -1,0 +1,16 @@
+5c845b75d9e37482.png
+	size: 1156, 404
+	filter: Linear, Linear
+Circle Shadow
+	bounds: 6, 9, 463, 388
+	offsets: 7, 7, 477, 402
+Square Shadow
+	bounds: 475, 6, 391, 391
+	offsets: 65, 65, 521, 521
+lever base
+	bounds: 872, 214, 183, 150
+	offsets: 1, 1, 185, 152
+	rotate: 90
+lever_handle
+	bounds: 1028, 220, 121, 177
+	offsets: 1, 1, 123, 179

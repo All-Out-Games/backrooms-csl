@@ -1,0 +1,39 @@
+011FISH_WaterfallVFX.png
+	size: 564, 368
+	filter: Linear, Linear
+	scale: 0.5
+images/ball1
+	bounds: 415, 321, 41, 41
+images/ball2
+	bounds: 368, 321, 41, 41
+images/ball3
+	bounds: 321, 321, 41, 41
+images/line_A1
+	bounds: 462, 328, 17, 34
+	offsets: 0, 1, 17, 36
+images/line_A2
+	bounds: 485, 328, 15, 34
+	offsets: 0, 1, 15, 36
+images/line_B1
+	bounds: 506, 328, 10, 34
+	offsets: 0, 1, 10, 35
+images/line_B2
+	bounds: 522, 329, 9, 33
+	offsets: 0, 1, 9, 34
+images/line_C1
+	bounds: 537, 326, 6, 36
+	offsets: 0, 1, 6, 38
+images/line_C2
+	bounds: 549, 328, 6, 34
+	offsets: 0, 1, 6, 36
+images/ripple_1
+	bounds: 278, 307, 55, 37
+	rotate: 90
+images/ripple_2
+	bounds: 214, 275, 87, 58
+	rotate: 90
+images/ripple_3
+	bounds: 134, 251, 111, 74
+	rotate: 90
+images/waterfall/waterfall_mid
+	bounds: 6, 6, 122, 356

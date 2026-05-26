@@ -14,6 +14,7 @@
     "Y": 1
   },
   "previous_sibling": 3754826206,
+  "next_sibling": 3743326586,
   "parent": 1807259580
 },
 {
@@ -29,7 +30,7 @@
         "layer_id": 1,
         "sort_order": 1,
         "layer_mode": 1,
-        "manual_layer": -14,
+        "manual_layer": -11,
         "outline_color": {
           "W": 1
         },
@@ -290,13 +291,13 @@
             "texture": "Tiles/Filler.png"
           }
         ],
-        "mask": "$AO/tile_mask.png"
+        "mask": "Tiles/mask_normal_sharp.png"
       },
       {
         "layer_id": 2,
         "sort_order": 2,
         "layer_mode": 1,
-        "manual_layer": -13,
+        "manual_layer": -10,
         "chunks": [
           {
             "chunk_x": 2,
@@ -500,7 +501,7 @@
             "texture": "Tiles/Tiles_Zone2/Zone2Pitfall.png"
           }
         ],
-        "mask": "$AO/tile_mask.png"
+        "mask": "Tiles/mask_normal_sharp.png"
       }
     ]
   }

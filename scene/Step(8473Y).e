@@ -14,6 +14,7 @@
     "Y": 0.3400005996227264
   },
   "previous_sibling": 1007859309,
+  "next_sibling": 1015897581,
   "parent": 1016874829
 },
 {
@@ -23,7 +24,7 @@
   "internal_component_type": "Sprite_Renderer",
   "data": {
     "texture": "Tiles/Zone3/zone3_wall_1.png",
-    "layer": -12,
+    "layer": -9,
     "wrap": true
   }
 }
