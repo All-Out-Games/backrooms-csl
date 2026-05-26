@@ -1370,6 +1370,7 @@ Player :: class : Player_Base {
             draw_survivor_intro_static_ui(this);
             this.draw_warp_to_backrooms_static_ui();
             draw_intro_spawn_transition_ui(this);
+            draw_game_start_vignette_ui(this);
             draw_head_start_ui(this);
             draw_hunt_begin_banner_ui(this);
             draw_exit_unlocked_banner_ui(this);
