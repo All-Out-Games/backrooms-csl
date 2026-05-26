@@ -387,6 +387,15 @@ get_round_tapes_found_count :: proc(gm: Game_Manager) -> s64 {
     return found;
 }
 
+get_tape_goal_count_for_zone :: proc(zone: CurrentZone) -> s64 {
+    switch zone {
+        case .Zone1: return ZONE1_TAPE_GOAL_COUNT;
+        case .Zone2: return ZONE2_TAPE_GOAL_COUNT;
+        case .Zone3: return ZONE3_TAPE_GOAL_COUNT;
+        default:     return 0;
+    }
+}
+
 get_end_countdown_seconds :: proc(gm: Game_Manager) -> s64 {
     if !#alive(gm) {
         return 0;
@@ -604,42 +613,12 @@ draw_match_timer_ui :: proc(player: Player) {
     if gm.round_timer_paused {
         UIK.text("Paused", UIK.text_body());
     }
-    if player.is_round_survivor() && (player.current_zone == .Zone1 || player.current_zone == .Zone2) {
-        tapes_found := get_round_tapes_found_count(gm);
-        UIK.text(format_string("Tapes Found %/%", {tapes_found, ZONE2_TAPE_GOAL_COUNT}), UIK.text_body());
-    } else if player.is_round_survivor() && player.current_zone == .Zone3 {
-        tapes_found := get_round_tapes_found_count(gm);
-        UIK.text(format_string("Tapes Found %/%", {tapes_found, ZONE3_TAPE_GOAL_COUNT}), UIK.text_body());
-        goal_count := ZONE1_TAPE_GOAL_COUNT;
-        if player.current_zone == .Zone2 {
-            goal_count = ZONE2_TAPE_GOAL_COUNT;
+    if player.is_round_survivor() {
+        tape_goal_count := get_tape_goal_count_for_zone(player.current_zone);
+        if tape_goal_count > 0 {
+            tapes_found := get_round_tapes_found_count(gm);
+            UIK.text(format_string("Tapes Found %/%", {tapes_found, tape_goal_count}), UIK.text_body());
         }
-
-        tape_row := UIK.layout_row(UIK.fit(), UIK.fit(), 6);
-        tape_row.cross_align = .CENTER;
-        tape_row.main_align = .CENTER;
-        tape_row.show_background = false;
-        UIK.panel_begin(tape_row);
-
-        tape_icon := get_asset(Texture_Asset, "tapes/vhs_yellow.png");
-        if tape_icon != null {
-            tape_icon_panel := UIK.layout_column();
-            tape_icon_panel.width = UIK.pixels(26);
-            tape_icon_panel.height = UIK.pixels(26);
-            tape_icon_panel.cross_align = .CENTER;
-            tape_icon_panel.main_align = .CENTER;
-            tape_icon_panel.show_background = false;
-            UIK.panel_begin(tape_icon_panel);
-            UIK.image_fitted(tape_icon, UIK.image_desc(.CONTAIN));
-            UIK.panel_end();
-        }
-
-        tapes_text := UIK.text_title();
-        UIK.text_set_word_wrap(&tapes_text, false);
-        UIK.text_set_size_mult(&tapes_text, 0.55);
-        UIK.text(format_string("Tapes Found %/%", {tapes_found, goal_count}), tapes_text);
-
-        UIK.panel_end();
     }
 
     if player.is_local() && !player.is_round_entity() && player.entity_scream_reveal_remaining > 0.0 {
