@@ -108,6 +108,7 @@ ao_update :: proc(dt: float) {
     if braam2_next_play_at <= 0.0 || get_time() >= braam2_next_play_at {
         braam2_desc := SFX.default_sfx_desc();
         braam2_desc.volume = 0.85;
+        braam2_desc.channel = .MUSIC;
         SFX.play(get_asset(SFX_Asset, "SFX/braam2.wav"), braam2_desc);
         braam2_next_play_at = get_time() + BRAAM2_REPLAY_SECONDS;
     }

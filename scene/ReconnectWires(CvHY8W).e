@@ -52,4 +52,13 @@
   "data": {
 
   }
+},
+{
+  "cid": 4,
+  "aoid": 2949503523,
+  "component_type": "Internal_Component",
+  "internal_component_type": "InteractableGlow",
+  "data": {
+
+  }
 }

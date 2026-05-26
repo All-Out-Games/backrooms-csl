@@ -1,0 +1,126 @@
+import "core:ao"
+
+InteractableGlowColor :: enum {
+    WARM_GOLD;
+    COOL_BLUE;
+    TOXIC_GREEN;
+    SOFT_PURPLE;
+    WARNING_RED;
+    GHOST_WHITE;
+    CUSTOM;
+}
+
+get_interactable_glow_color :: proc(color: InteractableGlowColor) -> v4 {
+    switch color {
+        case .COOL_BLUE: {
+            return v4{0.55, 0.9, 1.45, 1.0};
+        }
+        case .TOXIC_GREEN: {
+            return v4{0.45, 1.45, 0.45, 1.0};
+        }
+        case .SOFT_PURPLE: {
+            return v4{1.05, 0.55, 1.45, 1.0};
+        }
+        case .WARNING_RED: {
+            return v4{1.55, 0.35, 0.25, 1.0};
+        }
+        case .GHOST_WHITE: {
+            return v4{1.35, 1.45, 1.55, 1.0};
+        }
+        default: {
+            return v4{1.45, 1.22, 0.45, 1.0};
+        }
+    }
+}
+
+get_attached_sprite_renderer :: proc(target: Entity) -> Sprite_Renderer {
+    if !#alive(target) {
+        return null;
+    }
+
+    sprite := target.get_component(Sprite_Renderer);
+    if #alive(sprite) {
+        return sprite;
+    }
+
+    child := target.get_first_child();
+    while #alive(child) {
+        sprite = child.get_component(Sprite_Renderer);
+        if #alive(sprite) {
+            return sprite;
+        }
+        child = child.get_next_sibling();
+    }
+
+    return null;
+}
+
+InteractableGlow :: class : Component {
+    color_preset: InteractableGlowColor @ao_serialize;
+    glow_color: v4 @ao_serialize;
+    min_strength: float @ao_serialize;
+    max_strength: float @ao_serialize;
+    pulse_speed: float @ao_serialize;
+    affect_alpha: bool @ao_serialize;
+
+    sprite: Sprite_Renderer;
+    base_color: v4;
+    elapsed: float;
+
+    ao_start :: method() {
+        if color_preset != .CUSTOM {
+            glow_color = get_interactable_glow_color(color_preset);
+        } else if glow_color.x == 0.0 && glow_color.y == 0.0 && glow_color.z == 0.0 && glow_color.w == 0.0 {
+            glow_color = get_interactable_glow_color(.WARM_GOLD);
+        }
+        if max_strength <= 0.0 {
+            max_strength = 1.0;
+        }
+        if min_strength <= 0.0 {
+            min_strength = 0.25;
+        }
+        if pulse_speed <= 0.0 {
+            pulse_speed = 5.0;
+        }
+
+        min_strength = clamp(min_strength, 0.0, 1.0);
+        max_strength = clamp(max_strength, min_strength, 1.0);
+        elapsed = 0.0;
+
+        sprite = get_attached_sprite_renderer(entity);
+        if #alive(sprite) {
+            base_color = sprite.color;
+        }
+    }
+
+    ao_update :: method(dt: float) {
+        if !#alive(sprite) {
+            sprite = get_attached_sprite_renderer(entity);
+            if !#alive(sprite) {
+                return;
+            }
+            base_color = sprite.color;
+        }
+
+        elapsed += dt;
+        pulse := (sin(elapsed * pulse_speed) + 1.0) * 0.5;
+        strength := lerp(min_strength, max_strength, pulse);
+
+        tint := v4{
+            lerp(base_color.x, glow_color.x, strength),
+            lerp(base_color.y, glow_color.y, strength),
+            lerp(base_color.z, glow_color.z, strength),
+            base_color.w,
+        };
+        if affect_alpha {
+            tint.w = lerp(base_color.w, glow_color.w, strength);
+        }
+        sprite.color = tint;
+    }
+
+    ao_end :: method() {
+        if #alive(sprite) {
+            sprite.color = base_color;
+        }
+    }
+}
