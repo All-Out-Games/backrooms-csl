@@ -399,7 +399,16 @@
           "W": 1
         },
         "wall_top_texture": "Tiles/Zone3/zone3_filler.png",
-        "wall_top_mask": "Tiles/mask_normal_sharp.png"
+        "wall_top_mask": "Tiles/mask_normal_sharp.png",
+        "collision_enabled": true,
+        "collision_inset": {
+          "X": 0.2000000178813934,
+          "Y": -0.8000000715255737
+        },
+        "collision_offset": {
+          "X": -0.0000000149011612,
+          "Y": 1
+        }
       }
     ]
   }
