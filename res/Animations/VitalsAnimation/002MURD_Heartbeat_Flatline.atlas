@@ -1,0 +1,19 @@
+002MURD_Heartbeat_Flatline.png
+	size: 684, 2272
+	filter: Linear, Linear
+green_flatline
+	bounds: 3, 2085, 578, 90
+	offsets: 1, 5, 581, 100
+green_line1
+	bounds: 3, 363, 581, 389
+green_line2
+	bounds: 3, 3, 581, 358
+	rotate: 180
+red_flatline
+	bounds: 3, 2178, 578, 90
+	offsets: 1, 5, 581, 100
+vitalsbackground
+	bounds: 3, 755, 678, 596
+vitalsborder
+	bounds: 3, 1354, 728, 646
+	rotate: 90

@@ -287,6 +287,7 @@ Player :: class : Player_Base {
     chat_mode_inited: bool;
     chat_mode_last_applied: Chat.Mode;
     vitals_modal_open: bool;
+    vitals_ui_entries: [..]Vitals_UI_Entry;
     sabotage_modal_open: bool;
     jumpscare_target_modal_open: bool;
     security_cameras_open: bool;
@@ -1428,7 +1429,7 @@ Player :: class : Player_Base {
                 this.draw_viewfinder_screen_overlay();
                 return;
             }
-            draw_vitals_modal_ui(this);
+            draw_vitals_modal_ui(this, dt);
             draw_entity_sabotage_modal_ui(this);
             draw_entity_jumpscare_target_modal_ui(this);
             draw_radio_hint_arrows(this);
@@ -1547,6 +1548,7 @@ Player :: class : Player_Base {
 
         this.destroy_held_item_visual();
         this.destroy_jumpscare_overlay();
+        destroy_vitals_ui_entries(this);
         close_security_cameras_for_player(this);
 
         // Local-only: destroy LOS light entity.

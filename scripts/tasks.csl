@@ -12,15 +12,15 @@ RR_TASK_SFX_TILE_CLICK   :: "task_click_tile_8ba441.wav";
 RR_TASK_SFX_SUCCESS      :: "task_success_df0cb6.wav";
 RR_UI_BUTTON_CLICK_SOUND_PATH :: "mouse_click_cee011.wav";
 
-TASK_PANEL_WIDTH         :: 320.0;
-TASK_LIST_WIDTH          :: 300.0;
-TASK_HEADER_HEIGHT       :: 46.0;
-TASK_ENTRY_HEIGHT        :: 32.0;
-TASK_ENTRY_GAP           :: 2.0;
-TASK_LIST_PADDING        :: 10.0;
+TASK_PANEL_WIDTH         :: 480.0;
+TASK_LIST_WIDTH          :: 450.0;
+TASK_HEADER_HEIGHT       :: 69.0;
+TASK_ENTRY_HEIGHT        :: 48.0;
+TASK_ENTRY_GAP           :: 3.0;
+TASK_LIST_PADDING        :: 15.0;
 TASK_HEADER_TOP_OFFSET   :: 30.0;
-TASK_CHECKBOX_HALF_SIZE  :: 9.0;
-TASK_DROPDOWN_SLICE_PX   :: 16.0;
+TASK_CHECKBOX_HALF_SIZE  :: 13.5;
+TASK_DROPDOWN_SLICE_PX   :: 24.0;
 TASK_HELP_ENTRY_HEIGHT   :: 140.0;
 TASK_HELP_ENTRY_GAP      :: 12.0;
 
@@ -1314,24 +1314,24 @@ draw_task_list_header :: proc(screen: Rect, player: Player) -> Rect {
     header_rect := header_draw_rect;
     header_rect.cut_left(extra_left);
 
-    header_content := header_rect.inset(4, 4, 4, 4);
+    header_content := header_rect.inset(6, 6, 6, 6);
 
     title_ts := UI.default_text_settings();
-    title_ts.size = 24;
+    title_ts.size = 36;
     title_ts.color = v4.{1, 1, 1, 1};
     title_ts.halign = .LEFT;
     title_ts.valign = .CENTER;
     title_ts.do_outline = true;
-    title_ts.outline_thickness = 2;
+    title_ts.outline_thickness = 3;
     title_ts.outline_color = v4.{0, 0, 0, 1};
     title_ts.do_autofit = true;
-    title_ts.autofit_min_size = 14;
-    title_ts.autofit_max_size = 24;
+    title_ts.autofit_min_size = 21;
+    title_ts.autofit_max_size = 36;
     UI.text(header_content, title_ts, "Tasks");
 
     arrow_tex := get_asset(Texture_Asset, TASK_TEX_DROPDOWN_ARROW);
     if arrow_tex != null {
-        arrow_rect := header_rect.right_rect().center_rect().offset(-22.0, 0.0).grow(10.0);
+        arrow_rect := header_rect.right_rect().center_rect().offset(-33.0, 0.0).grow(15.0);
         arrow_rect = arrow_rect.fit_aspect(arrow_tex.get_aspect());
         if player.task_list_open {
             UI.push_matrix(Matrix4.rotate_about_point(arrow_rect.center(), 180.0));
@@ -1359,8 +1359,8 @@ draw_task_list_header :: proc(screen: Rect, player: Player) -> Rect {
         player.task_list_open = !player.task_list_open;
     }
 
-    help_btn_half := 16.0;
-    help_btn_rect := header_rect.top_right_rect().offset(0, -5.0).grow(help_btn_half);
+    help_btn_half := 24.0;
+    help_btn_rect := header_rect.top_right_rect().offset(0, -7.5).grow(help_btn_half);
 
     UI.push_id("task_help_btn");
     defer UI.pop_id();
@@ -1441,15 +1441,15 @@ draw_task_progress_bar :: proc(player: Player, screen: Rect) {
 }
 
 draw_task_entry :: proc(entry_rect: Rect, task: Task_Base, player: Player) {
-    entry_content := entry_rect.inset(0.0, 6.0, 0.0, 6.0);
-    checkbox_slot := entry_content.cut_left(24.0);
+    entry_content := entry_rect.inset(0.0, 9.0, 0.0, 9.0);
+    checkbox_slot := entry_content.cut_left(36.0);
     checkbox_rect := checkbox_slot.center_rect().grow(TASK_CHECKBOX_HALF_SIZE);
     checked_off := is_task_completed_for_player(player, task);
     draw_task_checkbox(checkbox_rect, checked_off);
 
     text_rect := entry_content;
     task_ts := UI.default_text_settings();
-    task_ts.size = 24;
+    task_ts.size = 36;
     if checked_off {
         task_ts.color = v4.{0.6, 0.6, 0.6, 1};
     } else {
@@ -1458,12 +1458,12 @@ draw_task_entry :: proc(entry_rect: Rect, task: Task_Base, player: Player) {
     task_ts.halign = .LEFT;
     task_ts.valign = .CENTER;
     task_ts.do_outline = true;
-    task_ts.outline_thickness = 4;
+    task_ts.outline_thickness = 6;
     task_ts.outline_color = v4.{0.15, 0.15, 0.215, 1};
     task_ts.do_autofit = true;
-    task_ts.autofit_min_size = 14;
-    task_ts.autofit_max_size = 24;
-    UI.text(text_rect.inset(0, 4, 0, 4), task_ts, get_task_display_name(task.id));
+    task_ts.autofit_min_size = 21;
+    task_ts.autofit_max_size = 36;
+    UI.text(text_rect.inset(0, 6, 0, 6), task_ts, get_task_display_name(task.id));
 
     if task.id == TASK_ID_REPAIR_LAPTOP && player != null && !task.started && !task.completed {
         UI.push_id("start_repair_laptop_task");
@@ -1550,16 +1550,16 @@ draw_task_list_ui :: proc(player: Player) {
         UI.quad(list_rect, core_globals.white_sprite, v4.{0.04, 0.04, 0.06, 0.9});
     }
 
-    list_content := list_rect.inset(TASK_LIST_PADDING, 10.0, TASK_LIST_PADDING, 10.0);
+    list_content := list_rect.inset(TASK_LIST_PADDING, 15.0, TASK_LIST_PADDING, 15.0);
     if player.active_tasks.elements.count == 0 {
         empty_ts := UI.default_text_settings();
-        empty_ts.size = 20;
+        empty_ts.size = 30;
         empty_ts.color = v4.{0.85, 0.85, 0.9, 0.8};
         empty_ts.halign = .LEFT;
         empty_ts.valign = .CENTER;
         empty_ts.word_wrap = true;
         empty_ts.do_outline = true;
-        empty_ts.outline_thickness = 2;
+        empty_ts.outline_thickness = 3;
         empty_ts.outline_color = v4.{0, 0, 0, 1};
         UI.text(list_content, empty_ts, "No tasks assigned.");
         return;
