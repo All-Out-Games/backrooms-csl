@@ -359,7 +359,7 @@ Player :: class : Player_Base {
 
     ensure_entity_override_rig :: method() -> bool {
         if entity_override_state_machine != null {
-            entity_override_state_machine.debug_enabled = true;
+            //entity_override_state_machine.debug_enabled = true;
             return #alive(override_rig) && override_rig.instance != null;
         }
 
@@ -848,7 +848,7 @@ Player :: class : Player_Base {
         init_weapon_items();
         setup_reusable_weapons_player_state_machine(this);
         if animator != null && animator.state_machine != null {
-            animator.state_machine.debug_enabled = true;
+            //animator.state_machine.debug_enabled = true;
         }
         if #alive(agent) {
             base_movement_speed = agent.movement_speed;

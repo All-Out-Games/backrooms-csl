@@ -44,6 +44,14 @@ WarpToBackrooms :: class : Interactable {
             return;
         }
 
+        this.warp_player(player, true);
+    }
+
+    warp_player :: method(player: Player, register_zone_progression: bool) {
+        if player == null || !#alive(player.entity) || !#alive(destination_entity) {
+            return;
+        }
+
         if player.security_cameras_open {
             close_security_cameras_for_player(player);
         }
@@ -55,7 +63,7 @@ WarpToBackrooms :: class : Interactable {
             player.agent.velocity = v2{0.0, 0.0};
         }
 
-        if player.is_round_survivor() && RequireReconnectWires {
+        if register_zone_progression && player.is_round_survivor() && RequireReconnectWires {
             gm := get_game_manager();
             if #alive(gm) {
                 gm.register_survivor_reached_next_zone(player);

@@ -2647,6 +2647,69 @@ start :: proc(player: Player) {
     }
 } @chat_command
 
+find_zone_cheat_warp :: proc(target_zone: CurrentZone, target_position: v2) -> WarpToBackrooms {
+    best_warp: WarpToBackrooms = null;
+    best_dist_sq := 999999.0;
+    max_dist_sq := 0.25;
+
+    for warp: component_iterator(WarpToBackrooms) {
+        if !#alive(warp.entity) || !#alive(warp.destination_entity) {
+            continue;
+        }
+        if warp.current_zone != target_zone {
+            continue;
+        }
+
+        dist_sq := length_squared(warp.entity.world_position - target_position);
+        if dist_sq < best_dist_sq {
+            best_dist_sq = dist_sq;
+            best_warp = warp;
+        }
+    }
+
+    if best_dist_sq > max_dist_sq {
+        return null;
+    }
+    return best_warp;
+}
+
+zone :: proc(player: Player, zone_number: int) {
+    if player == null || !#alive(player.entity) {
+        return;
+    }
+
+    target_zone: CurrentZone = .None;
+    target_position := v2{0.0, 0.0};
+    switch zone_number {
+        case 1: {
+            target_zone = .Zone1;
+            target_position = v2{220.1728363037109375, -80.4986801147460938};
+        }
+        case 2: {
+            target_zone = .Zone2;
+            target_position = v2{187.8609771728515625, 43.1976203918457031};
+        }
+        case 3: {
+            target_zone = .Zone3;
+            target_position = v2{216.7621459960937500, 139.2165527343750000};
+        }
+        default: {
+            Notifier.notify(player, "Usage: /zone 1, /zone 2, or /zone 3.");
+            return;
+        }
+    }
+
+    warp := find_zone_cheat_warp(target_zone, target_position);
+    if !#alive(warp) {
+        Notifier.notify(player, "Zone % warp not found.", {zone_number});
+        return;
+    }
+
+    warp.warp_player(player, false);
+    Notifier.notify(player, "Warped to zone %.", {zone_number});
+    log_info("zone: % warped to zone %", {player.get_username(), zone_number});
+} @chat_command
+
 end :: proc(player: Player) {
     gm := get_game_manager();
     if !#alive(gm) {
