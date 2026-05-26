@@ -24,6 +24,7 @@ find_downed_minion_conversion_target :: proc(entity_player: Player) -> Player {
         if !other.is_round_downed() continue;
         if other.is_round_minion() continue;
         if !#alive(other.entity) continue;
+        if !is_entity_reveal_active(other) continue;
 
         delta := other.entity.world_position - origin;
         distance_sq := delta.x * delta.x + delta.y * delta.y;
@@ -50,6 +51,9 @@ convert_downed_player_to_minion :: proc(entity_player: Player, target: Player) -
         return false;
     }
     if !#alive(entity_player.entity) || !#alive(target.entity) {
+        return false;
+    }
+    if !is_entity_reveal_active(target) {
         return false;
     }
 

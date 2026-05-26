@@ -1,0 +1,29 @@
+beast_minion.png
+	size: 448, 120
+	filter: Linear, Linear
+	scale: 0.5
+BackLegL
+	bounds: 275, 56, 52, 58
+BackLegR
+	bounds: 214, 51, 63, 59
+	rotate: 90
+Body
+	bounds: 160, 55, 59, 56
+	offsets: 0, 23, 59, 91
+	rotate: 90
+FrontLegL
+	bounds: 349, 70, 35, 44
+FrontLegR
+	bounds: 314, 66, 37, 48
+Head
+	bounds: 69, 45, 69, 63
+	rotate: 90
+Shadow
+	bounds: 135, 3, 111, 22
+	rotate: 90
+TendrilGrabbing
+	bounds: 3, 31, 64, 83
+Tendril_A
+	bounds: 386, 74, 30, 40
+Tendril_B
+	bounds: 419, 74, 25, 40

@@ -195,12 +195,12 @@ HELD_ITEM_SCALE := v2.{0.35, 0.35};
 HELD_ITEM_RENDER_LAYER :: 1;
 
 ENTITY_OVERRIDE_RIG_PATH :: "Animations/Bacteria/Backrooms_Monster.spine";
-MINION_OVERRIDE_RIG_PATH :: "Animations/beast_minion/beast_minion_and_crewmate.spine";
+MINION_OVERRIDE_RIG_PATH :: "Animations/beast_minion/beast_minion.spine";
 // The Entity override spine is authored larger than the reusable player rig,
 // so keep it on its own scale and small downward offset.
 ENTITY_OVERRIDE_SCALE := v2.{1, 1};
 ENTITY_OVERRIDE_OFFSET := v2.{0.0, -0.30};
-MINION_OVERRIDE_SCALE := v2.{1.0, 1.0};
+MINION_OVERRIDE_SCALE := v2.{2.0, 2.0};
 MINION_OVERRIDE_OFFSET := v2.{0.0, -0.16};
 
 VIEWFINDER_COLOR_FILTER := v3.{0.9, 0.9, 0.9};
