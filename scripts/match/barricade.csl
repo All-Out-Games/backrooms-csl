@@ -1,20 +1,19 @@
 import "core:ao"
 
-BARRICADE_CRATE_TEXTURE_PATH :: "Barriers/BarrierCrate.png";
-BARRICADE_CRATE_PREFAB_PATH :: "BarrierCrate.prefab";
+BARRICADE_CRATE_PREFAB_PATH :: "Barricade.prefab";
+BARRICADE_ICON_PATH :: "Barriers/dresser.png";
 BARRICADE_PLACE_RANGE :: 2.8;
 BARRICADE_MIN_PLACE_DISTANCE :: 0.35;
 BARRICADE_PICKUP_HOLD_SECONDS :: 0.45;
 BARRICADE_MONSTER_BREAK_HOLD_SECONDS :: 5.0;
 BARRICADE_PLACE_COOLDOWN_SECONDS :: 0.25;
-BARRICADE_SPRITE_LAYER :: 0;
-BARRICADE_SPRITE_SCALE :: v2{2.0, 2.0};
-BARRICADE_OBSTACLE_HALF_EXTENT :: 0.75;
-BARRICADE_PREVIEW_ALPHA :: 0.48;
 BARRICADE_BREAK_VFX_SPINE_PATH :: "016ARP_Destroy_FX_93ab22/016ARP_Destroy_FX.spine";
 BARRICADE_BREAK_VFX_ANIM :: "016ARP/Small_Break";
 BARRICADE_BREAK_VFX_LIFETIME :: 0.55;
 BARRICADE_BREAK_VFX_SCALE :: v2{1.15, 1.15};
+BARRICADE_PREVIEW_HALF_EXTENT :: 0.75;
+BARRICADE_PREVIEW_ALPHA :: 0.48;
+BARRICADE_PREVIEW_LAYER :: 10;
 
 is_barricade_item_def :: proc(item_def: Item_Definition) -> bool {
     return item_def != null && item_def.get_id() == BARRICADE_ITEM_ID;
@@ -34,10 +33,6 @@ player_has_selected_barricade :: proc(player: Player) -> bool {
         return false;
     }
     return is_barricade_item_def(item.get_definition());
-}
-
-get_barricade_half_extents :: proc() -> v2 {
-    return v2{BARRICADE_OBSTACLE_HALF_EXTENT, BARRICADE_OBSTACLE_HALF_EXTENT};
 }
 
 get_barricade_selected_position :: proc(player: Player, params: ref Ability_Update_Params, aim_direction: v2) -> v2 {
@@ -122,16 +117,6 @@ Barricade :: class : Component {
     navmesh: Navmesh;
 
     ao_start :: method() {
-        sync_visuals();
-    }
-
-    sync_visuals :: method() {
-        sprite := entity.get_component(Sprite_Renderer);
-        if sprite != null {
-            sprite.set_texture(get_asset(Texture_Asset, BARRICADE_CRATE_TEXTURE_PATH));
-            sprite.layer = BARRICADE_SPRITE_LAYER;
-            sprite.mask_in_shadow = true;
-        }
     }
 
     pick_up :: method(player: Player) {
@@ -262,7 +247,6 @@ spawn_barricade_from_prefab :: proc(position: v2) -> Barricade {
     if barrier == null {
         barrier = e.add_component(Barricade);
     }
-    barrier.sync_visuals();
 
     survivor_interactable := e.get_component(Barricade_Survivor_Interactable);
     if survivor_interactable == null {
@@ -281,29 +265,10 @@ spawn_barricade_from_prefab :: proc(position: v2) -> Barricade {
 }
 
 spawn_barricade :: proc(player: Player, position: v2) -> Barricade {
-    barrier_from_prefab := spawn_barricade_from_prefab(position);
-    if #alive(barrier_from_prefab) {
-        play_barricade_sfx("reusable_weapons/sounds/reusable-weapons/drop_item.wav", barrier_from_prefab.entity);
-        return barrier_from_prefab;
+    barrier := spawn_barricade_from_prefab(position);
+    if #alive(barrier) {
+        play_barricade_sfx("reusable_weapons/sounds/reusable-weapons/drop_item.wav", barrier.entity);
     }
-
-    e := Scene.create_entity();
-    e.set_local_position(position);
-    e.set_local_scale(BARRICADE_SPRITE_SCALE);
-
-    sprite := e.add_component(Sprite_Renderer);
-    sprite.set_texture(get_asset(Texture_Asset, BARRICADE_CRATE_TEXTURE_PATH));
-    sprite.layer = BARRICADE_SPRITE_LAYER;
-    sprite.mask_in_shadow = true;
-
-    barrier := e.add_component(Barricade);
-    barrier.sync_visuals();
-    survivor_interactable := e.add_component(Barricade_Survivor_Interactable);
-    survivor_interactable.setup(barrier);
-    monster_interactable := e.add_component(Barricade_Monster_Interactable);
-    monster_interactable.setup(barrier);
-
-    play_barricade_sfx("reusable_weapons/sounds/reusable-weapons/drop_item.wav", e);
     return barrier;
 }
 
@@ -312,17 +277,17 @@ draw_barricade_preview :: proc(player: Player, position: v2) {
         return;
     }
 
-    tex := get_asset(Texture_Asset, BARRICADE_CRATE_TEXTURE_PATH);
+    tex := get_asset(Texture_Asset, BARRICADE_ICON_PATH);
     if tex == null {
         return;
     }
 
     UI.push_world_draw_context();
     defer UI.pop_draw_context();
-    UI.push_layer(BARRICADE_SPRITE_LAYER + 10);
+    UI.push_layer(BARRICADE_PREVIEW_LAYER);
     defer UI.pop_layer();
 
-    half := get_barricade_half_extents();
+    half := v2{BARRICADE_PREVIEW_HALF_EXTENT, BARRICADE_PREVIEW_HALF_EXTENT};
     rect := Rect{position - half, position + half};
     rect = rect.fit_aspect(tex.get_aspect(), .KEEP_BIGGER);
     UI.quad(rect, tex, v4{1.0, 1.0, 1.0, BARRICADE_PREVIEW_ALPHA});
@@ -338,7 +303,10 @@ place_selected_barricade :: proc(player: Player, position: v2) -> bool {
         return false;
     }
 
-    spawn_barricade(player, position);
+    barrier := spawn_barricade(player, position);
+    if !#alive(barrier) {
+        return false;
+    }
 
     Items.destroy_item_instance(item, 1);
     player.handle_equipped_item_changing(player.last_selected_index);
@@ -361,7 +329,7 @@ clear_all_barricades :: proc() {
 Place_Barricade_Ability :: class : Ability_Base {
     on_init :: method() {
         name = "Place";
-        icon = get_asset(Texture_Asset, BARRICADE_CRATE_TEXTURE_PATH);
+        icon = get_asset(Texture_Asset, BARRICADE_ICON_PATH);
         is_aimed_ability = true;
     }
 
