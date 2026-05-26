@@ -202,6 +202,10 @@ ENTITY_OVERRIDE_SCALE := v2.{1, 1};
 ENTITY_OVERRIDE_OFFSET := v2.{0.0, -0.30};
 MINION_OVERRIDE_SCALE := v2.{2.0, 2.0};
 MINION_OVERRIDE_OFFSET := v2.{0.0, -0.16};
+MINION_FLASHBANG_SHAKE_DISTANCE :: 0.085;
+MINION_FLASHBANG_SHAKE_SPEED :: 48.0;
+MINION_FLASHBANG_SCALE_PULSE :: 0.08;
+MINION_FLASHBANG_SCALE_PULSE_SPEED :: 18.0;
 
 VIEWFINDER_COLOR_FILTER := v3.{0.9, 0.9, 0.9};
 VIEWFINDER_SATURATION :: 1;
@@ -505,8 +509,18 @@ Player :: class : Player_Base {
         if #alive(override_rig) {
             override_rig.entity.set_local_enabled(active);
             if round_minion {
-                override_rig.entity.set_local_position(MINION_OVERRIDE_OFFSET);
-                override_rig.entity.set_local_scale(MINION_OVERRIDE_SCALE);
+                offset := MINION_OVERRIDE_OFFSET;
+                scale := MINION_OVERRIDE_SCALE;
+                if active && is_entity_flashbanged(this) {
+                    alpha := get_entity_flashbang_alpha(this);
+                    t := get_time();
+                    offset.x += sin(t * MINION_FLASHBANG_SHAKE_SPEED) * MINION_FLASHBANG_SHAKE_DISTANCE * alpha;
+                    offset.y += cos(t * MINION_FLASHBANG_SHAKE_SPEED * 1.37) * MINION_FLASHBANG_SHAKE_DISTANCE * 0.55 * alpha;
+                    pulse := 1.0 + sin(t * MINION_FLASHBANG_SCALE_PULSE_SPEED) * MINION_FLASHBANG_SCALE_PULSE * alpha;
+                    scale = v2.{MINION_OVERRIDE_SCALE.x * pulse, MINION_OVERRIDE_SCALE.y * pulse};
+                }
+                override_rig.entity.set_local_position(offset);
+                override_rig.entity.set_local_scale(scale);
             } else {
                 override_rig.entity.set_local_position(ENTITY_OVERRIDE_OFFSET);
                 override_rig.entity.set_local_scale(ENTITY_OVERRIDE_SCALE);
