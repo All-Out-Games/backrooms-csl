@@ -1,8 +1,8 @@
 14
-2482491097089
-1013308120
+5149665787905
+1017799225
 {
-  "name": "Decoration",
+  "name": "Props",
   "local_enabled": true,
   "local_position": {
 
@@ -12,6 +12,7 @@
     "X": 1,
     "Y": 1
   },
-  "next_sibling": 1017799225,
+  "previous_sibling": 1013308120,
+  "next_sibling": 1011186614,
   "parent": 1021241893
 }
