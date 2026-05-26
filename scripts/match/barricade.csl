@@ -1,6 +1,7 @@
 import "core:ao"
 
 BARRICADE_CRATE_TEXTURE_PATH :: "Barriers/BarrierCrate.png";
+BARRICADE_CRATE_PREFAB_PATH :: "BarrierCrate.prefab";
 BARRICADE_PLACE_RANGE :: 2.8;
 BARRICADE_MIN_PLACE_DISTANCE :: 0.35;
 BARRICADE_PICKUP_HOLD_SECONDS :: 0.45;
@@ -202,6 +203,9 @@ Barricade_Survivor_Interactable :: class : Interactable {
     }
 
     install_listener :: method() {
+        if !#alive(barrier) {
+            barrier = entity.get_component(Barricade);
+        }
         this.set_listener(this);
         this.set_text("Pick Up Barricade");
         required_hold_time = BARRICADE_PICKUP_HOLD_SECONDS;
@@ -239,6 +243,9 @@ Barricade_Monster_Interactable :: class : Interactable {
     }
 
     install_listener :: method() {
+        if !#alive(barrier) {
+            barrier = entity.get_component(Barricade);
+        }
         this.set_listener(this);
         this.set_text("Break Barricade");
         required_hold_time = BARRICADE_MONSTER_BREAK_HOLD_SECONDS;
@@ -267,8 +274,44 @@ Barricade_Monster_Interactable :: class : Interactable {
     }
 }
 
+spawn_barricade_from_prefab :: proc(position: v2) -> Barricade {
+    prefab := get_asset(Prefab_Asset, BARRICADE_CRATE_PREFAB_PATH);
+    if prefab == null {
+        return null;
+    }
+
+    e := Scene.instantiate(prefab, position);
+    if !#alive(e) {
+        return null;
+    }
+
+    barrier := e.get_component(Barricade);
+    if barrier == null {
+        barrier = e.add_component(Barricade);
+    }
+    barrier.sync_visuals();
+
+    survivor_interactable := e.get_component(Barricade_Survivor_Interactable);
+    if survivor_interactable == null {
+        survivor_interactable = e.add_component(Barricade_Survivor_Interactable);
+    }
+    survivor_interactable.setup(barrier);
+
+    monster_interactable := e.get_component(Barricade_Monster_Interactable);
+    if monster_interactable == null {
+        monster_interactable = e.add_component(Barricade_Monster_Interactable);
+    }
+    monster_interactable.setup(barrier);
+
+    return barrier;
+}
+
 spawn_barricade :: proc(player: Player, position: v2) -> Barricade {
-    gm := get_game_manager();
+    barrier_from_prefab := spawn_barricade_from_prefab(position);
+    if #alive(barrier_from_prefab) {
+        play_barricade_sfx("reusable_weapons/sounds/reusable-weapons/drop_item.wav", barrier_from_prefab.entity);
+        return barrier_from_prefab;
+    }
 
     e := Scene.create_entity();
     e.set_local_position(position);
