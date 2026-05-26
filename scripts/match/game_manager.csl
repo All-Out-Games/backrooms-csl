@@ -141,6 +141,8 @@ put_entity_abilities_on_standard_cooldown :: proc(player: Player) {
             ability.current_cooldown = ENTITY_LURCH_COOLDOWN_SECONDS;
         } else if ability.#type == Entity_Vomit_Ability {
             ability.current_cooldown = ENTITY_VOMIT_COOLDOWN_SECONDS;
+        } else if ability.#type == Entity_Convert_Minion_Ability {
+            ability.current_cooldown = ENTITY_CONVERT_MINION_COOLDOWN_SECONDS;
         } else if ability.#type == Entity_Wall_Seep_Ability {
             ability.current_cooldown = ENTITY_WALL_SEEP_COOLDOWN_SECONDS;
         }
@@ -165,6 +167,9 @@ get_entity_ability_unlock_step :: proc(ability: Ability_Base) -> s64 {
         return 3;
     }
     if ability.#type == Entity_Lurch_Ability {
+        return 4;
+    }
+    if ability.#type == Entity_Convert_Minion_Ability {
         return 4;
     }
     if ability.#type == Entity_Wall_Seep_Ability {
@@ -2347,6 +2352,8 @@ Game_Manager :: class : Component {
 
         for i: 0..players.count - 1 {
             players[i].current_zone = .None;
+            players[i].clear_round_minion_state();
+            players[i].clear_round_death_state(false);
             clear_player_tasks(players[i]);
             players[i].vent_cooldown_ends_at = 0.0;
             players[i].jumpscare_request_target_user_id = "";
@@ -2459,6 +2466,9 @@ Game_Manager :: class : Component {
             end_match_survivors_win();
             return;
         }
+        if player.is_round_minion() {
+            return;
+        }
         if !is_survivor_player(player) || player.is_round_dead() {
             return;
         }
@@ -2475,7 +2485,7 @@ Game_Manager :: class : Component {
         if phase != .ACTIVE {
             return;
         }
-        if !is_survivor_player(exiting_player) {
+        if !is_survivor_player(exiting_player) || !exiting_player.is_round_survivor() {
             return;
         }
         if !emergency_systems_online {
@@ -2491,6 +2501,8 @@ Game_Manager :: class : Component {
         clear_all_footstep_echoes();
         for player: component_iterator(Player) {
             player.current_zone = .None;
+            player.clear_round_minion_state();
+            player.clear_round_death_state(false);
             clear_player_tasks(player);
             player.vent_cooldown_ends_at = 0.0;
             player.remove_freeze_reason(FREEZE_ENTITY_HEAD_START);
@@ -2629,6 +2641,7 @@ Game_Manager :: class : Component {
         clear_all_corpses();
         for player: component_iterator(Player) {
             player.current_zone = .None;
+            player.clear_round_minion_state();
         }
         phase = .ENDED;
         set_matchmaking_priority_for_phase(phase);
@@ -2654,6 +2667,7 @@ Game_Manager :: class : Component {
         clear_all_corpses();
         for player: component_iterator(Player) {
             player.current_zone = .None;
+            player.clear_round_minion_state();
         }
         phase = .ENDED;
         set_matchmaking_priority_for_phase(phase);
@@ -2795,6 +2809,82 @@ resume_round_timer :: proc(player: Player) {
     } else {
         Notifier.notify(player, "Round timer can only be resumed during the hunt.");
     }
+} @chat_command
+
+teleport_player_to_cheat_destination :: proc(player: Player, position: v2, zone: CurrentZone) {
+    if player == null || !#alive(player.entity) {
+        return;
+    }
+
+    if player.security_cameras_open {
+        close_security_cameras_for_player(player);
+    }
+
+    player.entity.set_local_position(position);
+    player.entity.mark_teleported();
+    player.current_zone = zone;
+    if #alive(player.agent) {
+        player.agent.velocity = v2{0.0, 0.0};
+    }
+    player.snap_local_camera_to_player();
+}
+
+find_warp_destination_for_zone :: proc(zone: CurrentZone) -> Entity {
+    for warp: component_iterator(WarpToBackrooms) {
+        if warp.current_zone == zone && #alive(warp.destination_entity) {
+            return warp.destination_entity;
+        }
+    }
+    return null;
+}
+
+tp :: proc(player: Player, destination: string = "zone1") {
+    gm := get_game_manager();
+    if !#alive(gm) {
+        Notifier.notify(player, "No match manager found.");
+        return;
+    }
+
+    target: Entity;
+    zone := player.current_zone;
+
+    if destination == "zone1" || destination == "Zone1" || destination == "1" {
+        target = find_warp_destination_for_zone(.Zone1);
+        if !#alive(target) {
+            target = gm.SurvivorSpawn;
+        }
+        zone = .Zone1;
+    } else if destination == "zone2" || destination == "Zone2" || destination == "2" || destination == "entry" || destination == "Entry" {
+        target = find_warp_destination_for_zone(.Zone2);
+        if !#alive(target) {
+            target = Scene.get_entity_by_name("EntryPoint");
+        }
+        zone = .Zone2;
+    } else if destination == "zone3" || destination == "Zone3" || destination == "3" {
+        target = Scene.get_entity_by_name("Zone3_GRP");
+        zone = .Zone3;
+    } else if destination == "lobby" || destination == "Lobby" {
+        target = gm.LobbySpawn;
+        zone = .None;
+    } else if destination == "survivor" || destination == "Survivor" || destination == "spawn" || destination == "Spawn" {
+        target = gm.SurvivorSpawn;
+        zone = .Zone1;
+    } else if destination == "entity" || destination == "Entity" || destination == "entityspawn" || destination == "EntitySpawn" {
+        if #alive(gm.round_entity_spawn) {
+            target = gm.round_entity_spawn;
+        } else {
+            target = Scene.get_entity_by_name("EntitySpawns");
+        }
+        zone = .Zone1;
+    }
+
+    if !#alive(target) {
+        Notifier.notify(player, "Unknown or unavailable tp target: %", {destination});
+        return;
+    }
+
+    teleport_player_to_cheat_destination(player, target.world_position, zone);
+    Notifier.notify(player, "Teleported to %.", {destination});
 } @chat_command
 
 set_round_timer :: proc(player: Player, seconds: float) {
