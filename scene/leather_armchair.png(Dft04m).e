@@ -6,7 +6,7 @@
   "local_enabled": true,
   "local_position": {
     "X": 9.1495056152343750,
-    "Y": 44.6681213378906250
+    "Y": 44.7061157226562500
   },
   "local_rotation": 0,
   "local_scale": {
@@ -36,6 +36,8 @@
   "component_type": "Internal_Component",
   "internal_component_type": "Polygon_Collider",
   "data": {
+    "make_navmesh_loop": true,
+    "flip_navmesh_loop": true,
     "points": [
       {
         "X": -0.4360504448413849,

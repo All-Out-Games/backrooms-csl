@@ -3,7 +3,7 @@
 3741695441
 {
   "name": "server_3_126876.png",
-  "local_enabled": true,
+  "local_enabled": false,
   "local_position": {
     "X": -48.6994323730468750,
     "Y": 35.8782958984375000

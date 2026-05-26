@@ -5,7 +5,7 @@
   "name": "couch_modern_grey_2.png",
   "local_enabled": true,
   "local_position": {
-    "X": 3.2105255126953125,
+    "X": 3.4052581787109375,
     "Y": -2.7417297363281250
   },
   "local_rotation": 0,
@@ -37,6 +37,8 @@
   "component_type": "Internal_Component",
   "internal_component_type": "Box_Collider",
   "data": {
+    "make_navmesh_loop": true,
+    "flip_navmesh_loop": true,
     "size": {
       "X": 3.1308746337890625,
       "Y": 0.9517936706542969

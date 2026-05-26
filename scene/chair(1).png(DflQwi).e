@@ -3,7 +3,7 @@
 3751087138
 {
   "name": "chair (1).png",
-  "local_enabled": true,
+  "local_enabled": false,
   "local_position": {
     "X": -41.9280395507812500,
     "Y": 29.5305175781250000
@@ -33,13 +33,15 @@
   "component_type": "Internal_Component",
   "internal_component_type": "Box_Collider",
   "data": {
+    "make_navmesh_loop": true,
+    "flip_navmesh_loop": true,
     "size": {
       "X": 0.5852508544921875,
-      "Y": 0.5341663360595703
+      "Y": 0.2901248931884766
     },
     "offset": {
       "X": 0.0000076293945312,
-      "Y": -0.3612737655639648
+      "Y": -0.2392530441284180
     }
   }
 }
