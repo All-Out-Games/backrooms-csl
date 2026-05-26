@@ -253,15 +253,8 @@ setup_reusable_weapons_player_state_machine :: proc(player: Player) {
     additive_layer.create_transition(idle_state, melee_state, false).create_trigger_condition(sm.create_variable("melee_AL", .TRIGGER));
     additive_layer.create_transition(melee_state, idle_state, true);
 
-    // Dance
-    dance_state := base_layer.try_get_state("Emote/Dance");
-    if dance_state == null {
-        dance_state = base_layer.create_state("Emote/Dance", true);
-    }
-    if dance_state != null {
-        to_dance := base_layer.create_global_transition(dance_state, false);
-        to_dance.create_bool_condition(end_game_cutscene_var, true);
-    }
+    // The end-game cutscene bool only locks locomotion transitions. Routing every
+    // player through a global dance transition has been crash-prone at match end.
 
     jumpscare_state := base_layer.try_get_state("Emote/Jumpscare");
     if jumpscare_state == null {
