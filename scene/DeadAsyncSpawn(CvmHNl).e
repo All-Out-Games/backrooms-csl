@@ -3,10 +3,10 @@
 2946003813
 {
   "name": "DeadAsyncSpawn",
-  "local_enabled": false,
+  "local_enabled": true,
   "local_position": {
-    "X": 18.1313247680664062,
-    "Y": -37.4152603149414062
+    "X": 228.0819702148437500,
+    "Y": 104.8690795898437500
   },
   "local_rotation": 0,
   "local_scale": {
