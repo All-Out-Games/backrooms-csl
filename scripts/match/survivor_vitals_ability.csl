@@ -1,169 +1,326 @@
 import "core:ao"
 
-SURVIVOR_VITALS_ICON_PATH :: "$AO/ui/kit/Icons/misc_icons_1/heart_icon_full.png";
+VITALS_SPINE_ASSET_PATH :: "Animations/VitalsAnimation/002MURD_Heartbeat_Flatline.spine";
+VITALS_LOOP_ALIVE_ANIM :: "Loop_Alive";
+VITALS_LOOP_DEAD_ANIM :: "Loop_Dead";
+VITALS_STATUS_ALIVE_COLOR := v4.{0.30, 0.95, 0.40, 1.0};
+VITALS_STATUS_DOWNED_COLOR := v4.{1.0, 0.65, 0.20, 1.0};
+VITALS_STATUS_DEAD_COLOR := v4.{1.0, 0.30, 0.30, 1.0};
+VITALS_MAX_ROWS :: 16;
 
-get_survivor_vitals_status :: proc(player: Player) -> string {
-    if player == null {
-        return "Healthy";
-    }
-    if player.is_round_dead() {
-        return "Dead";
-    }
-    if player.is_round_downed() {
-        return "Downed";
-    }
-    return "Healthy";
+Vitals_UI_Entry :: struct {
+    user_id: string;
+    vitals_spine: Spine_Instance;
+    avatar_spine: Spine_Instance;
+    last_animation: string;
+    last_avatar_skeleton: Spine_Asset;
+    last_update_frame: u64;
 }
 
-get_survivor_vitals_status_color :: proc(player: Player) -> v4 {
-    if player == null {
-        return v4{0.7, 1.0, 0.7, 1.0};
-    }
-    if player.is_round_dead() {
-        return v4{1.0, 0.35, 0.35, 1.0};
-    }
-    if player.is_round_downed() {
-        return v4{1.0, 0.85, 0.35, 1.0};
-    }
-    return v4{0.7, 1.0, 0.7, 1.0};
+Vitals_Row_Handles :: struct {
+    avatar: UIK.Interact_Handle;
+    monitor: UIK.Interact_Handle;
 }
 
-draw_vitals_player_row :: proc(player: Player) {
-    row := UIK.layout_row(UIK.flex(1), UIK.pixels(72), 12);
+HUD_VITALS_LAYER :: 50;
+HUD_VITALS_WIDTH :: 238.0;
+HUD_VITALS_TOP_MARGIN :: 180.0;
+HUD_VITALS_BOTTOM_MARGIN :: 200.0;
+HUD_VITALS_RIGHT_MARGIN :: 16.0;
+HUD_VITALS_ROW_HEIGHT :: 64.0;
+HUD_VITALS_AVATAR_SIZE :: 44.0;
+HUD_VITALS_MONITOR_WIDTH :: 80.0;
+HUD_VITALS_MONITOR_HEIGHT :: 40.0;
+HUD_VITALS_AVATAR_SPINE_SCALE := v2.{35.0, 35.0};
+HUD_VITALS_AVATAR_SPINE_OFFSET := v2.{0.0, -18.0};
+HUD_VITALS_MONITOR_SPINE_SCALE := v2.{13.0, 13.0};
+HUD_VITALS_MONITOR_SPINE_OFFSET := v2.{0.0, -6.0};
+
+get_vitals_spine_asset :: proc() -> Spine_Asset {
+    return get_asset(Spine_Asset, VITALS_SPINE_ASSET_PATH);
+}
+
+find_vitals_ui_entry :: proc(local_player: Player, user_id: string) -> s64 {
+    if local_player == null || user_id == "" {
+        return -1;
+    }
+    for i: 0..local_player.vitals_ui_entries.count - 1 {
+        if local_player.vitals_ui_entries[i].user_id == user_id {
+            return i;
+        }
+    }
+    return -1;
+}
+
+ensure_vitals_ui_entry :: proc(local_player: Player, target_player: Player) -> s64 {
+    if local_player == null || target_player == null {
+        return -1;
+    }
+    user_id := target_player.get_user_id();
+    if user_id == "" {
+        return -1;
+    }
+
+    existing := find_vitals_ui_entry(local_player, user_id);
+    if existing >= 0 {
+        return existing;
+    }
+
+    entry: Vitals_UI_Entry;
+    entry.user_id = user_id;
+    entry.last_animation = "";
+    entry.last_avatar_skeleton = null;
+
+    vitals_asset := get_vitals_spine_asset();
+    if vitals_asset != null {
+        vi := Spine_Instance.create();
+        vi.set_skeleton(vitals_asset);
+        vi.disable_all_skins();
+        vi.enable_skin("default");
+        vi.refresh_skins();
+        vi.set_animation(VITALS_LOOP_ALIVE_ANIM, true, 0);
+        entry.vitals_spine = vi;
+        entry.last_animation = VITALS_LOOP_ALIVE_ANIM;
+    }
+
+    entry.avatar_spine = Spine_Instance.create();
+
+    local_player.vitals_ui_entries.append(entry);
+    return local_player.vitals_ui_entries.count - 1;
+}
+
+sync_vitals_ui_avatar :: proc(entry: ref Vitals_UI_Entry, target_player: Player) {
+    if entry.avatar_spine == null {
+        return;
+    }
+    if target_player == null || target_player.animator == null {
+        return;
+    }
+
+    skeleton := target_player.animator.get_skeleton();
+    if skeleton == null {
+        return;
+    }
+
+    if entry.last_avatar_skeleton != skeleton {
+        entry.avatar_spine.set_skeleton(skeleton);
+        entry.avatar_spine.disable_all_skins();
+        for skin: target_player.animator.get_skins() {
+            entry.avatar_spine.enable_skin(skin);
+        }
+        entry.avatar_spine.refresh_skins();
+        entry.last_avatar_skeleton = skeleton;
+    }
+
+    entry.avatar_spine.set_color_replace_color(target_player.avatar_color);
+    entry.avatar_spine.set_animation("Idle", true, 0);
+}
+
+tick_vitals_ui_entry :: proc(entry: ref Vitals_UI_Entry, dt: float) {
+    current_frame := get_frame_number();
+    if entry.last_update_frame == current_frame {
+        return;
+    }
+    if entry.vitals_spine != null {
+        entry.vitals_spine.update(dt);
+    }
+    if entry.avatar_spine != null {
+        entry.avatar_spine.update(dt);
+    }
+    entry.last_update_frame = current_frame;
+}
+
+sync_vitals_ui_animation :: proc(entry: ref Vitals_UI_Entry, target_player: Player) {
+    if entry.vitals_spine == null {
+        return;
+    }
+
+    desired := VITALS_LOOP_ALIVE_ANIM;
+    desired_speed: float = 1.0;
+    if target_player != null && target_player.is_round_dead() {
+        desired = VITALS_LOOP_DEAD_ANIM;
+    } else if target_player != null && target_player.is_round_downed() {
+        desired_speed = 0.5;
+    }
+
+    if entry.last_animation != desired {
+        entry.vitals_spine.set_animation(desired, true, 0);
+        entry.last_animation = desired;
+    }
+    entry.vitals_spine.speed_multiplier = desired_speed;
+}
+
+destroy_vitals_ui_entries :: proc(local_player: Player) {
+    if local_player == null {
+        return;
+    }
+    for i: 0..local_player.vitals_ui_entries.count - 1 {
+        if local_player.vitals_ui_entries[i].vitals_spine != null {
+            local_player.vitals_ui_entries[i].vitals_spine.destroy();
+            local_player.vitals_ui_entries[i].vitals_spine = null;
+        }
+        if local_player.vitals_ui_entries[i].avatar_spine != null {
+            local_player.vitals_ui_entries[i].avatar_spine.destroy();
+            local_player.vitals_ui_entries[i].avatar_spine = null;
+        }
+    }
+    local_player.vitals_ui_entries.clear();
+}
+
+draw_vitals_hud_row_uik :: proc(target_player: Player, row_index: s64) -> Vitals_Row_Handles {
+    handles: Vitals_Row_Handles;
+
+    row := UIK.layout_row(UIK.flex(1), UIK.pixels(HUD_VITALS_ROW_HEIGHT), 10);
     row.background = .MODAL_TRANSP_BLACK;
-    row.padding = v4{14, 12, 14, 12};
+    row.padding = v4{8, 10, 8, 10};
     row.cross_align = .CENTER;
     UIK.panel_begin(row);
+
+    avatar_desc: UIK.Panel_Desc;
+    avatar_desc.axis = .VERTICAL;
+    avatar_desc.width = UIK.pixels(HUD_VITALS_AVATAR_SIZE);
+    avatar_desc.height = UIK.pixels(HUD_VITALS_AVATAR_SIZE);
+    avatar_desc.cross_align = .CENTER;
+    avatar_desc.main_align = .CENTER;
+    avatar_desc.show_background = false;
+    avatar_desc.clip_children = true;
+    handles.avatar = UIK.panel_begin_interactive(format_string("hud_vitals_avatar_%", {row_index}), avatar_desc, true);
+    UIK.panel_end();
 
     name_panel := UIK.layout_column();
     name_panel.width = UIK.flex(1);
     name_panel.height = UIK.fit();
     name_panel.main_align = .CENTER;
+    name_panel.cross_align = .CENTER;
+    name_panel.gap = 1;
     name_panel.show_background = false;
     UIK.panel_begin(name_panel);
 
     name_text := UIK.text_body();
     UIK.text_set_word_wrap(&name_text, false);
-    UIK.text(player.get_username(), name_text);
+    UIK.text_set_size_mult(&name_text, 0.85);
+    UIK.text(target_player.get_username(), name_text);
 
-    UIK.panel_end();
-
-    status_panel := UIK.layout_column();
-    status_panel.width = UIK.pixels(145);
-    status_panel.height = UIK.fit();
-    status_panel.main_align = .CENTER;
-    status_panel.cross_align = .END;
-    status_panel.show_background = false;
-    UIK.panel_begin(status_panel);
-
+    status_label := "ALIVE";
+    status_color := VITALS_STATUS_ALIVE_COLOR;
+    if target_player.is_round_dead() {
+        status_label = "DEAD";
+        status_color = VITALS_STATUS_DEAD_COLOR;
+    } else if target_player.is_round_downed() {
+        status_label = "DOWNED";
+        status_color = VITALS_STATUS_DOWNED_COLOR;
+    }
     status_text := UIK.text_body();
-    UIK.text_set_color(&status_text, get_survivor_vitals_status_color(player));
-    UIK.text_set_halign(&status_text, .RIGHT);
-    UIK.text(get_survivor_vitals_status(player), status_text);
+    UIK.text_set_word_wrap(&status_text, false);
+    UIK.text_set_size_mult(&status_text, 0.65);
+    UIK.text_set_color(&status_text, status_color);
+    UIK.text(status_label, status_text);
 
     UIK.panel_end();
 
+    monitor_desc: UIK.Panel_Desc;
+    monitor_desc.axis = .VERTICAL;
+    monitor_desc.width = UIK.pixels(HUD_VITALS_MONITOR_WIDTH);
+    monitor_desc.height = UIK.pixels(HUD_VITALS_MONITOR_HEIGHT);
+    monitor_desc.cross_align = .CENTER;
+    monitor_desc.main_align = .CENTER;
+    monitor_desc.show_background = false;
+    handles.monitor = UIK.panel_begin_interactive(format_string("hud_vitals_monitor_%", {row_index}), monitor_desc, true);
     UIK.panel_end();
+
+    UIK.panel_end();
+
+    return handles;
 }
 
-draw_vitals_survivor_list :: proc() {
-    list_panel := UIK.layout_column();
-    list_panel.width = UIK.flex(1);
-    list_panel.height = UIK.flex(1);
-    list_panel.gap = 8;
-    list_panel.padding = v4{2, 2, 2, 2};
-    UIK.list_begin("vitals_survivor_list", list_panel);
-
-    survivor_count: s64 = 0;
-    for other: component_iterator(Player) {
-        if !other.is_round_survivor() {
-            continue;
-        }
-
-        draw_vitals_player_row(other);
-        survivor_count += 1;
-    }
-
-    if survivor_count == 0 {
-        empty_panel := UIK.layout_centered(UIK.flex(1), UIK.flex(1));
-        UIK.panel_begin(empty_panel);
-        UIK.text("No Survivor vitals available.", UIK.text_body());
-        UIK.panel_end();
-    }
-
-    UIK.list_end();
-}
-
-draw_vitals_modal_ui :: proc(player: Player) {
-    if player == null || !player.vitals_modal_open {
+draw_vitals_hud :: proc(player: Player, dt: float) {
+    if player == null || !player.is_local_or_server() {
         return;
     }
-    if !player.is_local_or_server() || !player.is_round_survivor() {
+    if player.is_round_entity() {
         return;
     }
 
     gm := get_game_manager();
     if !#alive(gm) || (gm.phase != .SURVIVOR_HEAD_START && gm.phase != .ACTIVE) {
-        player.vitals_modal_open = false;
         return;
     }
 
-    UIK.begin(UIK.modal(UIK.rect_window_small(), 15));
+    screen := UI.get_safe_screen_rect();
+    hud_rect := Rect{
+        min = v2{screen.max.x - HUD_VITALS_WIDTH - HUD_VITALS_RIGHT_MARGIN, screen.min.y + HUD_VITALS_BOTTOM_MARGIN},
+        max = v2{screen.max.x - HUD_VITALS_RIGHT_MARGIN, screen.max.y - HUD_VITALS_TOP_MARGIN}
+    };
 
-    shell := UIK.panel_modal(.TRANSP_BLACK);
-    shell.gap = 10;
-    shell.padding = v4{16, 16, 16, 16};
-    UIK.panel_begin(shell);
+    UIK.begin(UIK.window(hud_rect));
 
-    title_desc := UIK.title_area_desc("Vitals");
-    exit_handle := UIK.title_area(title_desc);
+    column := UIK.layout_column();
+    column.width = UIK.flex(1);
+    column.height = UIK.fit();
+    column.main_align = .START;
+    column.cross_align = .STRETCH;
+    column.gap = 8;
+    column.show_background = false;
+    UIK.panel_begin(column);
 
-    content := UIK.panel_interior(.INSET);
-    content.width = UIK.flex(1);
-    content.height = UIK.flex(1);
-    content.padding = v4{8, 8, 8, 8};
-    UIK.panel_begin(content);
+    row_handles: [VITALS_MAX_ROWS]Vitals_Row_Handles;
+    row_players: [VITALS_MAX_ROWS]Player;
+    row_count: s64 = 0;
 
-    draw_vitals_survivor_list();
-
-    UIK.panel_end();
+    for other: component_iterator(Player) {
+        if !#alive(other) {
+            continue;
+        }
+        if !gm.is_survivor_player(other) {
+            continue;
+        }
+        if row_count >= VITALS_MAX_ROWS {
+            break;
+        }
+        row_handles[row_count] = draw_vitals_hud_row_uik(other, row_count);
+        row_players[row_count] = other;
+        row_count += 1;
+    }
 
     UIK.panel_end();
     UIK.end();
 
-    if UIK.clicked(exit_handle) {
-        player.vitals_modal_open = false;
+    if row_count == 0 {
+        return;
     }
+
+    UI.push_screen_draw_context();
+    UI.push_layer(HUD_VITALS_LAYER);
+    for i: 0..row_count - 1 {
+        other := row_players[i];
+        if !#alive(other) {
+            continue;
+        }
+
+        entry_index := ensure_vitals_ui_entry(player, other);
+        if entry_index < 0 {
+            continue;
+        }
+
+        sync_vitals_ui_avatar(ref player.vitals_ui_entries[entry_index], other);
+        sync_vitals_ui_animation(ref player.vitals_ui_entries[entry_index], other);
+        tick_vitals_ui_entry(ref player.vitals_ui_entries[entry_index], dt);
+
+        avatar_rect := UIK.resolve(row_handles[i].avatar).rect;
+        monitor_rect := UIK.resolve(row_handles[i].monitor).rect;
+
+        avatar_spine := player.vitals_ui_entries[entry_index].avatar_spine;
+        if avatar_spine != null {
+            avatar_pos := avatar_rect.center() + HUD_VITALS_AVATAR_SPINE_OFFSET;
+            UI.spine(avatar_pos, avatar_spine, HUD_VITALS_AVATAR_SPINE_SCALE, 0.0);
+        }
+        vitals_spine := player.vitals_ui_entries[entry_index].vitals_spine;
+        if vitals_spine != null {
+            monitor_pos := monitor_rect.center() + HUD_VITALS_MONITOR_SPINE_OFFSET;
+            UI.spine(monitor_pos, vitals_spine, HUD_VITALS_MONITOR_SPINE_SCALE, 0.0);
+        }
+    }
+    UI.pop_layer();
+    UI.pop_draw_context();
 }
 
-Survivor_Vitals_Ability :: class : Ability_Base {
-    on_init :: method() {
-        name = "Vitals";
-        icon = get_asset(Texture_Asset, SURVIVOR_VITALS_ICON_PATH);
-    }
-
-    can_use :: method() -> bool {
-        if player == null || !player.is_round_survivor() || player.is_round_entity() {
-            return false;
-        }
-
-        gm := get_game_manager();
-        if !#alive(gm) || (gm.phase != .SURVIVOR_HEAD_START && gm.phase != .ACTIVE) {
-            return false;
-        }
-
-        return true;
-    }
-
-    on_update :: method(params: ref Ability_Update_Params) {
-        if !params.clicked || !params.can_use {
-            return;
-        }
-
-        player.vitals_modal_open = !player.vitals_modal_open;
-    }
-
-    on_draw_button :: proc(instance: Survivor_Vitals_Ability, rect: Rect) {
-        draw_ability_name_label(rect, "Vitals");
-    }
-}

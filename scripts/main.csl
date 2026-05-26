@@ -186,6 +186,8 @@ PLAYER_WINS_SAVE_KEY :: "playerWins";
 ROUND_SURVIVOR_NORMAL_MOVEMENT_MULTIPLIER :: 0.90;
 DOWNED_SURVIVOR_MOVEMENT_MULTIPLIER :: 0.30;
 DOWNED_BLEED_OUT_SECONDS :: 30.0;
+DOWNED_BLEED_OUT_OVERLAY_PATH :: "bleedingout.png";
+DOWNED_BLEED_OUT_OVERLAY_LAYER :: -1;
 DOWNED_SCREAM_INTERVAL_SECONDS :: 10.0;
 ROUND_ENTITY_NORMAL_MOVEMENT_MULTIPLIER :: 0.84;
 HELD_ITEM_BONE_NAME :: "Finger_R2";
@@ -285,7 +287,7 @@ Player :: class : Player_Base {
     task_help_open: bool;
     chat_mode_inited: bool;
     chat_mode_last_applied: Chat.Mode;
-    vitals_modal_open: bool;
+    vitals_ui_entries: [..]Vitals_UI_Entry;
     sabotage_modal_open: bool;
     jumpscare_target_modal_open: bool;
     security_cameras_open: bool;
@@ -770,7 +772,6 @@ Player :: class : Player_Base {
         task_list_open = true;
         task_help_open = false;
         chat_mode_inited = false;
-        vitals_modal_open = false;
         sabotage_modal_open = false;
         jumpscare_target_modal_open = false;
         security_cameras_open = false;
@@ -1336,6 +1337,7 @@ Player :: class : Player_Base {
         this.update_entity_local_player_visibility(dt);
         this.sync_entity_local_silhouette_material();
         this.update_entity_local_nameplate_visibility();
+        this.update_dropped_item_visibility_for_local_entity();
         tick_footstep_echo_for_player(this, dt);
     }
 
@@ -1375,7 +1377,7 @@ Player :: class : Player_Base {
                 this.draw_viewfinder_screen_overlay();
                 return;
             }
-            draw_vitals_modal_ui(this);
+            draw_vitals_hud(this, dt);
             draw_entity_sabotage_modal_ui(this);
             draw_entity_jumpscare_target_modal_ui(this);
             draw_radio_hint_arrows(this);
@@ -1419,9 +1421,8 @@ Player :: class : Player_Base {
             } else if !round_dead && !round_downed && active_effect == null {
                 draw_ability_button(this, Sprint_Ability, 2);
                 if this.is_round_survivor() {
-                    draw_ability_button(this, Survivor_Vitals_Ability, 3);
+                    draw_ability_button(this, Survivor_Info_Ping_Ability, 3);
                     draw_ability_button(this, Survivor_Danger_Ping_Ability, 4);
-                    draw_ability_button(this, Survivor_Info_Ping_Ability, 5);
                 }
                 // Draw fire ability button based on equipped weapon
                 if equipped_weapon_type != .NONE {
@@ -1494,6 +1495,7 @@ Player :: class : Player_Base {
 
         this.destroy_held_item_visual();
         this.destroy_jumpscare_overlay();
+        destroy_vitals_ui_entries(this);
         close_security_cameras_for_player(this);
 
         // Local-only: destroy LOS light entity.
@@ -1816,7 +1818,7 @@ Player :: class : Player_Base {
     }
 
     should_hide_revealed_eye_for_local_ui :: proc(using this: Player) -> bool {
-        if vitals_modal_open || sabotage_modal_open || jumpscare_target_modal_open || task_help_open || security_cameras_open {
+        if sabotage_modal_open || jumpscare_target_modal_open || task_help_open || security_cameras_open {
             return true;
         }
         if entity != null {
@@ -1829,7 +1831,7 @@ Player :: class : Player_Base {
     }
 
     should_hide_arrow_overlays_for_modal_ui :: proc(using this: Player) -> bool {
-        if task_help_open || vitals_modal_open || sabotage_modal_open || jumpscare_target_modal_open || security_cameras_open {
+        if task_help_open || sabotage_modal_open || jumpscare_target_modal_open || security_cameras_open {
             return true;
         }
         if get_radio_tuning_effect(this) != null {
@@ -2095,6 +2097,24 @@ Player :: class : Player_Base {
         do_name_color_override = false;
     }
 
+    update_dropped_item_visibility_for_local_entity :: method() {
+        if !this.is_local() {
+            return;
+        }
+
+        hide_for_entity := this.is_round_entity();
+        for di: component_iterator(Dropped_Item) {
+            if !#alive(di) || !#alive(di.entity) {
+                continue;
+            }
+            if hide_for_entity {
+                di.entity.set_local_enabled(false);
+            } else {
+                di.update_visibility();
+            }
+        }
+    }
+
     ensure_local_vision_light :: proc(using this: Player) {
         if local_light_entity != null && #alive(local_light_entity) {
             local_light_entity.set_local_enabled(true);
@@ -2328,6 +2348,28 @@ Player :: class : Player_Base {
         seconds_remaining := this.get_downed_bleed_out_seconds_remaining();
         if seconds_remaining <= 0 {
             return;
+        }
+
+        if downed_bleed_out_ends_at > 0.0 {
+            elapsed := DOWNED_BLEED_OUT_SECONDS - (downed_bleed_out_ends_at - get_time());
+            t := clamp(elapsed / DOWNED_BLEED_OUT_SECONDS, 0.0, 1.0);
+            eased := pow(t, 1.4);
+
+            overlay_tex := get_asset(Texture_Asset, DOWNED_BLEED_OUT_OVERLAY_PATH);
+            if overlay_tex != null {
+                UI.push_screen_draw_context();
+                UI.push_layer(DOWNED_BLEED_OUT_OVERLAY_LAYER);
+
+                full_screen := UI.get_screen_rect();
+                alpha := lerp(0.06, 0.94, eased);
+                red := lerp(1.0, 0.35, eased);
+                green_blue := lerp(0.55, 0.04, eased);
+                tint := v4{red, green_blue, green_blue, alpha};
+                UI.quad(full_screen, overlay_tex, tint);
+
+                UI.pop_layer();
+                UI.pop_draw_context();
+            }
         }
 
         UIK.begin(UIK.window(UIK.rect_window_small()));
