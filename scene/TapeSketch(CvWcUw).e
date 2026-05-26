@@ -5,8 +5,8 @@
   "name": "TapeSketch",
   "local_enabled": true,
   "local_position": {
-    "X": -73.7310638427734375,
-    "Y": 82.9331436157226562
+    "X": -62.6852416992187500,
+    "Y": 192.1010589599609375
   },
   "local_rotation": 351.2736206054687500,
   "local_scale": {

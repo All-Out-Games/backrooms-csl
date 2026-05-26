@@ -5,8 +5,8 @@
   "name": "DeadAsyncSpawn",
   "local_enabled": true,
   "local_position": {
-    "X": 184.2537689208984375,
-    "Y": 128.3763580322265625
+    "X": 173.3916778564453125,
+    "Y": 160.3161010742187500
   },
   "local_rotation": 0,
   "local_scale": {
