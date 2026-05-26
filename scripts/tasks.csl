@@ -334,6 +334,208 @@ complete_lights_out_generator_tasks :: proc(player_who_completed: Player) {
     }
 }
 
+find_current_assigned_task_cheat :: proc(player: Player) -> Task_Base {
+    if player == null {
+        return null;
+    }
+
+    first_unlocked_task: Task_Base = null;
+    for i: 0..player.active_tasks.elements.count - 1 {
+        task := player.active_tasks.elements[i];
+        if task == null {
+            continue;
+        }
+        if is_task_completed_for_player(player, task) {
+            continue;
+        }
+        if !is_task_unlocked_for_player(player, task.id) {
+            continue;
+        }
+        if task.started {
+            return task;
+        }
+        if first_unlocked_task == null {
+            first_unlocked_task = task;
+        }
+    }
+
+    return first_unlocked_task;
+}
+
+complete_camera_task_cheat :: proc(player: Player, current_task: Task_Base) -> bool {
+    if player == null || current_task == null {
+        return false;
+    }
+    if player_inventory_has_item_id(player, CAMERA_ITEM_ID) {
+        current_task.started = true;
+        current_task.complete_attempt(player, true);
+        return true;
+    }
+
+    init_weapon_items();
+    camera_def := get_registered_item_def_by_id(CAMERA_ITEM_ID);
+    if camera_def == null {
+        return false;
+    }
+
+    broken_camera := find_player_inventory_item_id(player, BROKEN_CAMERA_ITEM_ID);
+    if #alive(broken_camera) {
+        Items.destroy_item_instance(broken_camera, 1);
+    }
+
+    camera_item := Items.create_item_instance(camera_def, 1);
+    will_destroy_item: bool;
+    if !Items.can_move_item_to_inventory(camera_item, player.default_inventory, ref will_destroy_item) {
+        Items.destroy_item_instance(camera_item);
+        return false;
+    }
+
+    Items.move_item_to_inventory(camera_item, player.default_inventory);
+    current_task.started = true;
+    current_task.complete_attempt(player, true);
+    return true;
+}
+
+complete_keycard_find_task_cheat :: proc(player: Player, current_task: Task_Base) -> bool {
+    if player == null || current_task == null {
+        return false;
+    }
+
+    init_weapon_items();
+    keycard_def := get_registered_item_def_by_id(ASYNC_KEYCARD_ITEM_ID);
+    if keycard_def == null {
+        return false;
+    }
+
+    keycards_needed := 2 - count_player_inventory_item_id(player, ASYNC_KEYCARD_ITEM_ID);
+    while keycards_needed > 0 {
+        keycard_item := Items.create_item_instance(keycard_def, 1);
+        will_destroy_item: bool;
+        if !Items.can_move_item_to_inventory(keycard_item, player.default_inventory, ref will_destroy_item) {
+            Items.destroy_item_instance(keycard_item);
+            return false;
+        }
+        Items.move_item_to_inventory(keycard_item, player.default_inventory);
+        keycards_needed -= 1;
+    }
+
+    current_task.started = true;
+    current_task.complete_attempt(player, true);
+    return true;
+}
+
+complete_radio_task_cheat :: proc(player: Player) -> bool {
+    for radio: component_iterator(Radio_Puzzle) {
+        radio.complete(player);
+        return true;
+    }
+    return false;
+}
+
+complete_keypad_task_cheat :: proc(player: Player) -> bool {
+    for keypad: component_iterator(Keypad_Puzzle) {
+        keypad.complete(player);
+        return true;
+    }
+    return false;
+}
+
+complete_generator_task_cheat :: proc(player: Player) -> bool {
+    for generator: component_iterator(Generator) {
+        generator.complete(player);
+        return true;
+    }
+    return false;
+}
+
+complete_wire_task_cheat :: proc(player: Player) -> bool {
+    gm := get_game_manager();
+    if #alive(gm) && #alive(gm.get_reconnect_wires_entity()) {
+        wire := gm.get_reconnect_wires_entity().get_component(Wire_Puzzle);
+        if wire != null {
+            wire.complete(player);
+            return true;
+        }
+    }
+
+    for wire: component_iterator(Wire_Puzzle) {
+        wire.complete(player);
+        return true;
+    }
+    return false;
+}
+
+complete_current_assigned_task_cheat :: proc(player: Player) -> string {
+    current_task := find_current_assigned_task_cheat(player);
+    if current_task == null {
+        return "";
+    }
+
+    current_task.started = true;
+    if current_task.id == TASK_ID_FIX_CAMERA {
+        if !complete_camera_task_cheat(player, current_task) {
+            return "";
+        }
+        update_survivor_task_progression(player);
+        return current_task.id;
+    }
+
+    if current_task.id == TASK_ID_TUNE_RADIO {
+        if !complete_radio_task_cheat(player) {
+            complete_task_for_survivors(current_task.id);
+        }
+        return current_task.id;
+    }
+
+    if current_task.id == TASK_ID_ENTER_KEYCODE {
+        if !complete_keypad_task_cheat(player) {
+            complete_task_for_survivors(current_task.id);
+            refresh_emergency_systems_online_state();
+        }
+        return current_task.id;
+    }
+
+    if current_task.id == TASK_ID_RESTART_GENERATOR || current_task.id == TASK_ID_LIGHTS_OUT_GENERATOR {
+        if !complete_generator_task_cheat(player) {
+            complete_task_for_survivors(current_task.id);
+            refresh_emergency_systems_online_state();
+        }
+        return current_task.id;
+    }
+
+    if current_task.id == TASK_ID_RECONNECT_WIRE {
+        if !complete_wire_task_cheat(player) {
+            complete_task_for_survivors(current_task.id);
+            refresh_emergency_systems_online_state();
+        }
+        update_survivor_task_progression(player);
+        return current_task.id;
+    }
+
+    if current_task.id == TASK_ID_FIND_ASYNC_KEYCARDS {
+        if !complete_keycard_find_task_cheat(player, current_task) {
+            return "";
+        }
+        return current_task.id;
+    }
+
+    if current_task.#type == Task_Repair_Laptop {
+        repair_task := current_task.(Task_Repair_Laptop);
+        if repair_task.workshop_repair {
+            if !complete_workshop_repair_laptop(player, repair_task) {
+                return "";
+            }
+            current_task.complete_attempt(player, true);
+            update_survivor_task_progression(player);
+            return current_task.id;
+        }
+    }
+
+    current_task.complete_attempt(player, true);
+    update_survivor_task_progression(player);
+    return current_task.id;
+}
+
 notify_survivors :: proc(fmt: string, args: [^]any = {}) {
     for player: component_iterator(Player) {
         if !player.is_round_survivor() || player.is_round_entity() {
@@ -1014,6 +1216,26 @@ find_player_inventory_item_id :: proc(player: Player, item_id: string) -> Item_I
 	return null;
 }
 
+count_player_inventory_item_id :: proc(player: Player, item_id: string) -> int {
+	if player == null || item_id.count == 0 {
+		return 0;
+	}
+
+	count := 0;
+	i: s64 = 0;
+	while i < player.default_inventory.capacity {
+		item := player.default_inventory.get_item(i);
+		if #alive(item) {
+			defn := item.get_definition();
+			if defn != null && defn.get_id() == item_id {
+				count += 1;
+			}
+		}
+		i += 1;
+	}
+	return count;
+}
+
 find_workshop_repair_task :: proc(player: Player) -> Task_Repair_Laptop {
 	if player == null {
 		return null;
@@ -1054,9 +1276,9 @@ remove_workshop_repair_task :: proc(player: Player, repair_task: Task_Repair_Lap
 	}
 }
 
-complete_workshop_repair_laptop :: proc(player: Player, repair_task: Task_Repair_Laptop) {
+complete_workshop_repair_laptop :: proc(player: Player, repair_task: Task_Repair_Laptop) -> bool {
 	if player == null || repair_task == null || repair_task.workshop_reward_given {
-		return;
+		return false;
 	}
 	repair_task.workshop_reward_given = true;
 
@@ -1064,14 +1286,14 @@ complete_workshop_repair_laptop :: proc(player: Player, repair_task: Task_Repair
 	if !#alive(broken_camera) {
 		Notifier.notify(player, "Broken Camera missing!");
 		remove_workshop_repair_task(player, repair_task);
-		return;
+		return false;
 	}
 
 	init_weapon_items();
 	camera_def := get_registered_item_def_by_id(CAMERA_ITEM_ID);
 	if camera_def == null {
 		remove_workshop_repair_task(player, repair_task);
-		return;
+		return false;
 	}
 
 	Items.destroy_item_instance(broken_camera, 1);
@@ -1092,12 +1314,13 @@ complete_workshop_repair_laptop :: proc(player: Player, repair_task: Task_Repair
 		}
 		Notifier.notify(player, "No room for Camera!");
 		remove_workshop_repair_task(player, repair_task);
-		return;
+		return false;
 	}
 
 	Items.move_item_to_inventory(camera_item, player.default_inventory);
 	Notifier.notify(player, "Camera fixed!");
 	remove_workshop_repair_task(player, repair_task);
+	return true;
 }
 
 start_workshop_repair_laptop :: proc(player: Player) {

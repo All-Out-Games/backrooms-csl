@@ -2702,6 +2702,31 @@ start :: proc(player: Player) {
     }
 } @chat_command
 
+task :: proc(player: Player) {
+    gm := get_game_manager();
+    if !#alive(gm) {
+        Notifier.notify(player, "No match manager found.");
+        return;
+    }
+    if gm.phase != .SURVIVOR_HEAD_START && gm.phase != .ACTIVE {
+        Notifier.notify(player, "No active task to complete.");
+        return;
+    }
+    if !player.is_round_survivor() {
+        Notifier.notify(player, "Only living Survivors have assigned tasks.");
+        return;
+    }
+
+    completed_task_id := complete_current_assigned_task_cheat(player);
+    if completed_task_id.count == 0 {
+        Notifier.notify(player, "No available assigned task to complete.");
+        return;
+    }
+
+    Notifier.notify(player, "Completed task: %.", {get_task_display_name(completed_task_id)});
+    log_info("task: % completed % with cheat", {player.get_username(), completed_task_id});
+} @chat_command
+
 find_zone_cheat_warp :: proc(target_zone: CurrentZone, target_position: v2) -> WarpToBackrooms {
     best_warp: WarpToBackrooms = null;
     best_dist_sq := 999999.0;
