@@ -5,13 +5,13 @@
   "name": "lamp.png",
   "local_enabled": true,
   "local_position": {
-    "X": 3.3949737548828125,
-    "Y": 45.9481658935546875
+    "X": -2.7024230957031250,
+    "Y": 42.8763656616210938
   },
   "local_rotation": 0,
   "local_scale": {
-    "X": 1,
-    "Y": 1
+    "X": 1.0263911485671997,
+    "Y": 1.0263911485671997
   },
   "previous_sibling": 3746352146,
   "next_sibling": 3744810632,

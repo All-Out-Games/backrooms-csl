@@ -5,15 +5,16 @@
   "name": "Filler.png",
   "local_enabled": true,
   "local_position": {
-    "X": 67.1596374511718750,
-    "Y": -4.8893365859985352
+    "X": 42.7096557617187500,
+    "Y": 103.9545974731445312
   },
   "local_rotation": 90,
   "local_scale": {
-    "X": 120,
-    "Y": 7
+    "X": 80,
+    "Y": 6.8449997901916504
   },
   "previous_sibling": 1795803012,
+  "next_sibling": 3744006152,
   "parent": 1807327005
 },
 {
@@ -23,6 +24,11 @@
   "internal_component_type": "Sprite_Renderer",
   "data": {
     "texture": "Tiles/Filler.png",
+    "tint": {
+      "X": 0.0439719557762146,
+      "Y": 0.1060608178377151,
+      "Z": 0.3049351274967194
+    },
     "layer": 2
   }
 }

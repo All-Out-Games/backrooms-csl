@@ -5,8 +5,8 @@
   "name": "floodlight_yellow_up.png",
   "local_enabled": true,
   "local_position": {
-    "X": -36.5534667968750000,
-    "Y": 23.5239562988281250
+    "X": -38.6340332031250000,
+    "Y": 26.4923858642578125
   },
   "local_rotation": 0,
   "local_scale": {

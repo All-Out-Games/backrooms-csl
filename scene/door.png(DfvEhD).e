@@ -5,8 +5,8 @@
   "name": "door.png",
   "local_enabled": false,
   "local_position": {
-    "X": -53.1211395263671875,
-    "Y": 41.3627471923828125
+    "X": -53.1520233154296875,
+    "Y": 40.3639984130859375
   },
   "local_rotation": 0,
   "local_scale": {

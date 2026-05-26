@@ -5,8 +5,8 @@
   "name": "backrooms_wall_scrawlings4.png",
   "local_enabled": true,
   "local_position": {
-    "X": 3.6284332275390625,
-    "Y": 55.4118499755859375
+    "X": 3.9908752441406250,
+    "Y": 53.4618988037109375
   },
   "local_rotation": 0,
   "local_scale": {
