@@ -2760,7 +2760,7 @@ zone :: proc(player: Player, zone_number: int) {
         return;
     }
 
-    warp.warp_player(player, false);
+    warp.warp_player(player, true);
     Notifier.notify(player, "Warped to zone %.", {zone_number});
     log_info("zone: % warped to zone %", {player.get_username(), zone_number});
 } @chat_command
