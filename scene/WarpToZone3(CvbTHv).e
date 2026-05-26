@@ -5,8 +5,8 @@
   "name": "WarpToZone3",
   "local_enabled": true,
   "local_position": {
-    "X": 216.7621459960937500,
-    "Y": 139.2165527343750000
+    "X": 221.4217987060546875,
+    "Y": 183.6373291015625000
   },
   "local_rotation": 0,
   "local_scale": {
@@ -28,6 +28,7 @@
       "Y": 1
     },
     "destination_entity": 2950519942,
+    "RequireLevers": true,
     "current_zone": 3
   }
 }

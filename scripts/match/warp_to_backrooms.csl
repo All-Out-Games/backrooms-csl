@@ -6,11 +6,12 @@ WARP_TO_NEXT_LEVEL_PROMPT :: "To Next Level";
 WarpToBackrooms :: class : Interactable {
     destination_entity: Entity @ao_serialize;
     RequireReconnectWires: bool @ao_serialize;
+    RequireLevers: bool @ao_serialize;
     current_zone: CurrentZone @ao_serialize;
 
     ao_start :: method() {
         this.set_listener(this);
-        if RequireReconnectWires {
+        if RequireReconnectWires || RequireLevers {
             this.set_text(WARP_TO_NEXT_LEVEL_PROMPT);
         } else {
             this.set_text(WARP_TO_BACKROOMS_PROMPT);
@@ -34,6 +35,9 @@ WarpToBackrooms :: class : Interactable {
         }
 
         if is_survivor && RequireReconnectWires && !is_task_completed(player, TASK_ID_RECONNECT_WIRE) {
+            return false;
+        }
+        if is_survivor && RequireLevers && !is_task_completed(player, TASK_ID_PULL_BOTH_LEVERS) {
             return false;
         }
         return true;

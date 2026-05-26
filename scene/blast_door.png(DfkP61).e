@@ -26,4 +26,22 @@
     "texture": "sprites/Zone1b/blast_door.png",
     "depth_offset": -0.8204879760742188
   }
+},
+{
+  "cid": 2,
+  "aoid": 2940800524,
+  "component_type": "Internal_Component",
+  "internal_component_type": "Box_Collider",
+  "data": {
+    "make_navmesh_loop": true,
+    "flip_navmesh_loop": true,
+    "size": {
+      "X": 3.3365173339843750,
+      "Y": 2.0094451904296875
+    },
+    "offset": {
+      "X": 0.0063171684741974,
+      "Y": 0.0224838405847549
+    }
+  }
 }

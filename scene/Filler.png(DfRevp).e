@@ -6,12 +6,12 @@
   "local_enabled": true,
   "local_position": {
     "X": -21.1542816162109375,
-    "Y": 199.2007751464843750
+    "Y": 198.1360626220703125
   },
   "local_rotation": 0,
   "local_scale": {
-    "X": 30,
-    "Y": 6.8449997901916504
+    "X": 150,
+    "Y": 19
   },
   "previous_sibling": 3744006152,
   "next_sibling": 3749722105,
@@ -29,17 +29,12 @@
       "Y": 0.1060608178377151,
       "Z": 0.3049351274967194
     },
-    "layer": 2,
-    "scale": {
-      "X": 5,
-      "Y": 3
-    }
+    "layer": 2
   }
 },
 {
   "cid": 2,
   "aoid": 2939738156,
-  "enabled": false,
   "component_type": "Internal_Component",
   "internal_component_type": "Box_Collider",
   "data": {

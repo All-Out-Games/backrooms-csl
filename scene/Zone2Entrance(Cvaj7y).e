@@ -5,8 +5,8 @@
   "name": "Zone2Entrance",
   "local_enabled": true,
   "local_position": {
-    "X": -0.7312164306640625,
-    "Y": 10.2157859802246094
+    "X": 3.9903869628906250,
+    "Y": 54.7135581970214844
   },
   "local_rotation": 0,
   "local_scale": {

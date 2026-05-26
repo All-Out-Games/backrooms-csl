@@ -10,6 +10,7 @@ entity_ambience_user_id: string;
 braam2_next_play_at: float;
 
 BRAAM2_REPLAY_SECONDS :: 45.0;
+ROUND_CAMERA_SIZE_DELTA :: 1.0;
 ENTITY_CAMERA_SIZE_DELTA :: 1.5;
 ROUND_DEAD_CAMERA_SIZE_DELTA :: 2.5;
 ROUND_DEAD_LOCAL_PLAYER_ALPHA :: 150.0 / 255.0;
@@ -731,6 +732,10 @@ Player :: class : Player_Base {
         if desired_camera_size <= 0.0 {
             desired_camera_size = camera.size;
             default_camera_size = desired_camera_size;
+        }
+
+        if #alive(gm) && gm.is_round_in_progress() {
+            desired_camera_size += ROUND_CAMERA_SIZE_DELTA;
         }
 
         if this.is_round_dead() {

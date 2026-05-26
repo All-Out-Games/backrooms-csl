@@ -5,8 +5,8 @@
   "name": "Zone3Entrance",
   "local_enabled": true,
   "local_position": {
-    "X": -0.0267944335937500,
-    "Y": 3.3372917175292969
+    "X": -45.6661224365234375,
+    "Y": 49.8253288269042969
   },
   "local_rotation": 0,
   "local_scale": {
