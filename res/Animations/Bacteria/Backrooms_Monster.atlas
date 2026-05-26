@@ -3,14 +3,14 @@ Backrooms_Monster.png
 	filter: Linear, Linear
 	scale: 0.5
 ArmL_A
-	bounds: 2286, 92, 43, 96
+	bounds: 2285, 92, 43, 96
 ArmL_B
-	bounds: 2421, 121, 28, 67
+	bounds: 2420, 121, 28, 67
 Black Vomit/VomitSpatter
 	bounds: 1705, 37, 151, 89
 	rotate: 90
 Black Vomit/VomitStream
-	bounds: 2056, 96, 92, 85
+	bounds: 1993, 96, 92, 85
 	rotate: 90
 Body1
 	bounds: 1059, 27, 125, 161
@@ -22,39 +22,39 @@ Body4
 	bounds: 528, 20, 168, 163
 	rotate: 90
 Corruption BreathCloud/Breath_A
-	bounds: 2379, 130, 58, 39
+	bounds: 2378, 130, 58, 39
 	rotate: 90
 Corruption BreathCloud/Breath_C
-	bounds: 2144, 100, 88, 82
+	bounds: 2081, 100, 88, 82
 	rotate: 90
 FingerL_A
 	bounds: 1274, 173, 15, 33
 	rotate: 90
 FingerL_B
-	bounds: 2468, 160, 28, 59
+	bounds: 2467, 160, 28, 59
 	rotate: 90
 FingerL_C
-	bounds: 2452, 134, 54, 45
+	bounds: 2451, 134, 54, 45
 	rotate: 90
 FingerL_D
 	bounds: 803, 143, 45, 16
 	rotate: 90
 FingerR_A
-	bounds: 2563, 161, 27, 24
+	bounds: 2562, 161, 27, 24
 	offsets: 0, 1, 27, 25
 	rotate: 90
 FingerR_B
-	bounds: 2530, 132, 31, 56
+	bounds: 2529, 132, 31, 56
 FingerR_C
 	bounds: 3, 165, 23, 64
 	rotate: 90
 FingerR_D
-	bounds: 2590, 147, 41, 27
+	bounds: 2589, 147, 41, 27
 	rotate: 90
 HandL_A
-	bounds: 2229, 101, 54, 87
+	bounds: 2228, 101, 54, 87
 HandL_B
-	bounds: 2332, 120, 44, 68
+	bounds: 2331, 120, 44, 68
 Head1
 	bounds: 1608, 11, 177, 95
 	rotate: 90
@@ -90,7 +90,7 @@ LegR_A
 PalmL
 	bounds: 1588, 166, 20, 22
 PalmR
-	bounds: 2620, 162, 16, 26
+	bounds: 2619, 162, 16, 26
 Scream Lines/Scream_1
 	bounds: 1897, 74, 114, 93
 	offsets: 1, 0, 116, 93
@@ -99,9 +99,10 @@ Scream Lines/Scream_2
 	bounds: 1797, 77, 111, 97
 	offsets: 1, 0, 112, 98
 	rotate: 90
-Shadow
-	bounds: 1993, 34, 154, 60
-	rotate: 90
 Teleport Gank Pool/TeleportGankPool
 	bounds: 693, 3, 185, 107
+	rotate: 90
+shadow
+	bounds: 2166, 72, 116, 59
+	offsets: 3, 3, 122, 64
 	rotate: 90

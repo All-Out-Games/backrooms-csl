@@ -1,0 +1,365 @@
+import "core:ao"
+
+BARRICADE_CRATE_PREFAB_PATH :: "Barricade.prefab";
+BARRICADE_ICON_PATH :: "Barriers/dresser.png";
+BARRICADE_PLACE_RANGE :: 2.8;
+BARRICADE_MIN_PLACE_DISTANCE :: 0.35;
+BARRICADE_PICKUP_HOLD_SECONDS :: 0.45;
+BARRICADE_MONSTER_BREAK_HOLD_SECONDS :: 5.0;
+BARRICADE_PLACE_COOLDOWN_SECONDS :: 0.25;
+BARRICADE_BREAK_VFX_SPINE_PATH :: "016ARP_Destroy_FX_93ab22/016ARP_Destroy_FX.spine";
+BARRICADE_BREAK_VFX_ANIM :: "016ARP/Small_Break";
+BARRICADE_BREAK_VFX_LIFETIME :: 0.55;
+BARRICADE_BREAK_VFX_SCALE :: v2{1.15, 1.15};
+BARRICADE_PREVIEW_HALF_EXTENT :: 0.75;
+BARRICADE_PREVIEW_ALPHA :: 0.48;
+BARRICADE_PREVIEW_LAYER :: 10;
+
+is_barricade_item_def :: proc(item_def: Item_Definition) -> bool {
+    return item_def != null && item_def.get_id() == BARRICADE_ITEM_ID;
+}
+
+get_barricade_item_def :: proc() -> Item_Definition {
+    init_weapon_items();
+    return get_registered_item_def_by_id(BARRICADE_ITEM_ID);
+}
+
+player_has_selected_barricade :: proc(player: Player) -> bool {
+    if player == null {
+        return false;
+    }
+    item := player.get_equipped_item_instance();
+    if !#alive(item) {
+        return false;
+    }
+    return is_barricade_item_def(item.get_definition());
+}
+
+get_barricade_selected_position :: proc(player: Player, params: ref Ability_Update_Params, aim_direction: v2) -> v2 {
+    start_position := player.entity.world_position;
+
+    if player.device_kind == .PC {
+        offset := get_mouse_world_position() - start_position;
+        distance := length(offset);
+        if distance <= BARRICADE_MIN_PLACE_DISTANCE {
+            return start_position + v2{1.0, 0.0} * BARRICADE_MIN_PLACE_DISTANCE;
+        }
+        distance = min(distance, BARRICADE_PLACE_RANGE);
+        return start_position + normalize(offset) * distance;
+    }
+
+    drag_t := clamp(length(params.drag_offset), 0.0, 1.0);
+    distance := max(BARRICADE_MIN_PLACE_DISTANCE, BARRICADE_PLACE_RANGE * drag_t);
+    direction := aim_direction;
+    if length_squared(direction) <= 0.0001 {
+        direction = v2{1.0, 0.0};
+    }
+    return start_position + normalize(direction) * distance;
+}
+
+play_barricade_sfx :: proc(path: string, entity_to_follow: Entity) {
+    sound := get_asset(SFX_Asset, path);
+    if sound == null {
+        return;
+    }
+
+    desc := SFX.default_sfx_desc();
+    if #alive(entity_to_follow) {
+        desc.entity_to_follow = entity_to_follow.id;
+    }
+    desc.volume = 0.55;
+    desc.volume_perturb = 0.1;
+    desc.speed_perturb = 0.08;
+    SFX.play(sound, desc);
+}
+
+spawn_barricade_break_vfx :: proc(position: v2) {
+    spawn_simple_vfx(BARRICADE_BREAK_VFX_SPINE_PATH, "default", position, BARRICADE_BREAK_VFX_SCALE, BARRICADE_BREAK_VFX_ANIM, BARRICADE_BREAK_VFX_LIFETIME);
+}
+
+get_barricade_navmesh :: proc() -> Navmesh {
+    gm := get_game_manager();
+    if #alive(gm) && #alive(gm.navmesh_to_lock_to) {
+        return gm.navmesh_to_lock_to;
+    }
+    return find_scene_navmesh();
+}
+
+mark_barricade_navmesh_for_rebuild :: proc() {
+    navmesh := get_barricade_navmesh();
+    if #alive(navmesh) {
+        navmesh.mark_for_rebuild();
+    }
+}
+
+give_barricade_item_to_player :: proc(player: Player) -> bool {
+    if player == null {
+        return false;
+    }
+
+    item_def := get_barricade_item_def();
+    if item_def == null {
+        return false;
+    }
+
+    item := Items.create_item_instance(item_def, 1);
+    will_destroy_item: bool;
+    if !Items.can_move_item_to_inventory(item, player.default_inventory, ref will_destroy_item) {
+        Items.destroy_item_instance(item);
+        return false;
+    }
+
+    Items.move_item_to_inventory(item, player.default_inventory);
+    return true;
+}
+
+Barricade :: class : Component {
+    navmesh: Navmesh;
+
+    ao_start :: method() {
+    }
+
+    pick_up :: method(player: Player) {
+        if player == null {
+            return;
+        }
+
+        if !give_barricade_item_to_player(player) {
+            if player.is_local() {
+                Notifier.notify(player, "No room for Barricade.");
+            }
+            return;
+        }
+
+        play_barricade_sfx("reusable_weapons/sounds/reusable-weapons/drop_item.wav", entity);
+        entity.destroy();
+        mark_barricade_navmesh_for_rebuild();
+    }
+
+    break_permanently :: method() {
+        play_barricade_sfx("reusable_weapons/sounds/reusable-weapons/ice_cube_break.wav", entity);
+        spawn_barricade_break_vfx(entity.world_position);
+        entity.destroy();
+        mark_barricade_navmesh_for_rebuild();
+    }
+
+    ao_end :: method() {
+    }
+}
+
+Barricade_Survivor_Interactable :: class : Interactable {
+    barrier: Barricade;
+
+    setup :: method(target: Barricade) {
+        barrier = target;
+        this.install_listener();
+    }
+
+    install_listener :: method() {
+        if !#alive(barrier) {
+            barrier = entity.get_component(Barricade);
+        }
+        this.set_listener(this);
+        this.set_text("Pick Up Barricade");
+        required_hold_time = BARRICADE_PICKUP_HOLD_SECONDS;
+        radius = 1.4;
+        priority = 20;
+    }
+
+    ao_start :: method() {
+        this.install_listener();
+    }
+
+    can_use :: method(player: Player) -> bool {
+        if !#alive(barrier) {
+            return false;
+        }
+        if player == null || player.is_round_dead() || player.is_round_downed() {
+            return false;
+        }
+        return player.is_round_survivor();
+    }
+
+    on_interact :: method(player: Player) {
+        if #alive(barrier) {
+            barrier.pick_up(player);
+        }
+    }
+}
+
+Barricade_Monster_Interactable :: class : Interactable {
+    barrier: Barricade;
+
+    setup :: method(target: Barricade) {
+        barrier = target;
+        this.install_listener();
+    }
+
+    install_listener :: method() {
+        if !#alive(barrier) {
+            barrier = entity.get_component(Barricade);
+        }
+        this.set_listener(this);
+        this.set_text("Break Barricade");
+        required_hold_time = BARRICADE_MONSTER_BREAK_HOLD_SECONDS;
+        radius = 1.4;
+        priority = 20;
+    }
+
+    ao_start :: method() {
+        this.install_listener();
+    }
+
+    can_use :: method(player: Player) -> bool {
+        if !#alive(barrier) {
+            return false;
+        }
+        if player == null || player.is_round_dead() || player.is_round_downed() {
+            return false;
+        }
+        return player.is_round_entity() || player.is_round_minion();
+    }
+
+    on_interact :: method(player: Player) {
+        if #alive(barrier) {
+            barrier.break_permanently();
+        }
+    }
+}
+
+spawn_barricade_from_prefab :: proc(position: v2) -> Barricade {
+    prefab := get_asset(Prefab_Asset, BARRICADE_CRATE_PREFAB_PATH);
+    if prefab == null {
+        return null;
+    }
+
+    e := Scene.instantiate(prefab, position);
+    if !#alive(e) {
+        return null;
+    }
+
+    navmesh := get_barricade_navmesh();
+    if #alive(navmesh) && #alive(navmesh.entity) {
+        e.set_parent(navmesh.entity, true);
+    }
+
+    barrier := e.get_component(Barricade);
+    if barrier == null {
+        barrier = e.add_component(Barricade);
+    }
+
+    survivor_interactable := e.get_component(Barricade_Survivor_Interactable);
+    if survivor_interactable == null {
+        survivor_interactable = e.add_component(Barricade_Survivor_Interactable);
+    }
+    survivor_interactable.setup(barrier);
+
+    monster_interactable := e.get_component(Barricade_Monster_Interactable);
+    if monster_interactable == null {
+        monster_interactable = e.add_component(Barricade_Monster_Interactable);
+    }
+    monster_interactable.setup(barrier);
+
+    mark_barricade_navmesh_for_rebuild();
+    return barrier;
+}
+
+spawn_barricade :: proc(player: Player, position: v2) -> Barricade {
+    barrier := spawn_barricade_from_prefab(position);
+    if #alive(barrier) {
+        play_barricade_sfx("reusable_weapons/sounds/reusable-weapons/drop_item.wav", barrier.entity);
+    }
+    return barrier;
+}
+
+draw_barricade_preview :: proc(player: Player, position: v2) {
+    if player == null || !#alive(player.entity) {
+        return;
+    }
+
+    tex := get_asset(Texture_Asset, BARRICADE_ICON_PATH);
+    if tex == null {
+        return;
+    }
+
+    UI.push_world_draw_context();
+    defer UI.pop_draw_context();
+    UI.push_layer(BARRICADE_PREVIEW_LAYER);
+    defer UI.pop_layer();
+
+    half := v2{BARRICADE_PREVIEW_HALF_EXTENT, BARRICADE_PREVIEW_HALF_EXTENT};
+    rect := Rect{position - half, position + half};
+    rect = rect.fit_aspect(tex.get_aspect(), .KEEP_BIGGER);
+    UI.quad(rect, tex, v4{1.0, 1.0, 1.0, BARRICADE_PREVIEW_ALPHA});
+}
+
+place_selected_barricade :: proc(player: Player, position: v2) -> bool {
+    if player == null || !#alive(player.entity) {
+        return false;
+    }
+
+    item := player.get_equipped_item_instance();
+    if !#alive(item) || !is_barricade_item_def(item.get_definition()) {
+        return false;
+    }
+
+    barrier := spawn_barricade(player, position);
+    if !#alive(barrier) {
+        return false;
+    }
+
+    Items.destroy_item_instance(item, 1);
+    player.handle_equipped_item_changing(player.last_selected_index);
+    return true;
+}
+
+clear_all_barricades :: proc() {
+    destroyed_any := false;
+    for barrier: component_iterator(Barricade) {
+        if #alive(barrier.entity) {
+            barrier.entity.destroy();
+            destroyed_any = true;
+        }
+    }
+    if destroyed_any {
+        mark_barricade_navmesh_for_rebuild();
+    }
+}
+
+Place_Barricade_Ability :: class : Ability_Base {
+    on_init :: method() {
+        name = "Place";
+        icon = get_asset(Texture_Asset, BARRICADE_ICON_PATH);
+        is_aimed_ability = true;
+    }
+
+    can_use :: method() -> bool {
+        if player == null || !player.is_round_survivor() {
+            return false;
+        }
+        if player.is_round_dead() || player.is_round_downed() {
+            return false;
+        }
+        return player_has_selected_barricade(player);
+    }
+
+    on_update :: method(params: ref Ability_Update_Params) {
+        aiming := Ability_Utilities.full_update_aimed_ability(player, ref params);
+        if length_squared(aiming.direction) > 0.0001 && player != null && #alive(player.entity) {
+            position := get_barricade_selected_position(player, ref params, aiming.direction);
+            draw_barricade_preview(player, position);
+        }
+
+        if !aiming.activate || !params.can_use {
+            return;
+        }
+
+        position := get_barricade_selected_position(player, ref params, aiming.direction);
+        place_selected_barricade(player, position);
+        current_cooldown = BARRICADE_PLACE_COOLDOWN_SECONDS;
+    }
+
+    on_draw_button :: proc(instance: Place_Barricade_Ability, rect: Rect) {
+        draw_ability_name_label(rect, "Place");
+    }
+}

@@ -1702,6 +1702,8 @@ Player :: class : Player_Base {
                             }
                         }
                     }
+                } else if is_barricade_item_def(equipped_item_def) {
+                    draw_ability_button(this, Place_Barricade_Ability, 0);
                 }
 
                 // Draw hotbar and handle equip/unequip
@@ -2563,6 +2565,8 @@ Player :: class : Player_Base {
             if wt != .NONE {
                 weapon_equip(this, wt);
                 equipped_weapon_type = wt;
+                equipped_item_def = new_def;
+            } else if is_barricade_item_def(new_def) {
                 equipped_item_def = new_def;
             }
         }

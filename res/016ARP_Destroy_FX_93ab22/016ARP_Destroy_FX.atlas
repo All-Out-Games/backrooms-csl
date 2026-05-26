@@ -1,0 +1,40 @@
+93ab229b37c44e78.png
+	size: 1516, 256
+	filter: Linear, Linear
+	scale: 0.5
+break_particles/break_particle_1
+	bounds: 1484, 221, 27, 26
+	rotate: 90
+break_particles/break_particle_2
+	bounds: 1448, 216, 30, 32
+break_particles/break_particle_3
+	bounds: 1396, 199, 46, 49
+brown_button_poof/brown_button_poof_A
+	bounds: 271, 9, 239, 218
+	offsets: 1, 1, 241, 220
+	rotate: 90
+brown_button_poof/brown_button_poof_B
+	bounds: 495, 12, 236, 214
+	offsets: 1, 1, 238, 216
+	rotate: 90
+brown_button_poof/brown_button_poof_C
+	bounds: 6, 6, 259, 242
+	offsets: 1, 1, 261, 244
+hit spark
+	bounds: 715, 20, 96, 228
+	offsets: 0, 0, 97, 228
+hit_fx/hit_effect1
+	bounds: 1330, 186, 60, 62
+hit_fx/hit_effect2
+	bounds: 1244, 166, 80, 82
+hit_fx/hit_effect3
+	bounds: 1150, 157, 88, 91
+smoke/smoke_particle_A
+	bounds: 817, 134, 112, 114
+	offsets: 2, 2, 116, 118
+smoke/smoke_particle_B
+	bounds: 935, 136, 110, 112
+	offsets: 3, 3, 116, 118
+smoke/smoke_particle_C
+	bounds: 1051, 146, 93, 102
+	offsets: 2, 2, 97, 106
