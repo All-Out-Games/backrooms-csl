@@ -1,5 +1,5 @@
 14
-7919919693825
+163208757249
 1023220941
 {
   "name": "chair_plastic_white_frontside_shallow.png",
@@ -34,6 +34,8 @@
   "component_type": "Internal_Component",
   "internal_component_type": "Polygon_Collider",
   "data": {
+    "make_navmesh_loop": true,
+    "flip_navmesh_loop": true,
     "points": [
       {
         "X": 0.0825958251953125,

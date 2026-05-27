@@ -1,5 +1,5 @@
 14
-8031588843521
+219043332097
 1022551618
 {
   "name": "lifeguard_chair.png",
@@ -14,7 +14,7 @@
     "Y": 1
   },
   "previous_sibling": 1018299454,
-  "next_sibling": 1013271790,
+  "next_sibling": 2964618039,
   "parent": 1017799225,
   "linked_prefab": "lifeguard_chair.png.prefab"
 },
@@ -34,6 +34,8 @@
   "component_type": "Internal_Component",
   "internal_component_type": "Polygon_Collider",
   "data": {
+    "make_navmesh_loop": true,
+    "flip_navmesh_loop": true,
     "points": [
       {
         "X": -0.0676574707031250,
