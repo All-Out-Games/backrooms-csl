@@ -1,5 +1,5 @@
 14
-7846905249793
+214748364801
 1017738852
 {
   "name": "chair_plastic_white_back_shallow.png",
@@ -34,6 +34,8 @@
   "component_type": "Internal_Component",
   "internal_component_type": "Box_Collider",
   "data": {
+    "make_navmesh_loop": true,
+    "flip_navmesh_loop": true,
     "size": {
       "X": 0.8159027099609375,
       "Y": 0.4644012451171875

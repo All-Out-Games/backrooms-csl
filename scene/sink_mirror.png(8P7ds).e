@@ -1,5 +1,5 @@
 14
-8250632175617
+240518168577
 1010808684
 {
   "name": "sink_mirror.png",
@@ -34,6 +34,8 @@
   "component_type": "Internal_Component",
   "internal_component_type": "Box_Collider",
   "data": {
+    "make_navmesh_loop": true,
+    "flip_navmesh_loop": true,
     "size": {
       "X": 0.6768951416015625,
       "Y": 0.4479675292968750

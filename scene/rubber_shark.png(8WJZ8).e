@@ -14,7 +14,7 @@
     "Y": 1
   },
   "previous_sibling": 1019080922,
-  "next_sibling": 1018258283,
+  "next_sibling": 2953811777,
   "parent": 1017799225,
   "linked_prefab": "rubber_shark.png.prefab"
 },
@@ -26,35 +26,5 @@
   "data": {
     "texture": "sprites/Zone3/rubber_shark.png",
     "depth_offset": -0.2589263916015625
-  }
-},
-{
-  "cid": 2,
-  "aoid": 1018154069,
-  "component_type": "Internal_Component",
-  "internal_component_type": "Polygon_Collider",
-  "data": {
-    "points": [
-      {
-        "X": -0.8099823594093323,
-        "Y": -0.4088287651538849
-      },
-      {
-        "X": -0.0974731519818306,
-        "Y": -0.4824066460132599
-      },
-      {
-        "X": 0.8170471787452698,
-        "Y": -0.3032532036304474
-      },
-      {
-        "X": 0.6833344101905823,
-        "Y": 0.0709991529583931
-      },
-      {
-        "X": -0.5566559433937073,
-        "Y": 0.0287628192454576
-      }
-    ]
   }
 }

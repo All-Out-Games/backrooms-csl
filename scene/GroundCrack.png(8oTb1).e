@@ -5,15 +5,16 @@
   "name": "GroundCrack.png",
   "local_enabled": true,
   "local_position": {
-    "X": 189.5240936279296875,
-    "Y": 312.8197021484375000
+    "X": 13.2304992675781250,
+    "Y": 41.1455078125000000
   },
   "local_rotation": 0,
   "local_scale": {
     "X": 1.1118564605712891,
     "Y": 1.0068566799163818
   },
-  "previous_sibling": 1804982722
+  "previous_sibling": 1019711316,
+  "parent": 1013308120
 },
 {
   "cid": 1,
