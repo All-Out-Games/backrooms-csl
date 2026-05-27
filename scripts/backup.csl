@@ -175,47 +175,43 @@ rr_backup_last_saved_bytes: int;
 
 RR_BACKUP_QUOTE_SENTINEL :: "'";
 
-rr_backup_encode_for_save :: proc(s: string) -> string {
-	no_ws := s;
-	parts := string_split(no_ws, "\n");
-	no_ws = "";
+rr_backup_join_parts :: proc(parts: []string, separator: string) -> string {
+	if parts.count == 0 return "";
+	if parts.count == 1 return parts[0];
+
+	current: [..]string;
+	current.reserve(parts.count.(int));
 	for i: 0..parts.count-1 {
-		no_ws = format_string("%0%", .{no_ws, parts[i]});
-	}
-	parts = string_split(no_ws, "\r");
-	no_ws = "";
-	for i: 0..parts.count-1 {
-		no_ws = format_string("%0%", .{no_ws, parts[i]});
-	}
-	parts = string_split(no_ws, "\t");
-	no_ws = "";
-	for i: 0..parts.count-1 {
-		no_ws = format_string("%0%", .{no_ws, parts[i]});
+		append(ref current, parts[i]);
 	}
 
-	q_parts := string_split(no_ws, "\"");
-	result := "";
-	for i: 0..q_parts.count-1 {
-		if i == 0 {
-			result = q_parts[i];
-		} else {
-			result = format_string("%0%0%", .{result, RR_BACKUP_QUOTE_SENTINEL, q_parts[i]});
+	while current.count > 1 {
+		next: [..]string;
+		next.reserve(((current.count + 1) / 2).(int));
+		i := 0;
+		while i < current.count {
+			if i + 1 < current.count {
+				append(ref next, format_string("%0%0%", .{current[i], separator, current[i + 1]}));
+			} else {
+				append(ref next, current[i]);
+			}
+			i += 2;
 		}
+		current = next;
 	}
-	return result;
+
+	return current[0];
+}
+
+rr_backup_encode_for_save :: proc(s: string) -> string {
+	no_ws := rr_backup_join_parts(string_split(s, "\n"), "");
+	no_ws = rr_backup_join_parts(string_split(no_ws, "\r"), "");
+	no_ws = rr_backup_join_parts(string_split(no_ws, "\t"), "");
+	return rr_backup_join_parts(string_split(no_ws, "\""), RR_BACKUP_QUOTE_SENTINEL);
 }
 
 rr_backup_decode_from_save :: proc(s: string) -> string {
-	parts := string_split(s, RR_BACKUP_QUOTE_SENTINEL);
-	result := "";
-	for i: 0..parts.count-1 {
-		if i == 0 {
-			result = parts[i];
-		} else {
-			result = format_string("%0\"%", .{result, parts[i]});
-		}
-	}
-	return result;
+	return rr_backup_join_parts(string_split(s, RR_BACKUP_QUOTE_SENTINEL), "\"");
 }
 
 rr_backup_save_to_api :: proc() {
