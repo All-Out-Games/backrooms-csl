@@ -1,25 +1,25 @@
 14
-5673651798017
-3748398438
+6412386172929
+3743633002
 {
   "name": "Filler.png",
   "local_enabled": true,
   "local_position": {
-    "X": -52.0341033935546875,
-    "Y": 143.0709075927734375
+    "X": 10.9247283935546875,
+    "Y": 54.7890853881835938
   },
   "local_rotation": 0,
   "local_scale": {
-    "X": 10,
-    "Y": 6
+    "X": 3.3621172904968262,
+    "Y": 5.8671193122863770
   },
-  "previous_sibling": 3754740128,
-  "next_sibling": 3754218435,
+  "previous_sibling": 3745362525,
+  "next_sibling": 3757084432,
   "parent": 1807327005
 },
 {
   "cid": 1,
-  "aoid": 3754340535,
+  "aoid": 3756335556,
   "component_type": "Internal_Component",
   "internal_component_type": "Sprite_Renderer",
   "data": {
