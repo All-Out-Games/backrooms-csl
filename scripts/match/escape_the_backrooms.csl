@@ -19,10 +19,10 @@ EscapeTheBackrooms :: class : Interactable {
             return false;
         }
         gm := get_game_manager();
-        if !#alive(gm) || get_round_tapes_found_count(gm) < TASK_TAPE_COUNT {
+        if !#alive(gm) || gm.phase != .ACTIVE || get_round_tapes_found_count(gm) < TASK_FINAL_BECK_TAPES_REQUIRED {
             return false;
         }
-        return player.viewfinder_active && player.equipped_weapon_type == .CAMERA;
+        return true;
     }
 
     on_interact :: method(player: Player) {
