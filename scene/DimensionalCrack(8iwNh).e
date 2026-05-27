@@ -5,15 +5,17 @@
   "name": "DimensionalCrack",
   "local_enabled": true,
   "local_position": {
-
+    "X": 176.2935791015625000,
+    "Y": 271.6741943359375000
   },
   "local_rotation": 0,
   "local_scale": {
     "X": 1,
     "Y": 1
   },
-  "next_sibling": 1010866212,
-  "parent": 1013308120
+  "previous_sibling": 2936484116,
+  "next_sibling": 1017198325,
+  "parent": 2943964615
 },
 {
   "cid": 1,

@@ -202,6 +202,7 @@ ENTITY_COLOR_GRADE_CONTRASTZ2 :: 1.0;
 ENTITY_FLASHBANG_BLACKOUT_COLOR := v4.{0.0, 0.0, 0.0, 1.0};
 ENTITY_FLASHBANG_DEBUFF_ICON_PATH :: "AbilityIcons/flashbang_taped.png";
 ENTITY_NOISEMAKER_DEBUFF_ICON_PATH :: "AbilityIcons/Noisemaker.png";
+LIGHTS_OUT_DEBUFF_ICON_PATH :: "bulb_off_d8e1f5.png";
 ENTITY_DEBUFF_ICON_TIMER_GAP :: 110.0;
 ENTITY_DEBUFF_ICON_SPACING :: 48.0;
 ENTITY_DEBUFF_ICON_SIZE :: 48.0;
@@ -2127,37 +2128,59 @@ Player :: class : Player_Base {
             return;
         }
 
+        gm := get_game_manager();
+        lights_out_active := #alive(gm) && gm.lights_out_active;
+
         entity_player := get_round_entity_player();
-        if !#alive(entity_player) || !#alive(entity_player.entity) {
+        if (!#alive(entity_player) || !#alive(entity_player.entity)) && !lights_out_active {
             return;
         }
 
-        icon_paths: [6]string;
-        icon_alphas: [6]float;
-        icon_count: s64 = 0;
+        if #alive(entity_player) && #alive(entity_player.entity) {
+            icon_paths: [6]string;
+            icon_alphas: [6]float;
+            icon_count: s64 = 0;
 
-        flashbang_alpha := get_entity_flashbang_alpha(entity_player);
-        if flashbang_alpha > 0.0 {
-            icon_paths[icon_count] = ENTITY_FLASHBANG_DEBUFF_ICON_PATH;
-            icon_alphas[icon_count] = flashbang_alpha;
-            icon_count += 1;
+            flashbang_alpha := get_entity_flashbang_alpha(entity_player);
+            if flashbang_alpha > 0.0 {
+                icon_paths[icon_count] = ENTITY_FLASHBANG_DEBUFF_ICON_PATH;
+                icon_alphas[icon_count] = flashbang_alpha;
+                icon_count += 1;
+            }
+
+            if is_entity_sound_sight_interfered() {
+                icon_paths[icon_count] = ENTITY_NOISEMAKER_DEBUFF_ICON_PATH;
+                icon_alphas[icon_count] = 1.0;
+                icon_count += 1;
+            }
+
+            this.draw_status_debuff_icon_stack_for_player(entity_player, icon_paths, icon_alphas, icon_count);
         }
 
-        if is_entity_sound_sight_interfered() {
-            icon_paths[icon_count] = ENTITY_NOISEMAKER_DEBUFF_ICON_PATH;
-            icon_alphas[icon_count] = 1.0;
-            icon_count += 1;
-        }
+        if lights_out_active {
+            lights_icon_paths: [6]string;
+            lights_icon_alphas: [6]float;
+            lights_icon_paths[0] = LIGHTS_OUT_DEBUFF_ICON_PATH;
+            lights_icon_alphas[0] = 1.0;
 
-        if icon_count <= 0 {
+            for survivor: component_iterator(Player) {
+                if survivor.is_round_survivor() && #alive(survivor.entity) {
+                    this.draw_status_debuff_icon_stack_for_player(survivor, lights_icon_paths, lights_icon_alphas, 1);
+                }
+            }
+        }
+    }
+
+    draw_status_debuff_icon_stack_for_player :: proc(using this: Player, target: Player, icon_paths: [6]string, icon_alphas: [6]float, icon_count: s64) {
+        if target == null || !#alive(target.entity) || icon_count <= 0 {
             return;
         }
 
-        screen_pos := world_to_screen(entity_player.entity.world_position + ENTITY_DEBUFF_ICON_HEAD_OFFSET);
+        screen_pos := world_to_screen(target.entity.world_position + ENTITY_DEBUFF_ICON_HEAD_OFFSET);
         total_width := ENTITY_DEBUFF_ICON_SIZE + (icon_count.(float) - 1.0) * ENTITY_DEBUFF_ICON_SPACING;
         start_x := screen_pos.x - total_width * 0.5 + ENTITY_DEBUFF_ICON_SIZE * 0.5;
         half_size := ENTITY_DEBUFF_ICON_SIZE * 0.5;
-        pulse := 1.0 + sin(get_time() * 8.0 + entity_player.entity.world_position.x) * 0.035;
+        pulse := 1.0 + sin(get_time() * 8.0 + target.entity.world_position.x) * 0.035;
 
         UI.push_screen_draw_context();
         defer UI.pop_draw_context();

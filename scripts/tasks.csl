@@ -8,11 +8,15 @@ TASK_ID_DESCEND_LEVEL_2   :: "descend_level_2";
 TASK_ID_FIND_ASYNC_KEYCARDS :: "find_async_keycards";
 TASK_ID_SCAN_KEYCARDS :: "scan_keycards";
 TASK_ID_PULL_BOTH_LEVERS :: "pull_both_levers";
+TASK_ID_DESCEND_LEVEL_3 :: "descend_level_3";
+TASK_ID_FIND_LAST_TAPES :: "find_last_tapes";
+TASK_ID_ESCAPE_BACKROOMS :: "escape_backrooms";
 TASK_ID_REPAIR_LAPTOP     :: "repair_laptop";
 TASK_ID_FIX_CAMERA        :: "fix_camera";
 TASK_ASYNC_KEYCARDS_REQUIRED :: 2;
 TASK_FIRST_BECK_TAPES_REQUIRED :: 3;
 TASK_SECOND_BECK_TAPES_REQUIRED :: 6;
+TASK_FINAL_BECK_TAPES_REQUIRED :: 8;
 
 // --- Task SFX helpers copied with the Repair Laptop task ---
 RR_TASK_SFX_TILE_CLICK   :: "task_click_tile_8ba441.wav";
@@ -253,6 +257,15 @@ is_task_unlocked_for_player :: proc(player: Player, task_id: string) -> bool {
     if task_id == TASK_ID_PULL_BOTH_LEVERS {
         return is_task_completed(player, TASK_ID_SCAN_KEYCARDS);
     }
+    if task_id == TASK_ID_DESCEND_LEVEL_3 {
+        return is_task_completed(player, TASK_ID_PULL_BOTH_LEVERS);
+    }
+    if task_id == TASK_ID_FIND_LAST_TAPES {
+        return is_task_completed(player, TASK_ID_DESCEND_LEVEL_3);
+    }
+    if task_id == TASK_ID_ESCAPE_BACKROOMS {
+        return is_task_completed(player, TASK_ID_FIND_LAST_TAPES);
+    }
     if task_id == TASK_ID_REPAIR_LAPTOP {
         return true;
     }
@@ -261,6 +274,10 @@ is_task_unlocked_for_player :: proc(player: Player, task_id: string) -> bool {
 
 is_zone_at_or_past_zone2 :: proc(zone: CurrentZone) -> bool {
     return zone == .Zone2 || zone == .Zone3;
+}
+
+is_zone_at_or_past_zone3 :: proc(zone: CurrentZone) -> bool {
+    return zone == .Zone3;
 }
 
 are_all_surviving_survivors_at_or_past_zone2 :: proc() -> bool {
@@ -280,6 +297,29 @@ are_all_surviving_survivors_at_or_past_zone2 :: proc() -> bool {
 
         found_survivor = true;
         if !is_zone_at_or_past_zone2(player.current_zone) {
+            return false;
+        }
+    }
+    return found_survivor;
+}
+
+are_all_surviving_survivors_at_or_past_zone3 :: proc() -> bool {
+    found_survivor := false;
+    gm := get_game_manager();
+    for player: component_iterator(Player) {
+        if #alive(gm) {
+            if !gm.is_survivor_player(player) || player.is_round_entity() || player.is_round_minion() {
+                continue;
+            }
+        } else if !player.is_round_survivor() || player.is_round_entity() {
+            continue;
+        }
+        if player.is_round_dead() {
+            continue;
+        }
+
+        found_survivor = true;
+        if !is_zone_at_or_past_zone3(player.current_zone) {
             return false;
         }
     }
@@ -639,6 +679,21 @@ complete_current_assigned_task_cheat :: proc(player: Player) -> string {
         return current_task.id;
     }
 
+    if current_task.id == TASK_ID_DESCEND_LEVEL_3 {
+        complete_task_for_survivors(current_task.id);
+        update_survivor_task_progression(player);
+        return current_task.id;
+    }
+
+    if current_task.id == TASK_ID_FIND_LAST_TAPES {
+        if !ensure_round_tapes_collected_count(TASK_FINAL_BECK_TAPES_REQUIRED) {
+            return "";
+        }
+        complete_task_for_survivors(current_task.id);
+        update_survivor_task_progression(player);
+        return current_task.id;
+    }
+
     if current_task.#type == Task_Repair_Laptop {
         repair_task := current_task.(Task_Repair_Laptop);
         if repair_task.workshop_repair {
@@ -677,6 +732,9 @@ get_task_display_name :: proc(task_id: string) -> string {
         case TASK_ID_FIND_ASYNC_KEYCARDS: return "Find 2 Keycards and 3 Tapes";
         case TASK_ID_SCAN_KEYCARDS: return "Scan Keycards at Doors";
         case TASK_ID_PULL_BOTH_LEVERS: return "Pull Both Levers";
+        case TASK_ID_DESCEND_LEVEL_3: return "Descend to Level 3";
+        case TASK_ID_FIND_LAST_TAPES: return "Find the Last 2 Tapes";
+        case TASK_ID_ESCAPE_BACKROOMS: return "Escape the Backrooms";
         case TASK_ID_REPAIR_LAPTOP:     return "Repair Laptop";
         case TASK_ID_FIX_CAMERA:        return "Find and Fix a Broken Camera";
     }
@@ -714,6 +772,15 @@ get_task_description :: proc(task_id: string) -> string {
         }
         case TASK_ID_PULL_BOTH_LEVERS: {
             return "Pull both blast door levers within 5 seconds.";
+        }
+        case TASK_ID_DESCEND_LEVEL_3: {
+            return "Get every surviving Survivor through the second blast door and down to Level 3.";
+        }
+        case TASK_ID_FIND_LAST_TAPES: {
+            return "Use the Viewfinder to find the final 2 Beck Tapes in Level 3.";
+        }
+        case TASK_ID_ESCAPE_BACKROOMS: {
+            return "Find the exit and escape the Backrooms.";
         }
         case TASK_ID_REPAIR_LAPTOP: {
             return "Drag each piece back into its correct slot on the laptop.";
@@ -875,6 +942,27 @@ update_keycard_task_progression :: proc() {
     }
 }
 
+update_final_task_progression :: proc() {
+    if !is_task_completed_for_survivors(TASK_ID_PULL_BOTH_LEVERS) {
+        return;
+    }
+
+    assign_task_to_survivors(TASK_ID_DESCEND_LEVEL_3);
+    if are_all_surviving_survivors_at_or_past_zone3() && !is_task_completed_for_survivors(TASK_ID_DESCEND_LEVEL_3) {
+        complete_task_for_survivors(TASK_ID_DESCEND_LEVEL_3);
+    }
+    if !is_task_completed_for_survivors(TASK_ID_DESCEND_LEVEL_3) {
+        return;
+    }
+
+    assign_task_to_survivors(TASK_ID_FIND_LAST_TAPES);
+    if !complete_tape_task_if_ready(TASK_ID_FIND_LAST_TAPES, TASK_FINAL_BECK_TAPES_REQUIRED) {
+        return;
+    }
+
+    assign_task_to_survivors(TASK_ID_ESCAPE_BACKROOMS);
+}
+
 update_survivor_task_progression :: proc(player: Player) {
     if player == null {
         return;
@@ -920,6 +1008,8 @@ update_survivor_task_progression :: proc(player: Player) {
         ensure_task_assigned(player, TASK_ID_FIND_ASYNC_KEYCARDS);
         update_keycard_task_progression();
     }
+
+    update_final_task_progression();
 
     gm := get_game_manager();
     if #alive(gm) && !wire_task.completed && !gm.is_task_zone_active_for(TASK_ID_RECONNECT_WIRE) {

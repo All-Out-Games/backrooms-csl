@@ -13,7 +13,7 @@
     "X": 1,
     "Y": 1
   },
-  "previous_sibling": 1017198325
+  "previous_sibling": 1804982722
 },
 {
   "cid": 1,
@@ -44,6 +44,15 @@
   "aoid": 2940948606,
   "component_type": "Internal_Component",
   "internal_component_type": "InteractableGlow",
+  "data": {
+
+  }
+},
+{
+  "cid": 5,
+  "aoid": 2950025335,
+  "component_type": "Internal_Component",
+  "internal_component_type": "ViewfinderOnly",
   "data": {
 
   }
