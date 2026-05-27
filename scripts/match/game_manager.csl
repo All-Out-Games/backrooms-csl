@@ -898,6 +898,7 @@ Game_Manager :: class : Component {
     EndOfGameWarp: Entity @ao_serialize;
     VO: Entity @ao_serialize;
     Shadows: Entity @ao_serialize;
+    dimensionalRift: Entity @ao_serialize;
     RoundItemIds: [..]string @ao_serialize;
     RoundItemWeights: [..]s64 @ao_serialize;
     MinRoundItemSpawnCount: s64 @ao_serialize;
@@ -1012,6 +1013,7 @@ Game_Manager :: class : Component {
         }
         sync_viewfinder_only_group_visibility();
         hide_task_zone();
+        sync_dimensional_rift_enabled();
         set_blast_door_sprite_enabled(true);
         cache_hearing_radius_sprite();
         sync_entity_hearing_radius_visual(0.0);
@@ -1035,6 +1037,9 @@ Game_Manager :: class : Component {
         if #alive(VO) {
             VO.set_local_enabled(false);
         }
+        if #alive(dimensionalRift) {
+            dimensionalRift.set_local_enabled(false);
+        }
         hide_task_zone();
         if game_manager_singleton == this {
             game_manager_singleton = null;
@@ -1043,6 +1048,7 @@ Game_Manager :: class : Component {
 
     ao_update :: method(dt: float) {
         sync_viewfinder_only_group_visibility();
+        sync_dimensional_rift_enabled();
 
         if phase == .ENDED {
             sync_entity_hearing_radius_visual(0.0);
@@ -1142,6 +1148,18 @@ Game_Manager :: class : Component {
             child = child.get_next_sibling();
         }
         VO.set_local_enabled(should_show);
+    }
+
+    sync_dimensional_rift_enabled :: method() {
+        if !#alive(dimensionalRift) {
+            dimensionalRift = Scene.get_entity_by_name("dimensionalRift");
+        }
+        if !#alive(dimensionalRift) {
+            return;
+        }
+
+        should_enable := is_round_in_progress() && get_round_tapes_found_count(this) >= TASK_TAPE_COUNT;
+        dimensionalRift.set_local_enabled(should_enable);
     }
 
     set_round_timer_paused :: method(paused: bool) -> bool {
@@ -2703,6 +2721,7 @@ Game_Manager :: class : Component {
         entity_jumpscare_sabotage_unlocked = false;
         async_keycard_pickup_notifications_sent = 0;
         hide_task_zone();
+        sync_dimensional_rift_enabled();
     }
 
     is_end_game_cutscene_active :: method() -> bool {

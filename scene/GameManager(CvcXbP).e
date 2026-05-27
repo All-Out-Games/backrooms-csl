@@ -38,6 +38,7 @@
     "EndOfGameWarp": 2946391297,
     "VO": 2943964615,
     "Shadows": 2947812243,
+    "dimensionalRift": 1015743329,
     "RoundItemIds": [
       "flashbang",
       "noisemaker",
