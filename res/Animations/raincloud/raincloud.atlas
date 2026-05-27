@@ -1,0 +1,52 @@
+f28db4720f7dd1e8.png
+	size: 2768, 2768
+	filter: Linear, Linear
+LightningStrike/lightning_1
+	bounds: 3, 102, 313, 920
+	offsets: 2, 3, 317, 926
+	rotate: 90
+LightningStrike/lightning_2
+	bounds: 926, 202, 251, 878
+	offsets: 2, 3, 255, 884
+	rotate: 90
+LightningStrike/lightning_3
+	bounds: 2365, 765, 302, 836
+	offsets: 3, 3, 306, 843
+LightningStrike/lightning_glow
+	bounds: 926, 44, 155, 933
+	offsets: 8, 22, 170, 1002
+	rotate: 90
+LightningStrike/lightning_glow_big
+	bounds: 920, 458, 479, 1142
+	offsets: 14, 29, 512, 1250
+LightningStrike/lightning_huge
+	bounds: 1402, 456, 280, 910
+	offsets: 2, 3, 284, 915
+	rotate: 90
+LightningStrike/lightning_mid
+	bounds: 1807, 229, 224, 894
+	offsets: 2, 4, 228, 901
+	rotate: 90
+LightningStrike/lightning_peterout1
+	bounds: 1862, 3, 223, 768
+	offsets: 3, 3, 229, 774
+	rotate: 90
+LightningStrike/lightning_peterout2
+	bounds: 967, 1638, 100, 552
+	offsets: 5, 6, 110, 563
+	rotate: 90
+LightningStrike/lightning_pre
+	bounds: 3, 45, 54, 840
+	rotate: 90
+cloud
+	bounds: 1919, 1604, 1159, 744
+	offsets: 6, 2, 1165, 748
+	rotate: 90
+rain1
+	bounds: 1402, 739, 960, 862
+rain2
+	bounds: 967, 1741, 949, 1022
+rain3
+	bounds: 3, 1603, 961, 1160
+rain4
+	bounds: 3, 418, 914, 1182

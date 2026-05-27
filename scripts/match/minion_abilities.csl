@@ -188,9 +188,11 @@ find_minion_bite_target :: proc(minion: Player) -> Player {
 }
 
 Minion_Bite_Slow_Effect :: class : Effect_Base {
+    play_hit_react: bool;
+
     effect_start :: method() {
         set_duration(MINION_BITE_SLOW_SECONDS);
-        if player != null && player.animator != null && player.animator.state_machine != null {
+        if play_hit_react && player != null && player.animator != null && player.animator.state_machine != null {
             player.minion_bite_hit_react_remaining = MINION_BITE_EFFECT_SECONDS;
             player.animator.state_machine.set_trigger("minion_bite_hit");
         }
@@ -209,6 +211,7 @@ apply_minion_bite_to_survivor :: proc(minion: Player, target: Player) -> bool {
     }
 
     slow := new(Minion_Bite_Slow_Effect);
+    slow.play_hit_react = true;
     target.entity.add_passive_effect(slow);
 
     entity_player := get_round_entity_player();

@@ -235,6 +235,8 @@ unlock :: proc(player: Player) {
     gm.lights_out_cooldown_ends_at = 0.0;
 
     entity_player.jumpscare_cooldown_ends_at = 0.0;
+    entity_player.toxic_rain_cooldown_ends_at = 0.0;
+    entity_player.stop_toxic_rain_targeting();
     clear_player_ability_cooldowns(entity_player);
 
     Notifier.notify(player, "Entity abilities unlocked and cooldowns cleared.");
@@ -1231,6 +1233,7 @@ Game_Manager :: class : Component {
 
         if entity_player, ok := find_player_by_user_id(entity_user_id); ok {
             entity_player.jumpscare_cooldown_ends_at = 0.0;
+            entity_player.toxic_rain_cooldown_ends_at = 0.0;
         }
         update_survivor_task_progression(player);
     }
@@ -2504,6 +2507,8 @@ Game_Manager :: class : Component {
             players[i].jumpscare_request_id = 0;
             players[i].jumpscare_processed_request_id = 0;
             players[i].jumpscare_cooldown_ends_at = 0.0;
+            players[i].toxic_rain_cooldown_ends_at = 0.0;
+            players[i].stop_toxic_rain_targeting();
             players[i].add_freeze_reason(FREEZE_INTRO_POPUP);
             if #alive(players[i].agent) {
                 players[i].agent.velocity = v2{0.0, 0.0};
@@ -2645,6 +2650,7 @@ Game_Manager :: class : Component {
         clear_all_footstep_echoes();
         for player: component_iterator(Player) {
             player.current_zone = .None;
+            player.stop_toxic_rain_targeting();
             player.clear_round_minion_state();
             player.clear_round_death_state(false);
             clear_player_tasks(player);
@@ -2789,6 +2795,7 @@ Game_Manager :: class : Component {
         clear_all_corpses();
         for player: component_iterator(Player) {
             player.current_zone = .None;
+            player.stop_toxic_rain_targeting();
             player.clear_round_minion_state();
         }
         phase = .ENDED;
@@ -2815,6 +2822,7 @@ Game_Manager :: class : Component {
         clear_all_corpses();
         for player: component_iterator(Player) {
             player.current_zone = .None;
+            player.stop_toxic_rain_targeting();
             player.clear_round_minion_state();
         }
         phase = .ENDED;

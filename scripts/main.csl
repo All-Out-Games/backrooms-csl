@@ -344,6 +344,9 @@ Player :: class : Player_Base {
     jumpscare_request_id: s64;
     jumpscare_processed_request_id: s64;
     jumpscare_cooldown_ends_at: float;
+    toxic_rain_cooldown_ends_at: float;
+    toxic_rain_targeting_active: bool;
+    toxic_rain_targeting_started_frame: u64;
     jumpscare_overlay_request_id: s64;
     jumpscare_overlay_seen_request_id: s64;
     jumpscare_overlay_ends_at: float;
@@ -831,6 +834,102 @@ Player :: class : Player_Base {
         camera.position = entity.world_position;
     }
 
+    start_toxic_rain_targeting :: method() -> bool {
+        if !can_start_toxic_rain_targeting(this) {
+            return false;
+        }
+
+        sabotage_modal_open = false;
+        toxic_rain_targeting_active = true;
+        toxic_rain_targeting_started_frame = get_frame_number();
+        cheat_wide_view_active = true;
+        this.add_freeze_reason(TOXIC_RAIN_TARGETING_FREEZE_REASON);
+        if #alive(agent) {
+            agent.velocity = v2{0.0, 0.0};
+        }
+        return true;
+    }
+
+    stop_toxic_rain_targeting :: method() {
+        if !toxic_rain_targeting_active && !cheat_wide_view_active {
+            return;
+        }
+
+        toxic_rain_targeting_active = false;
+        toxic_rain_targeting_started_frame = 0;
+        cheat_wide_view_active = false;
+        this.remove_freeze_reason(TOXIC_RAIN_TARGETING_FREEZE_REASON);
+        if #alive(agent) {
+            agent.velocity = v2{0.0, 0.0};
+        }
+    }
+
+    update_toxic_rain_targeting_state :: method() {
+        if !toxic_rain_targeting_active {
+            return;
+        }
+
+        if !can_start_toxic_rain_targeting(this) {
+            this.stop_toxic_rain_targeting();
+            return;
+        }
+
+        cheat_wide_view_active = true;
+        if #alive(agent) {
+            agent.velocity = v2{0.0, 0.0};
+        }
+    }
+
+    draw_toxic_rain_targeting_ui :: method() -> bool {
+        if !toxic_rain_targeting_active {
+            return false;
+        }
+        if !this.is_local_or_server() {
+            return true;
+        }
+
+        target_position := get_mouse_world_position();
+        target_screen := world_to_screen(target_position);
+        range_screen := world_to_screen(target_position + v2{TOXIC_RAIN_EFFECT_RADIUS, 0.0});
+        range_radius_px := length(range_screen - target_screen);
+        reticle_radius_px := max(range_radius_px, 24.0);
+
+        UI.push_screen_draw_context();
+        defer UI.pop_draw_context();
+
+        UI.push_layer(1100);
+        defer UI.pop_layer();
+
+        UI.wire_circle(target_screen, reticle_radius_px, 4.0, v4{0.28, 1.0, 0.12, 0.85}, 64);
+        UI.wire_circle(target_screen, 14.0, 3.0, v4{1.0, 1.0, 1.0, 0.95}, 32);
+        UI.line(target_screen - v2{24.0, 0.0}, target_screen + v2{24.0, 0.0}, 3.0, core_globals.white_sprite, v4{1.0, 1.0, 1.0, 0.82}, false);
+        UI.line(target_screen - v2{0.0, 24.0}, target_screen + v2{0.0, 24.0}, 3.0, core_globals.white_sprite, v4{1.0, 1.0, 1.0, 0.82}, false);
+
+        UI.push_layer(-1000);
+        UI.push_id("toxic_rain_targeting");
+        interact := UI.button(UI.get_screen_rect(), {}, {}, "");
+        UI.pop_id();
+        UI.pop_layer();
+
+        if get_frame_number() <= toxic_rain_targeting_started_frame {
+            return true;
+        }
+
+        if interact.right.clicked {
+            this.stop_toxic_rain_targeting();
+            return true;
+        }
+
+        if interact.clicked {
+            if spawn_toxic_rain_sabotage(this, target_position) {
+                toxic_rain_cooldown_ends_at = get_time() + TOXIC_RAIN_COOLDOWN_SECONDS;
+            }
+            this.stop_toxic_rain_targeting();
+        }
+
+        return true;
+    }
+
     trigger_warp_to_backrooms_static :: method() {
         warp_to_backrooms_static_started_at = get_time();
     }
@@ -940,6 +1039,9 @@ Player :: class : Player_Base {
         jumpscare_request_id = 0;
         jumpscare_processed_request_id = 0;
         jumpscare_cooldown_ends_at = 0.0;
+        toxic_rain_cooldown_ends_at = 0.0;
+        toxic_rain_targeting_active = false;
+        toxic_rain_targeting_started_frame = 0;
         jumpscare_overlay_request_id = 0;
         jumpscare_overlay_seen_request_id = 0;
         jumpscare_overlay_ends_at = 0.0;
@@ -1654,6 +1756,7 @@ Player :: class : Player_Base {
 
         this.tick_downed_scream_state(dt);
         process_entity_jumpscare_sabotage_request(this);
+        this.update_toxic_rain_targeting_state();
         this.update_jumpscare_overlay(dt);
 
         if animator != null && animator.instance != null {
@@ -1746,6 +1849,9 @@ Player :: class : Player_Base {
             this.draw_round_dead_player_pointers();
             this.draw_revealed_survivor_eye_icons();
             this.draw_downed_bleed_out_ui();
+            if this.draw_toxic_rain_targeting_ui() {
+                return;
+            }
             for lb: component_iterator(Leaderboard) {
                 lb.draw();
             }
@@ -1918,8 +2024,11 @@ Player :: class : Player_Base {
     ao_can_use_interactable :: method(interactable: Interactable) -> bool {
         // Called to determine if the player is allowed to use the given interactable
         if round_dead || round_downed {
+            listener := interactable.listener;
+            if round_downed && #alive(listener) && listener.#type == WarpToBackrooms {
+                return true;
+            }
             if round_dead {
-                listener := interactable.listener;
                 if #alive(listener) && listener.#type == Ghost_Item_Ping_Interactable {
                     return true;
                 }
@@ -2000,7 +2109,7 @@ Player :: class : Player_Base {
 
     apply_entity_local_post_processing :: proc(using this: Player) {
         contrast := ENTITY_COLOR_GRADE_CONTRAST;
-        if (this.is_round_entity() || this.is_round_minion()) && current_zone == .Zone2 {
+        if (this.is_round_entity() || this.is_round_minion()) && (current_zone == .Zone2 || current_zone == .Zone3) {
             contrast = ENTITY_COLOR_GRADE_CONTRASTZ2;
         }
 
@@ -2132,43 +2241,34 @@ Player :: class : Player_Base {
         lights_out_active := #alive(gm) && gm.lights_out_active;
 
         entity_player := get_round_entity_player();
-        if (!#alive(entity_player) || !#alive(entity_player.entity)) && !lights_out_active {
+        if !#alive(entity_player) || !#alive(entity_player.entity) {
             return;
         }
 
-        if #alive(entity_player) && #alive(entity_player.entity) {
-            icon_paths: [6]string;
-            icon_alphas: [6]float;
-            icon_count: s64 = 0;
+        icon_paths: [6]string;
+        icon_alphas: [6]float;
+        icon_count: s64 = 0;
 
-            flashbang_alpha := get_entity_flashbang_alpha(entity_player);
-            if flashbang_alpha > 0.0 {
-                icon_paths[icon_count] = ENTITY_FLASHBANG_DEBUFF_ICON_PATH;
-                icon_alphas[icon_count] = flashbang_alpha;
-                icon_count += 1;
-            }
-
-            if is_entity_sound_sight_interfered() {
-                icon_paths[icon_count] = ENTITY_NOISEMAKER_DEBUFF_ICON_PATH;
-                icon_alphas[icon_count] = 1.0;
-                icon_count += 1;
-            }
-
-            this.draw_status_debuff_icon_stack_for_player(entity_player, icon_paths, icon_alphas, icon_count);
+        flashbang_alpha := get_entity_flashbang_alpha(entity_player);
+        if flashbang_alpha > 0.0 {
+            icon_paths[icon_count] = ENTITY_FLASHBANG_DEBUFF_ICON_PATH;
+            icon_alphas[icon_count] = flashbang_alpha;
+            icon_count += 1;
         }
 
         if lights_out_active {
-            lights_icon_paths: [6]string;
-            lights_icon_alphas: [6]float;
-            lights_icon_paths[0] = LIGHTS_OUT_DEBUFF_ICON_PATH;
-            lights_icon_alphas[0] = 1.0;
-
-            for survivor: component_iterator(Player) {
-                if survivor.is_round_survivor() && #alive(survivor.entity) {
-                    this.draw_status_debuff_icon_stack_for_player(survivor, lights_icon_paths, lights_icon_alphas, 1);
-                }
-            }
+            icon_paths[icon_count] = LIGHTS_OUT_DEBUFF_ICON_PATH;
+            icon_alphas[icon_count] = 1.0;
+            icon_count += 1;
         }
+
+        if is_entity_sound_sight_interfered() {
+            icon_paths[icon_count] = ENTITY_NOISEMAKER_DEBUFF_ICON_PATH;
+            icon_alphas[icon_count] = 1.0;
+            icon_count += 1;
+        }
+
+        this.draw_status_debuff_icon_stack_for_player(entity_player, icon_paths, icon_alphas, icon_count);
     }
 
     draw_status_debuff_icon_stack_for_player :: proc(using this: Player, target: Player, icon_paths: [6]string, icon_alphas: [6]float, icon_count: s64) {
@@ -2857,6 +2957,7 @@ Player :: class : Player_Base {
         shell.main_align = .CENTER;
         shell.gap = 4;
         shell.padding = v4{16, 12, 16, 12};
+        shell.show_background = false;
         UIK.panel_begin(shell);
 
         UIK.text("Downed", UIK.text_title());

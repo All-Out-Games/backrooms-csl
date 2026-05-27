@@ -5,8 +5,8 @@
   "name": "Arrow.png",
   "local_enabled": true,
   "local_position": {
-    "X": 23.6164550781250000,
-    "Y": -38.7522583007812500
+    "X": 203.7380676269531250,
+    "Y": 238.0388183593750000
   },
   "local_rotation": 260.2056274414062500,
   "local_scale": {
@@ -15,7 +15,7 @@
   },
   "previous_sibling": 2957220227,
   "next_sibling": 2957304808,
-  "parent": 2969111073
+  "parent": 2943964615
 },
 {
   "cid": 1,

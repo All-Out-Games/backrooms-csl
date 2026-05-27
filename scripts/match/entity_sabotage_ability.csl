@@ -7,6 +7,40 @@ ENTITY_SABOTAGE_TOXIC_RAIN_ICON_PATH :: "oil_sludge_3_a58110.png";
 ENTITY_JUMPSCARE_EFFECT_SECONDS :: 10.0;
 ENTITY_JUMPSCARE_COOLDOWN_SECONDS :: 120.0;
 ENTITY_JUMPSCARE_MODAL_MAX_TARGETS :: 32;
+TOXIC_RAIN_PREFAB_PATH :: "ToxicRain.prefab";
+TOXIC_RAIN_COOLDOWN_SECONDS :: 60.0;
+TOXIC_RAIN_LIFETIME_SECONDS :: 30.0;
+TOXIC_RAIN_SCAN_SECONDS :: 1.0;
+TOXIC_RAIN_REVEAL_SECONDS :: 5.0;
+TOXIC_RAIN_COLLIDER_SIZE :: 2.0;
+TOXIC_RAIN_COLLIDER_OFFSET := v2.{0.0, -2.0};
+TOXIC_RAIN_PREFAB_SCALE :: 2.0;
+TOXIC_RAIN_TARGETING_FREEZE_REASON :: "toxic_rain_targeting";
+TOXIC_RAIN_RETICLE_RANGE_FALLBACK :: 4.0;
+TOXIC_RAIN_EFFECT_RADIUS :: TOXIC_RAIN_RETICLE_RANGE_FALLBACK;
+
+get_toxic_rain_effect_center :: proc(entity: Entity) -> v2 {
+    if !#alive(entity) {
+        return v2{0.0, 0.0};
+    }
+
+    scale := entity.world_scale;
+    return entity.world_position + v2{TOXIC_RAIN_COLLIDER_OFFSET.x * scale.x, TOXIC_RAIN_COLLIDER_OFFSET.y * scale.y};
+}
+
+get_toxic_rain_effect_radius :: proc(entity: Entity) -> float {
+    if !#alive(entity) {
+        return TOXIC_RAIN_RETICLE_RANGE_FALLBACK;
+    }
+
+    scale := entity.world_scale;
+    scale_value := max(abs(scale.x), abs(scale.y));
+    if scale_value <= 0.0 {
+        scale_value = 1.0;
+    }
+
+    return max(TOXIC_RAIN_COLLIDER_SIZE * scale_value, 0.1);
+}
 
 is_entity_jumpscare_sabotage_unlocked :: proc() -> bool {
     gm := get_game_manager();
@@ -14,6 +48,36 @@ is_entity_jumpscare_sabotage_unlocked :: proc() -> bool {
         return false;
     }
     return gm.entity_jumpscare_sabotage_unlocked;
+}
+
+is_entity_toxic_rain_sabotage_unlocked :: proc() -> bool {
+    gm := get_game_manager();
+    if !#alive(gm) || gm.phase != .ACTIVE {
+        return false;
+    }
+    return gm.unlocked_entity_ability_count >= 5 || are_all_surviving_survivors_at_or_past_zone3();
+}
+
+can_start_toxic_rain_targeting :: proc(player: Player) -> bool {
+    if player == null || !#alive(player.entity) || !player.is_round_entity() {
+        return false;
+    }
+
+    gm := get_game_manager();
+    if !#alive(gm) || (gm.phase != .SURVIVOR_HEAD_START && gm.phase != .ACTIVE) {
+        return false;
+    }
+    if !is_entity_toxic_rain_sabotage_unlocked() {
+        return false;
+    }
+    if get_time() < player.toxic_rain_cooldown_ends_at {
+        return false;
+    }
+    if player.entity.get_active_effect() != null {
+        return false;
+    }
+
+    return true;
 }
 
 is_valid_jumpscare_target :: proc(player: Player) -> bool {
@@ -143,6 +207,96 @@ process_entity_jumpscare_sabotage_request :: proc(entity_player: Player) {
     apply_jumpscare_sabotage_to_survivor(entity_player, target);
 }
 
+ToxicRaincloud :: class : Component {
+    circle_collider: Circle_Collider;
+    expires_at: float;
+    next_scan_at: float;
+
+    ao_start :: method() {
+        circle_collider = entity.get_component(Circle_Collider);
+        expires_at = get_time() + TOXIC_RAIN_LIFETIME_SECONDS;
+        next_scan_at = 0.0;
+    }
+
+    ao_update :: method(dt: float) {
+        gm := get_game_manager();
+        if !#alive(gm) || (gm.phase != .SURVIVOR_HEAD_START && gm.phase != .ACTIVE) {
+            entity.destroy();
+            return;
+        }
+
+        if get_time() >= expires_at {
+            entity.destroy();
+            return;
+        }
+
+        if circle_collider == null {
+            circle_collider = entity.get_component(Circle_Collider);
+        }
+        if circle_collider == null || get_time() < next_scan_at {
+            return;
+        }
+
+        next_scan_at = get_time() + TOXIC_RAIN_SCAN_SECONDS;
+        this.scan_for_survivors();
+    }
+
+    scan_for_survivors :: method() {
+        center := get_toxic_rain_effect_center(entity);
+        radius := get_toxic_rain_effect_radius(entity);
+        radius_sq := radius * radius;
+        entity_player := get_round_entity_player();
+
+        for survivor: component_iterator(Player) {
+            if survivor == entity_player {
+                continue;
+            }
+            if !survivor.is_round_survivor() || survivor.is_round_downed() || survivor.is_round_dead() {
+                continue;
+            }
+            if !#alive(survivor.entity) {
+                continue;
+            }
+
+            delta := survivor.entity.world_position - center;
+            if delta.x * delta.x + delta.y * delta.y > radius_sq {
+                continue;
+            }
+
+            survivor.reveal_for_entity_local_view_with_duration(TOXIC_RAIN_REVEAL_SECONDS);
+            if #alive(entity_player) {
+                ping_survivor_with_entity_scream(entity_player, survivor);
+            }
+
+            slow := new(Minion_Bite_Slow_Effect);
+            slow.play_hit_react = false;
+            survivor.entity.add_passive_effect(slow);
+        }
+    }
+}
+
+spawn_toxic_rain_sabotage :: proc(entity_player: Player, position: v2) -> bool {
+    if !can_start_toxic_rain_targeting(entity_player) {
+        return false;
+    }
+
+    prefab := get_asset(Prefab_Asset, TOXIC_RAIN_PREFAB_PATH);
+    if prefab == null {
+        return false;
+    }
+
+    rain_entity := Scene.instantiate(prefab, position);
+    if !#alive(rain_entity) {
+        return false;
+    }
+
+    rain_entity.mark_teleported();
+    if rain_entity.get_component(ToxicRaincloud) == null {
+        rain_entity.add_component(ToxicRaincloud);
+    }
+    return true;
+}
+
 format_sabotage_cooldown :: proc(remaining_seconds: float) -> string {
     if remaining_seconds < 0.0 {
         remaining_seconds = 0.0;
@@ -246,10 +400,18 @@ draw_entity_sabotage_modal_ui :: proc(player: Player) {
     } else if get_time() < player.jumpscare_cooldown_ends_at {
         jumpscare_cooldown_label = format_sabotage_cooldown(player.jumpscare_cooldown_ends_at - get_time());
     }
+    toxic_rain_unlocked := is_entity_toxic_rain_sabotage_unlocked();
+    toxic_rain_disabled := !toxic_rain_unlocked || get_time() < player.toxic_rain_cooldown_ends_at || player.toxic_rain_targeting_active;
+    toxic_rain_cooldown_label := "";
+    if !toxic_rain_unlocked {
+        toxic_rain_cooldown_label = "Locked";
+    } else if get_time() < player.toxic_rain_cooldown_ends_at {
+        toxic_rain_cooldown_label = format_sabotage_cooldown(player.toxic_rain_cooldown_ends_at - get_time());
+    }
 
     lights_out_handle := draw_entity_sabotage_option_button("sabotage_lights_out", "Lights Out", ENTITY_SABOTAGE_LIGHTS_ICON_PATH, lights_disabled, lights_cooldown_label);
     jumpscare_handle := draw_entity_sabotage_option_button("sabotage_jumpscare", "Jumpscare", ENTITY_SABOTAGE_JUMPSCARE_ICON_PATH, jumpscare_disabled, jumpscare_cooldown_label);
-    draw_entity_sabotage_option_button("sabotage_toxic_rain", "Toxic Rain", ENTITY_SABOTAGE_TOXIC_RAIN_ICON_PATH);
+    toxic_rain_handle := draw_entity_sabotage_option_button("sabotage_toxic_rain", "Toxic Rain", ENTITY_SABOTAGE_TOXIC_RAIN_ICON_PATH, toxic_rain_disabled, toxic_rain_cooldown_label);
 
     UIK.panel_end();
     UIK.panel_end();
@@ -266,6 +428,9 @@ draw_entity_sabotage_modal_ui :: proc(player: Player) {
     if !jumpscare_disabled && UIK.clicked(jumpscare_handle) {
         player.sabotage_modal_open = false;
         player.jumpscare_target_modal_open = true;
+    }
+    if !toxic_rain_disabled && UIK.clicked(toxic_rain_handle) {
+        player.start_toxic_rain_targeting();
     }
 }
 
