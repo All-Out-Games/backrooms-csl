@@ -92,7 +92,7 @@ Task_Base :: class {
     }
 
     complete_attempt :: proc(using this: Task_Base, player: Player, success: bool) {
-        log(format_string("Task % completed: %", .{this.id, success}));
+        log("Task % completed: %", .{this.id, success});
         if completed {
             return;
         }

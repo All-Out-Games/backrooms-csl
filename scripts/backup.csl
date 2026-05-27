@@ -32,7 +32,14 @@
 //                  `solved` flags, matched by world position.
 // =============================================================================
 
-BACKUP_POLL_INTERVAL :: 0.5;
+BACKUP_POLL_INTERVAL :: 2.0;
+// API persistence cadence. After a save job finishes we wait at least this
+// long before queuing the next one. /restore reads from api so a process
+// crash loses at most BACKUP_PERSIST_INTERVAL + job-runtime of state.
+BACKUP_PERSIST_INTERVAL :: 6.0;
+// Max pair-merges per frame during the incremental encode stage. Keeps each
+// frame's encode work bounded; total merges = number of `"` in the JSON.
+BACKUP_ENCODE_MERGES_PER_FRAME :: 64;
 RR_BACKUP_SAVE_KEY :: "br_backup_snapshot_v1";
 RR_BACKUP_SCHEMA_VERSION :: 6;
 RR_BACKUP_MAX_SAVE_BYTES :: 200000;
@@ -163,74 +170,183 @@ Backup_Snapshot :: class {
 rr_backup_enabled: bool;
 rr_backup_snapshot: Backup_Snapshot;
 rr_backup_last_poll_at: float;
+rr_backup_last_persist_at: float;
 rr_backup_boot_loaded: bool;
 rr_backup_last_saved_bytes: int;
 
+// --- Incremental save job ----------------------------------------------------
+// JSON.serialize + tree-merge encode + Save.set_game_string previously fired
+// all in one frame, producing a visible hitch on every persist. Now they run
+// as a tiny state machine driven one slice per ao_update.
+
+Backup_Save_Stage :: enum {
+	IDLE;
+	SERIALIZE;
+	ENCODE;
+	SAVE;
+}
+
+rr_backup_save_stage: Backup_Save_Stage;
+rr_backup_save_payload: string;
+rr_backup_encode_work: [..]string;
+rr_backup_encode_next: [..]string;
+rr_backup_encode_pair_idx: s64;
+
 // --- Persistence (game-level save string, JSON-encoded) -----------------------
 //
-// JSON.serialize emits pretty-printed output. Strip structural whitespace AND
-// replace all `"` with `'` — the save backend validates strings it stores and
-// rejects raw JSON-like values. Apostrophes are rare in our data (user_ids,
-// item ids, task ids), and we swap them back before deserializing on load.
+// JSON.serialize emits pretty-printed output. The save backend rejects raw
+// `"` characters in stored values, so we substitute every `"` with `'`
+// (apostrophes are rare in our data: user_ids, item ids, task ids) and swap
+// it back on load. We deliberately do NOT strip the pretty-print whitespace —
+// the JSON parser handles it fine on read, and avoiding the extra rewrite
+// passes is critical for keeping `/backup` cheap enough to run on each poll.
 
 RR_BACKUP_QUOTE_SENTINEL :: "'";
 
-rr_backup_join_parts :: proc(parts: []string, separator: string) -> string {
-	if parts.count == 0 return "";
-	if parts.count == 1 return parts[0];
+rr_backup_replace_all :: proc(s: string, delim: string, replacement: string) -> string {
+	parts := string_split(s, delim);
+	if parts.count <= 1 return s;
 
-	current: [..]string;
-	current.reserve(parts.count.(int));
+	work: [..]string;
 	for i: 0..parts.count-1 {
-		append(ref current, parts[i]);
+		append(ref work, parts[i]);
 	}
 
-	while current.count > 1 {
+	while work.count > 1 {
 		next: [..]string;
-		next.reserve(((current.count + 1) / 2).(int));
 		i := 0;
-		while i < current.count {
-			if i + 1 < current.count {
-				append(ref next, format_string("%0%0%", .{current[i], separator, current[i + 1]}));
-			} else {
-				append(ref next, current[i]);
-			}
+		while i + 1 < work.count {
+			merged := format_string("%0%0%", .{work[i], replacement, work[i+1]});
+			append(ref next, merged);
 			i += 2;
 		}
-		current = next;
+		// Odd chunk carries forward; it will pair with its left neighbour on
+		// the next pass, which inserts the sentinel between them then.
+		if i < work.count {
+			append(ref next, work[i]);
+		}
+		work = next;
 	}
-
-	return current[0];
-}
-
-rr_backup_encode_for_save :: proc(s: string) -> string {
-	no_ws := rr_backup_join_parts(string_split(s, "\n"), "");
-	no_ws = rr_backup_join_parts(string_split(no_ws, "\r"), "");
-	no_ws = rr_backup_join_parts(string_split(no_ws, "\t"), "");
-	return rr_backup_join_parts(string_split(no_ws, "\""), RR_BACKUP_QUOTE_SENTINEL);
+	return work[0];
 }
 
 rr_backup_decode_from_save :: proc(s: string) -> string {
-	return rr_backup_join_parts(string_split(s, RR_BACKUP_QUOTE_SENTINEL), "\"");
+	return rr_backup_replace_all(s, RR_BACKUP_QUOTE_SENTINEL, "\"");
 }
 
-rr_backup_save_to_api :: proc() {
+// Kick off a save job. No-op if one is already in flight. The job runs across
+// many frames via rr_backup_advance_save_job; see Backup_Save_Stage.
+rr_backup_kick_save_job :: proc() {
 	if rr_backup_snapshot == null return;
-	rr_backup_snapshot.version = RR_BACKUP_SCHEMA_VERSION;
-	json := JSON.serialize(ref rr_backup_snapshot);
-	if json.count > RR_BACKUP_MAX_SAVE_BYTES {
-		// Dev-tool guard: don't write a payload large enough to make the next
-		// load expensive or arena-heavy.
+	if rr_backup_save_stage != .IDLE return;
+	rr_backup_save_stage = .SERIALIZE;
+}
+
+// Drive one slice of the incremental save job. Called every ao_update.
+// Returns true when this frame did "heavy" work (SERIALIZE or SAVE — both
+// hit foreign calls that can hitch a frame on their own). Callers use the
+// return value to avoid stacking another heavy operation (e.g. the in-memory
+// capture build) on the same frame.
+rr_backup_advance_save_job :: proc() -> bool {
+	if rr_backup_save_stage == .IDLE return false;
+
+	if rr_backup_save_stage == .SERIALIZE {
+		if rr_backup_snapshot == null {
+			rr_backup_save_stage = .IDLE;
+			return false;
+		}
+		rr_backup_snapshot.version = RR_BACKUP_SCHEMA_VERSION;
+		json := JSON.serialize(ref rr_backup_snapshot);
 		rr_backup_last_saved_bytes = json.count;
-		return;
+		if json.count > RR_BACKUP_MAX_SAVE_BYTES {
+			// Oversized — bail before the tree-merge has a chance to chew arena.
+			rr_backup_save_payload = "";
+			rr_backup_save_stage = .IDLE;
+			return true;
+		}
+
+		rr_backup_encode_work.clear();
+		rr_backup_encode_next.clear();
+		rr_backup_encode_pair_idx = 0;
+
+		parts := string_split(json, "\"");
+		for i: 0..parts.count-1 {
+			append(ref rr_backup_encode_work, parts[i]);
+		}
+
+		if rr_backup_encode_work.count <= 1 {
+			// No `"` to substitute — payload is the JSON as-is.
+			if rr_backup_encode_work.count == 1 {
+				rr_backup_save_payload = rr_backup_encode_work[0];
+			} else {
+				rr_backup_save_payload = "";
+			}
+			rr_backup_encode_work.clear();
+			rr_backup_save_stage = .SAVE;
+			return true;
+		}
+
+		rr_backup_save_stage = .ENCODE;
+		return true;
 	}
-	payload := rr_backup_encode_for_save(json);
-	if payload.count > RR_BACKUP_MAX_SAVE_BYTES {
-		rr_backup_last_saved_bytes = payload.count;
-		return;
+
+	if rr_backup_save_stage == .ENCODE {
+		// Encode slices are intentionally cheap — small, bounded merge budget.
+		// Return false so the caller is free to do other work on the same frame.
+		merges: s64 = 0;
+		while merges < BACKUP_ENCODE_MERGES_PER_FRAME {
+			if rr_backup_encode_pair_idx + 1 < rr_backup_encode_work.count {
+				a := rr_backup_encode_work[rr_backup_encode_pair_idx];
+				b := rr_backup_encode_work[rr_backup_encode_pair_idx + 1];
+				merged := format_string("%0%0%", .{a, RR_BACKUP_QUOTE_SENTINEL, b});
+				append(ref rr_backup_encode_next, merged);
+				rr_backup_encode_pair_idx += 2;
+				merges += 1;
+				continue;
+			}
+
+			// Out of pairs at this level. Carry odd chunk forward.
+			if rr_backup_encode_pair_idx < rr_backup_encode_work.count {
+				append(ref rr_backup_encode_next, rr_backup_encode_work[rr_backup_encode_pair_idx]);
+				rr_backup_encode_pair_idx += 1;
+			}
+
+			// Swap work <- next via explicit copy. Dynamic arrays in CSL alias
+			// their backing data on direct assignment, so we copy elements
+			// instead of shuffling structs.
+			rr_backup_encode_work.clear();
+			for i: 0..rr_backup_encode_next.count-1 {
+				append(ref rr_backup_encode_work, rr_backup_encode_next[i]);
+			}
+			rr_backup_encode_next.clear();
+			rr_backup_encode_pair_idx = 0;
+
+			if rr_backup_encode_work.count <= 1 {
+				rr_backup_save_payload = "";
+				if rr_backup_encode_work.count == 1 {
+					rr_backup_save_payload = rr_backup_encode_work[0];
+				}
+				rr_backup_encode_work.clear();
+				rr_backup_save_stage = .SAVE;
+				return false;
+			}
+			// Else fall through and keep merging into the new level this frame
+			// (up to the per-frame budget).
+		}
+		return false;
 	}
-	rr_backup_last_saved_bytes = payload.count;
-	Save.set_game_string(RR_BACKUP_SAVE_KEY, payload);
+
+	if rr_backup_save_stage == .SAVE {
+		if rr_backup_save_payload.count > 0 && rr_backup_save_payload.count <= RR_BACKUP_MAX_SAVE_BYTES {
+			rr_backup_last_saved_bytes = rr_backup_save_payload.count;
+			Save.set_game_string(RR_BACKUP_SAVE_KEY, rr_backup_save_payload);
+		}
+		rr_backup_save_payload = "";
+		rr_backup_save_stage = .IDLE;
+		return true;
+	}
+
+	return false;
 }
 
 // Result codes so /restore can tell us exactly which step failed instead of
@@ -520,7 +636,16 @@ rr_backup_capture :: proc() {
 		append(ref snap.puzzles, pe);
 	}
 
-	rr_backup_save_to_api();
+	// In-memory snapshot is always current after this point. Persistence is
+	// rate-limited AND deferred to the incremental save job (advance_save_job)
+	// so a capture never directly hits JSON.serialize / Save.set_game_string.
+	if rr_backup_save_stage == .IDLE {
+		now := get_time();
+		if rr_backup_last_persist_at == 0.0 || now - rr_backup_last_persist_at >= BACKUP_PERSIST_INTERVAL {
+			rr_backup_last_persist_at = now;
+			rr_backup_kick_save_job();
+		}
+	}
 }
 
 // Cheap surrogate digest. Not a rigorous diff; intentionally misses some
@@ -572,12 +697,12 @@ rr_backup_state_changed :: proc() -> bool {
 			if e.current_zone_i != p.current_zone.(int) return true;
 			if e.inventory.count != rr_backup_count_inventory(p) return true;
 			if e.completed_task_ids.count != rr_backup_count_completed_tasks(p) return true;
-			// Position drift: recapture when any player has moved > ~0.5 units
-			// so /restore doesn't snap players back to wherever they happened
-			// to be at the last non-positional state change.
+			// Position drift: recapture when any player has moved > 1 units
+			// so /restore doesn't snap players back too far from their current
+			// spot.
 			if #alive(p.entity) {
 				dp := p.entity.world_position - e.world_pos;
-				if dp.x*dp.x + dp.y*dp.y > 0.25 return true;
+				if dp.x*dp.x + dp.y*dp.y > 1 return true;
 			}
 			break;
 		}
@@ -616,12 +741,21 @@ rr_backup_maybe_auto :: proc() {
 	if !rr_backup_enabled return;
 	rr_backup_ensure_loaded();
 
+	// Drive the incremental save job one slice every frame regardless of poll
+	// cadence — that's the whole point of splitting it across frames.
+	heavy_this_frame := rr_backup_advance_save_job();
+
 	gm := get_game_manager();
 	if !#alive(gm) return;
 	// Only poll once the round is in progress — outside a round, save data
 	// from a fresh process boot may not be fully loaded yet, and capturing
 	// the lobby state has no useful restore semantics anyway.
 	if !gm.is_round_in_progress() return;
+
+	// If the save job already burned its budget this frame (SERIALIZE or SAVE
+	// foreign call), don't also stack the in-memory capture build on top.
+	// Captures are 2s apart anyway; deferring one by a frame is invisible.
+	if heavy_this_frame return;
 
 	now := get_time();
 	if now - rr_backup_last_poll_at < BACKUP_POLL_INTERVAL return;
@@ -1089,7 +1223,7 @@ backup :: proc(player: Player) {
 			player);
 		return;
 	}
-	Chat.server_send_message("Backup DISABLED. Last snapshot retained on disk; /restore still works.", player);
+	Chat.server_send_message("Backup DISABLED. Last snapshot retained on api; /restore still works.", player);
 } @chat_command @youtuber
 
 // /restore — applies the latest snapshot. Re-anchors timestamps to current time.
@@ -1114,7 +1248,7 @@ restore :: proc(player: Player) {
 			case .OVERSIZE_PAYLOAD:  reason = format_string("payload %b > max %b", .{rr_backup_last_load_payload_bytes, RR_BACKUP_MAX_SAVE_BYTES});
 			case .JSON_PARSE_FAILED: reason = format_string("JSON parse failed on %b payload", .{rr_backup_last_load_payload_bytes});
 			case .NULL_AFTER_PARSE:  reason = "deserialize returned null";
-			case .VERSION_MISMATCH:  reason = format_string("schema v% on disk, code expects v%", .{rr_backup_last_load_version, RR_BACKUP_SCHEMA_VERSION});
+			case .VERSION_MISMATCH:  reason = format_string("schema v% on api, code expects v%", .{rr_backup_last_load_version, RR_BACKUP_SCHEMA_VERSION});
 			case .OK: reason = "loaded ok but snapshot still null (bug)";
 		}
 		Chat.server_send_message(format_string("No backup snapshot — %.", .{reason}), player);

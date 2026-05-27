@@ -25,6 +25,11 @@ Leaderboard :: class : Component {
     last_refresh_time: float;
     REFRESH_INTERVAL :: 5.0;
 
+    // Distance beyond which we skip drawing entirely. The board is ~5 units
+    // tall and the scroll view caps at 50 entries, so anything past 30 units
+    // is well off-screen at default camera size. Cheap squared-distance test.
+    DRAW_CULL_DISTANCE_SQ :: 30.0 * 30.0;
+
     base_ts: Text_Settings;
 
     init_texture :: method() {
@@ -88,10 +93,22 @@ Leaderboard :: class : Component {
     }
 
     draw :: method() {
+        pos := entity.world_position;
+
+        // Distance-cull against the local player. Out-of-view boards still
+        // cost ~250 UI calls each per frame without this gate.
+        if !Game.is_editor() {
+            local_player, ok := Game.get_local_player();
+            if ok && #alive(local_player.entity) {
+                d := local_player.entity.world_position - pos;
+                if d.x*d.x + d.y*d.y > DRAW_CULL_DISTANCE_SQ {
+                    return;
+                }
+            }
+        }
+
         UI.push_world_draw_context();
         defer UI.pop_draw_context();
-
-        pos := entity.world_position;
 
         UI.push_z(pos.y);
         defer UI.pop_z();
