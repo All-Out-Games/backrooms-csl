@@ -5,8 +5,8 @@
   "name": "3Spawn",
   "local_enabled": true,
   "local_position": {
-    "X": -51.3554687500000000,
-    "Y": 272.2189941406250000
+    "X": -93.3766098022460938,
+    "Y": 311.9882202148437500
   },
   "local_rotation": 0,
   "local_scale": {

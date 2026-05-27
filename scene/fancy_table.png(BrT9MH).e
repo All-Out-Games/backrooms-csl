@@ -24,7 +24,7 @@
   "internal_component_type": "Sprite_Renderer",
   "data": {
     "texture": "sprites/Clipping_Furniture/fancy_table.png",
-    "depth_offset": -0.4121532440185547
+    "depth_offset": 0.5512542724609375
   }
 },
 {

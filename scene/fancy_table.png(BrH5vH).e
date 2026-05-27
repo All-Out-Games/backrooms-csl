@@ -24,23 +24,7 @@
   "internal_component_type": "Sprite_Renderer",
   "data": {
     "texture": "sprites/Clipping_Furniture/fancy_table.png",
-    "depth_offset": -0.0140171051025391
-  }
-},
-{
-  "cid": 2,
-  "aoid": 1802085973,
-  "component_type": "Internal_Component",
-  "internal_component_type": "Box_Collider",
-  "data": {
-    "size": {
-      "X": 1.9710998535156250,
-      "Y": 0.7225799560546875
-    },
-    "offset": {
-      "X": 0.0512847900390625,
-      "Y": 0.2412376403808594
-    }
+    "depth_offset": 0.5194644927978516
   }
 },
 {
@@ -52,12 +36,12 @@
     "make_navmesh_loop": true,
     "flip_navmesh_loop": true,
     "size": {
-      "X": 1.0151977539062500,
-      "Y": 0.3165550231933594
+      "X": 1.5783691406250000,
+      "Y": 0.3240680694580078
     },
     "offset": {
-      "X": 0.0075988769531250,
-      "Y": 0.3417224884033203
+      "X": 0.0263671875000000,
+      "Y": 0.3379659652709961
     }
   }
 }
