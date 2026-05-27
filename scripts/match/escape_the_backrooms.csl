@@ -1,0 +1,35 @@
+import "core:ao"
+
+EscapeTheBackrooms :: class : Interactable {
+    ao_start :: method() {
+        this.set_listener(this);
+        this.set_text("Escape");
+        required_hold_time = 0.0;
+        priority = 20;
+    }
+
+    can_use :: method(player: Player) -> bool {
+        if player == null || !#alive(player.entity) {
+            return false;
+        }
+        if !player.is_round_survivor() {
+            return false;
+        }
+        if player.entity.get_active_effect() != null {
+            return false;
+        }
+        return player.viewfinder_active && player.equipped_weapon_type == .CAMERA;
+    }
+
+    on_interact :: method(player: Player) {
+        if !can_use(player) {
+            return;
+        }
+
+        gm := get_game_manager();
+        if !#alive(gm) {
+            return;
+        }
+        gm.end_match_survivors_win();
+    }
+}

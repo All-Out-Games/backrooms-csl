@@ -169,6 +169,7 @@ ENTITY_FILM_GRAIN_NOISE_SCALE :: 1.75;
 ENTITY_COLOR_GRADE_FILTER := v3.{1.0, 1.0, 1.0};
 ENTITY_COLOR_GRADE_SATURATION :: 0.0;
 ENTITY_COLOR_GRADE_CONTRAST :: 2.0;
+ENTITY_COLOR_GRADE_CONTRASTZ2 :: 1.0;
 ENTITY_FLASHBANG_BLACKOUT_COLOR := v4.{0.0, 0.0, 0.0, 1.0};
 ENTITY_FLASHBANG_DEBUFF_ICON_PATH :: "AbilityIcons/flashbang_taped.png";
 ENTITY_NOISEMAKER_DEBUFF_ICON_PATH :: "AbilityIcons/Noisemaker.png";
@@ -1701,6 +1702,8 @@ Player :: class : Player_Base {
                             }
                         }
                     }
+                } else if is_barricade_item_def(equipped_item_def) {
+                    draw_ability_button(this, Place_Barricade_Ability, 0);
                 }
 
                 // Draw hotbar and handle equip/unequip
@@ -1874,10 +1877,15 @@ Player :: class : Player_Base {
     }
 
     apply_entity_local_post_processing :: proc(using this: Player) {
+        contrast := ENTITY_COLOR_GRADE_CONTRAST;
+        if (this.is_round_entity() || this.is_round_minion()) && current_zone == .Zone2 {
+            contrast = ENTITY_COLOR_GRADE_CONTRASTZ2;
+        }
+
         color_grade := Post_Processing.Color_Grade_Config{
             color_filter = ENTITY_COLOR_GRADE_FILTER,
             saturation = ENTITY_COLOR_GRADE_SATURATION,
-            contrast = ENTITY_COLOR_GRADE_CONTRAST
+            contrast = contrast
         };
         Post_Processing.color_grade(color_grade);
 
@@ -1888,11 +1896,11 @@ Player :: class : Player_Base {
         Post_Processing.film_grain(film_grain);
 
         if has_effect(entity, Entity_Flashbang_Effect) {
-            this.apply_entity_flashbang_local_post_processing(get_entity_flashbang_alpha(this));
+            this.apply_entity_flashbang_local_post_processing(get_entity_flashbang_alpha(this), contrast);
         }
     }
 
-    apply_entity_flashbang_local_post_processing :: proc(using this: Player, alpha: float) {
+    apply_entity_flashbang_local_post_processing :: proc(using this: Player, alpha: float, base_contrast: float) {
         alpha = clamp(alpha, 0.0, 1.0);
         flashbang_grade := Post_Processing.Color_Grade_Config{
             color_filter = v3{
@@ -1901,7 +1909,7 @@ Player :: class : Player_Base {
                 lerp(ENTITY_COLOR_GRADE_FILTER.z, 0.0, alpha)
             },
             saturation = lerp(ENTITY_COLOR_GRADE_SATURATION, -1.0, alpha),
-            contrast = lerp(ENTITY_COLOR_GRADE_CONTRAST, 0.0, alpha)
+            contrast = lerp(base_contrast, 0.0, alpha)
         };
         Post_Processing.color_grade(flashbang_grade);
 
@@ -2557,6 +2565,8 @@ Player :: class : Player_Base {
             if wt != .NONE {
                 weapon_equip(this, wt);
                 equipped_weapon_type = wt;
+                equipped_item_def = new_def;
+            } else if is_barricade_item_def(new_def) {
                 equipped_item_def = new_def;
             }
         }

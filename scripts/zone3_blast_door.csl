@@ -1,0 +1,13 @@
+import "core:ao"
+
+Zone3BlastDoor :: class : Component {
+    set_open :: method(open: bool) {
+        entity.set_local_enabled(!open);
+    }
+}
+
+set_zone3_blast_doors_open :: proc(open: bool) {
+    for door: component_iterator(Zone3BlastDoor) {
+        door.set_open(open);
+    }
+}

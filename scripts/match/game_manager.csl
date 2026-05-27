@@ -966,6 +966,7 @@ Game_Manager :: class : Component {
         sync_entity_hearing_radius_visual(0.0);
         clear_all_footstep_echoes();
         clear_spawned_round_items();
+        clear_all_barricades();
         clear_spawned_async_entities();
         clear_all_corpses();
 
@@ -976,6 +977,7 @@ Game_Manager :: class : Component {
         Server.set_matchmaking_priority(MATCHMAKING_PRIORITY_BETWEEN_ROUNDS);
         clear_all_footstep_echoes();
         clear_spawned_round_items();
+        clear_all_barricades();
         clear_spawned_async_entities();
         clear_all_corpses();
         sync_entity_hearing_radius_visual(0.0);
@@ -1324,6 +1326,11 @@ Game_Manager :: class : Component {
             hide_task_zone();
             set_blast_door_sprite_enabled(false);
         }
+
+        if task_id == TASK_ID_PULL_BOTH_LEVERS {
+            notify_all_players("Blast doors are opening!");
+            set_zone3_blast_doors_open(true);
+        }
     }
 
     is_task_zone_active_for :: method(task_id: string) -> bool {
@@ -1573,6 +1580,7 @@ Game_Manager :: class : Component {
     clear_round_item_state :: method() {
         clear_all_player_round_inventories();
         clear_spawned_round_items();
+        clear_all_barricades();
     }
 
     get_round_item_weight :: method(index: s64) -> s64 {
@@ -2335,9 +2343,11 @@ Game_Manager :: class : Component {
         lights_out_previous_task_zone_position = v2.{0.0, 0.0};
         clear_all_footstep_echoes();
         clear_all_corpses();
+        clear_all_barricades();
         reset_round_tapes_collected();
         reset_all_keycard_scanners_for_round();
         reset_all_door_levels_for_round();
+        set_zone3_blast_doors_open(false);
         hide_round_spawn_sprites_for_round();
         set_blast_door_sprite_enabled(true);
 
@@ -2519,6 +2529,7 @@ Game_Manager :: class : Component {
         reset_all_wire_puzzles_for_round(0);
         reset_all_keycard_scanners_for_round();
         reset_all_door_levels_for_round();
+        set_zone3_blast_doors_open(false);
         set_blast_door_sprite_enabled(true);
         lights_out_active = false;
         lights_out_cooldown_ends_at = 0.0;

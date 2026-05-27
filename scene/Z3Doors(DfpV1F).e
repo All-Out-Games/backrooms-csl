@@ -1,11 +1,11 @@
 14
-5866925326337
-3750821557
+5875515260929
+3752156485
 {
-  "name": "blast_door.png",
+  "name": "Z3Doors",
   "local_enabled": true,
   "local_position": {
-    "X": -0.6422882080078125,
+    "X": 12.3342132568359375,
     "Y": 55.5727844238281250
   },
   "local_rotation": 0,
@@ -13,13 +13,13 @@
     "X": 1.0851012468338013,
     "Y": 0.9951013326644897
   },
-  "previous_sibling": 3756160635,
-  "next_sibling": 3752156485,
+  "previous_sibling": 3750821557,
+  "next_sibling": 3754751859,
   "parent": 3743326586
 },
 {
   "cid": 1,
-  "aoid": 3743068766,
+  "aoid": 3746325806,
   "component_type": "Internal_Component",
   "internal_component_type": "Sprite_Renderer",
   "data": {
@@ -29,19 +29,28 @@
 },
 {
   "cid": 2,
-  "aoid": 2940800524,
+  "aoid": 2948826983,
   "component_type": "Internal_Component",
   "internal_component_type": "Box_Collider",
   "data": {
     "make_navmesh_loop": true,
     "flip_navmesh_loop": true,
     "size": {
-      "X": 3.3365173339843750,
-      "Y": 2.0094451904296875
+      "X": 3.2853698730468750,
+      "Y": 2.0113067626953125
     },
     "offset": {
-      "X": 0.0063171684741974,
-      "Y": 0.0224838405847549
+      "X": -0.0127410888671875,
+      "Y": 0.0051498413085938
     }
+  }
+},
+{
+  "cid": 3,
+  "aoid": 2941224805,
+  "component_type": "Internal_Component",
+  "internal_component_type": "Zone3BlastDoor",
+  "data": {
+
   }
 }
