@@ -502,6 +502,7 @@ draw_danger_ping_arrows_ui :: proc(player: Player) {
         return;
     }
 
+    player_user_id := player.get_user_id();
     for ping: component_iterator(Warning_Ping_Fade_Out) {
         if !#alive(ping.entity) {
             continue;
@@ -511,7 +512,14 @@ draw_danger_ping_arrows_ui :: proc(player: Player) {
         if icon_path.count <= 0 {
             icon_path = DANGER_PING_ICON_PATH;
         }
-        player.DrawArrowToPosition(ping.entity.world_position, icon_path, "", true, 56.0);
+
+        label := "";
+        if ping.owner_user_id != player_user_id {
+            distance := length(ping.entity.world_position - player.entity.world_position);
+            distance_units := (distance + 0.5).(s64);
+            label = format_string("%m", {distance_units});
+        }
+        player.DrawArrowToPosition(ping.entity.world_position, icon_path, label, true, 56.0);
     }
 }
 

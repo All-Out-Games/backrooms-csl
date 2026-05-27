@@ -26,7 +26,27 @@ players_are_in_same_active_zone :: proc(a: Player, b: Player) -> bool {
     return a.current_zone == b.current_zone;
 }
 
-ping_survivor_with_entity_scream :: proc(entity_player: Player, survivor: Player, require_same_zone: bool = false) {
+entity_player_has_active_action_ping_for_survivor :: proc(entity_player: Player, survivor: Player) -> bool {
+    if entity_player == null || survivor == null {
+        return false;
+    }
+    if entity_player.entity_target_ping_remaining <= 0.0 {
+        return false;
+    }
+    if entity_player.entity_target_ping_user_id != survivor.get_user_id() {
+        return false;
+    }
+    if entity_player.entity_target_ping_requires_same_zone {
+        zone := entity_player.entity_target_ping_source_zone;
+        if zone == .None || entity_player.current_zone != zone || survivor.current_zone != zone {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+ping_survivor_with_entity_scream :: proc(entity_player: Player, survivor: Player, require_same_zone: bool = false, show_action_ping: bool = true) {
     if survivor == null || !#alive(survivor.entity) {
         return;
     }
@@ -45,7 +65,9 @@ ping_survivor_with_entity_scream :: proc(entity_player: Player, survivor: Player
         return;
     }
 
-    entity_player.show_entity_target_ping_arrow(survivor, ENTITY_SCREAM_ARROW_SECONDS, require_same_zone);
+    if show_action_ping && !entity_player_has_active_action_ping_for_survivor(entity_player, survivor) {
+        entity_player.show_entity_target_ping_arrow(survivor, ENTITY_SCREAM_ARROW_SECONDS, require_same_zone);
+    }
 
     if !sound_sight_interfered {
         gm := get_game_manager();
@@ -59,15 +81,31 @@ ping_survivor_with_entity_scream :: proc(entity_player: Player, survivor: Player
 
 ping_all_survivors_with_entity_scream :: proc(entity_player: Player) {
     if entity_player != null {
-        entity_player.show_entity_scream_arrows(ENTITY_SCREAM_ARROW_SECONDS);
+        entity_player.show_entity_scream_arrows(ENTITY_SCREAM_ARROW_SECONDS, false);
     }
 
+    pinged_user_ids: [..]string;
     for other: component_iterator(Player) {
         if other == entity_player continue;
         if !other.is_round_survivor() continue;
-        if !players_are_in_same_active_zone(entity_player, other) continue;
+        if other.is_round_dead() continue;
+        if entity_player_has_active_action_ping_for_survivor(entity_player, other) continue;
+
+        other_user_id := other.get_user_id();
+        if other_user_id.count <= 0 continue;
+
+        already_pinged := false;
+        for pinged_user_id: pinged_user_ids {
+            if pinged_user_id == other_user_id {
+                already_pinged = true;
+                break;
+            }
+        }
+        if already_pinged continue;
+
+        pinged_user_ids.append(other_user_id);
         entity_player.add_entity_scream_arrow_target(other);
-        ping_survivor_with_entity_scream(entity_player, other, true);
+        ping_survivor_with_entity_scream(entity_player, other, false, false);
     }
 }
 

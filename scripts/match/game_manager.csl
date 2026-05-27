@@ -444,7 +444,7 @@ draw_entity_scream_arrow_ui :: proc(player: Player) {
     if player.entity_scream_arrow_remaining <= 0.0 {
         return;
     }
-    if player.entity_scream_arrow_zone == .None || player.current_zone != player.entity_scream_arrow_zone {
+    if player.entity_scream_arrow_zone != .None && player.current_zone != player.entity_scream_arrow_zone {
         return;
     }
 
@@ -453,7 +453,7 @@ draw_entity_scream_arrow_ui :: proc(player: Player) {
         if !found || other == player continue;
         if !other.is_round_survivor() continue;
         if !#alive(other.entity) continue;
-        if other.current_zone != player.entity_scream_arrow_zone continue;
+        if player.entity_scream_arrow_zone != .None && other.current_zone != player.entity_scream_arrow_zone continue;
 
         to_survivor := other.entity.world_position - player.entity.world_position;
         distance := length(to_survivor);
@@ -1134,6 +1134,11 @@ Game_Manager :: class : Component {
         }
 
         should_show := is_local_viewfinder_active();
+        child := VO.get_first_child();
+        while #alive(child) {
+            child.set_local_enabled(true);
+            child = child.get_next_sibling();
+        }
         VO.set_local_enabled(should_show);
     }
 
@@ -1213,6 +1218,7 @@ Game_Manager :: class : Component {
             return;
         }
         if entity_next_zone_progression_unlocked {
+            update_survivor_task_progression(player);
             return;
         }
 
@@ -1226,6 +1232,7 @@ Game_Manager :: class : Component {
         if entity_player, ok := find_player_by_user_id(entity_user_id); ok {
             entity_player.jumpscare_cooldown_ends_at = 0.0;
         }
+        update_survivor_task_progression(player);
     }
 
     get_intro_spawn_fade_to_black_starts_at :: method() -> float {
@@ -1725,13 +1732,12 @@ Game_Manager :: class : Component {
         return null;
     }
 
-    spawn_weighted_round_item_at_position :: method(position: v2) -> Dropped_Item {
-        chosen_item_def := choose_round_item_def();
-        if chosen_item_def == null {
+    spawn_round_item_def_at_position :: method(item_def: Item_Definition, position: v2) -> Dropped_Item {
+        if item_def == null {
             return null;
         }
 
-        item := Items.create_item_instance(chosen_item_def, 1);
+        item := Items.create_item_instance(item_def, 1);
         dropped_item := Dropped_Item.spawn(position, item);
         if !#alive(dropped_item) {
             if #alive(item) {
@@ -1753,6 +1759,11 @@ Game_Manager :: class : Component {
 
         dropped_item.despawn_time_start = get_time() + (ROUND_ITEM_DESPAWN_TOTAL_SECONDS - ROUND_ITEM_ENGINE_DESPAWN_WINDOW_SECONDS);
         return dropped_item;
+    }
+
+    spawn_weighted_round_item_at_position :: method(position: v2) -> Dropped_Item {
+        chosen_item_def := choose_round_item_def();
+        return spawn_round_item_def_at_position(chosen_item_def, position);
     }
 
     spawn_round_item_at_reference :: method(spawn_ref: Entity) -> Dropped_Item {
@@ -1869,6 +1880,24 @@ Game_Manager :: class : Component {
         return .None;
     }
 
+    get_vhs_tape_zone_for_index :: method(index: s64) -> CurrentZone {
+        if index >= 0 && index <= 2 return .Zone1;
+        if index >= 3 && index <= 5 return .Zone2;
+        if index >= 6 && index <= 7 return .Zone3;
+        return .None;
+    }
+
+    choose_vhs_tape_spawn_ref :: method(spawns: ref [..]Entity) -> Entity {
+        if spawns.count <= 0 {
+            return null;
+        }
+
+        spawn_index := rng_range_int(ref match_rng, 0, spawns.count - 1);
+        spawn_ref := spawns[spawn_index];
+        spawns.unordered_remove_by_index(spawn_index);
+        return spawn_ref;
+    }
+
     spawn_vhs_tape_item_at_reference :: method(spawn_ref: Entity, tape_index: s64) -> Dropped_Item {
         if !#alive(spawn_ref) {
             return null;
@@ -1894,18 +1923,7 @@ Game_Manager :: class : Component {
             return null;
         }
 
-        install_ghost_item_ping_listener(dropped_item);
-        if dropped_item.sprite != null {
-            dropped_item.sprite.mask_in_shadow = true;
-        }
-        if dropped_item.starburst != null {
-            dropped_item.starburst.mask_in_shadow = true;
-        }
-        if dropped_item.shadow != null {
-            dropped_item.shadow.mask_in_shadow = true;
-        }
-        viewfinder_only := dropped_item.entity.add_component(ViewfinderOnly);
-        viewfinder_only.sync_visibility();
+        configure_vhs_tape_dropped_item(dropped_item);
         dropped_item.despawn_time_start = get_time() + (ROUND_ITEM_DESPAWN_TOTAL_SECONDS - ROUND_ITEM_ENGINE_DESPAWN_WINDOW_SECONDS);
         return dropped_item;
     }
@@ -1919,6 +1937,9 @@ Game_Manager :: class : Component {
         collect_child_entity_references(VhsTapeSpawns, ref vhs_tape_spawns);
 
         valid_spawns: [..]Entity;
+        zone1_spawns: [..]Entity;
+        zone2_spawns: [..]Entity;
+        zone3_spawns: [..]Entity;
         for i: 0..vhs_tape_spawns.count - 1 {
             spawn_ref := vhs_tape_spawns[i];
             if !#alive(spawn_ref) {
@@ -1935,26 +1956,41 @@ Game_Manager :: class : Component {
 
             if !already_added {
                 valid_spawns.append(spawn_ref);
+                spawn_zone := get_vhs_tape_zone_for_spawn_ref(spawn_ref);
+                switch spawn_zone {
+                    case .Zone1: zone1_spawns.append(spawn_ref);
+                    case .Zone2: zone2_spawns.append(spawn_ref);
+                    case .Zone3: zone3_spawns.append(spawn_ref);
+                }
             }
         }
 
         for tape_index: 0..TASK_TAPE_COUNT - 1 {
-            if valid_spawns.count == 0 {
-                break;
+            target_zone := get_vhs_tape_zone_for_index(tape_index);
+            spawn_ref: Entity = null;
+            switch target_zone {
+                case .Zone1: spawn_ref = choose_vhs_tape_spawn_ref(ref zone1_spawns);
+                case .Zone2: spawn_ref = choose_vhs_tape_spawn_ref(ref zone2_spawns);
+                case .Zone3: spawn_ref = choose_vhs_tape_spawn_ref(ref zone3_spawns);
             }
 
-            spawn_index := rng_range_int(ref match_rng, 0, valid_spawns.count - 1);
-            spawn_ref := valid_spawns[spawn_index];
+            if !#alive(spawn_ref) {
+                log_info("Game_Manager: no VHS tape spawn found for tape % in zone %", {tape_index, target_zone});
+                continue;
+            }
+
             dropped_item := spawn_vhs_tape_item_at_reference(spawn_ref, tape_index);
             if #alive(dropped_item) {
                 round_tape_zones[tape_index] = get_vhs_tape_zone_for_spawn_ref(spawn_ref);
                 spawned_round_items.append(dropped_item);
             }
-            valid_spawns.unordered_remove_by_index(spawn_index);
         }
 
         vhs_tape_spawns.clear();
         valid_spawns.clear();
+        zone1_spawns.clear();
+        zone2_spawns.clear();
+        zone3_spawns.clear();
     }
 
     spawn_async_corpse_loot :: method(position: v2) -> bool {
@@ -2030,13 +2066,9 @@ Game_Manager :: class : Component {
             target_min = 0;
         }
 
-        target_max := MaxRoundItemSpawnCount;
+        target_max := valid_spawns.count;
         if target_max < target_min {
             target_max = target_min;
-        }
-
-        if target_max > valid_spawns.count {
-            target_max = valid_spawns.count;
         }
         if target_min > target_max {
             target_min = target_max;
@@ -2920,7 +2952,6 @@ task :: proc(player: Player) {
 find_zone_cheat_warp :: proc(target_zone: CurrentZone, target_position: v2) -> WarpToBackrooms {
     best_warp: WarpToBackrooms = null;
     best_dist_sq := 999999.0;
-    max_dist_sq := 0.25;
 
     for warp: component_iterator(WarpToBackrooms) {
         if !#alive(warp.entity) || !#alive(warp.destination_entity) {
@@ -2937,9 +2968,6 @@ find_zone_cheat_warp :: proc(target_zone: CurrentZone, target_position: v2) -> W
         }
     }
 
-    if best_dist_sq > max_dist_sq {
-        return null;
-    }
     return best_warp;
 }
 
@@ -3205,4 +3233,33 @@ g :: proc(player: Player, item_id: string) {
 
     Items.move_item_to_inventory(item, player.default_inventory);
     Notifier.notify(player, "Gave % (%).", {item_def.get_name(), item_def.get_id()});
+} @chat_command
+
+spawn :: proc(player: Player, item_id: string) {
+    if player == null || !#alive(player.entity) {
+        return;
+    }
+
+    gm := get_game_manager();
+    if !#alive(gm) {
+        Notifier.notify(player, "No match manager found.");
+        return;
+    }
+
+    init_weapon_items();
+    item_def := get_registered_item_def_by_id(item_id);
+    if item_def == null {
+        Notifier.notify(player, "Unknown item id: %", {item_id});
+        return;
+    }
+
+    dropped_item := gm.spawn_round_item_def_at_position(item_def, player.entity.world_position);
+    if !#alive(dropped_item) {
+        Notifier.notify(player, "Could not spawn %.", {item_def.get_name()});
+        return;
+    }
+
+    gm.spawned_round_items.append(dropped_item);
+    Notifier.notify(player, "Spawned % (%).", {item_def.get_name(), item_def.get_id()});
+    log_info("spawn: % spawned % at their position", {player.get_username(), item_def.get_id()});
 } @chat_command

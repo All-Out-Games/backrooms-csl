@@ -58,7 +58,7 @@ Backup_Player_Entry :: class {
 	sprint_lockout_remaining: float @ao_serialize;
 
 	// Absolute timestamps captured as-is; re-anchored on restore.
-	downed_bleed_out_ends_at: float @ao_serialize;
+	downed_bleed_out_started_at: float @ao_serialize;
 	vent_cooldown_ends_at: float @ao_serialize;
 	jumpscare_cooldown_ends_at: float @ao_serialize;
 	ghost_item_ping_cooldown_ends_at: float @ao_serialize;
@@ -330,7 +330,7 @@ rr_backup_fill_player_entry :: proc(e: Backup_Player_Entry, p: Player) {
 	e.max_stamina = p.max_stamina;
 	e.sprint_lockout_remaining = p.sprint_lockout_remaining;
 
-	e.downed_bleed_out_ends_at = p.downed_bleed_out_ends_at;
+	e.downed_bleed_out_started_at = p.downed_bleed_out_started_at;
 	e.vent_cooldown_ends_at = p.vent_cooldown_ends_at;
 	e.jumpscare_cooldown_ends_at = p.jumpscare_cooldown_ends_at;
 	e.ghost_item_ping_cooldown_ends_at = p.ghost_item_ping_cooldown_ends_at;
@@ -745,10 +745,10 @@ rr_backup_restore_player :: proc(p: Player, e: Backup_Player_Entry, time_delta: 
 	p.last_selected_index = e.last_selected_index.(s64);
 
 	// Re-anchor absolute timestamps so remaining durations are preserved.
-	if e.downed_bleed_out_ends_at > 0.0 {
-		p.downed_bleed_out_ends_at = e.downed_bleed_out_ends_at + time_delta;
+	if e.downed_bleed_out_started_at > 0.0 {
+		p.downed_bleed_out_started_at = e.downed_bleed_out_started_at + time_delta;
 	} else {
-		p.downed_bleed_out_ends_at = 0.0;
+		p.downed_bleed_out_started_at = 0.0;
 	}
 	if e.vent_cooldown_ends_at > 0.0 {
 		p.vent_cooldown_ends_at = e.vent_cooldown_ends_at + time_delta;
@@ -849,6 +849,9 @@ rr_backup_restore_dropped_items :: proc(time_delta: float) {
 			continue;
 		}
 		dropped.despawn_time_start = de.despawn_time_start + time_delta;
+		if is_vhs_tape_item_id(de.item_id) {
+			configure_vhs_tape_dropped_item(dropped);
+		}
 	}
 }
 

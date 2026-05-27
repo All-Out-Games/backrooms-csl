@@ -6,9 +6,57 @@ is_local_viewfinder_active :: proc() -> bool {
     return local_player.viewfinder_active && local_player.equipped_weapon_type == .CAMERA;
 }
 
+is_viewfinder_only_group_child :: proc(target: Entity) -> bool {
+    if !#alive(target) {
+        return false;
+    }
+
+    group := Scene.get_entity_by_name("ViewfinderOnly");
+    if !#alive(group) {
+        return false;
+    }
+
+    child := group.get_first_child();
+    while #alive(child) {
+        if child == target {
+            return true;
+        }
+        child = child.get_next_sibling();
+    }
+    return false;
+}
+
+sync_viewfinder_only_entity_visibility :: proc(target: Entity) {
+    if !#alive(target) {
+        return;
+    }
+
+    should_show := is_local_viewfinder_active();
+    if is_viewfinder_only_group_child(target) {
+        target.set_local_enabled(true);
+        return;
+    }
+
+    dropped_item := target.get_component(Dropped_Item);
+    if #alive(dropped_item) && #alive(dropped_item.visual_root) {
+        dropped_item.visual_root.set_local_enabled(should_show);
+        return;
+    }
+
+    target.set_local_enabled(should_show);
+}
+
 ViewfinderOnly :: class : Component {
+    ao_start :: method() {
+        sync_visibility();
+    }
+
+    ao_on_state_sync :: method() {
+        sync_visibility();
+    }
+
     sync_visibility :: method() {
-        sync_all_viewfinder_only_visibility();
+        sync_viewfinder_only_entity_visibility(entity);
     }
 }
 
@@ -16,6 +64,13 @@ sync_all_viewfinder_only_visibility :: proc() {
     gm := get_game_manager();
     if #alive(gm) {
         gm.sync_viewfinder_only_group_visibility();
+    }
+
+    for viewfinder_only: component_iterator(ViewfinderOnly) {
+        if !#alive(viewfinder_only) {
+            continue;
+        }
+        viewfinder_only.sync_visibility();
     }
 }
 

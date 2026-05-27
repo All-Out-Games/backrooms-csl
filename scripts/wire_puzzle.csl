@@ -17,6 +17,7 @@ WIRE_GRID_OFFSET_Y_FRACTION     :: 0.091;
 WIRE_TILE_GAP_FRACTION          :: 0.0;
 WIRE_INSET_FRACTION             :: 0.02;
 WIRE_DRAG_PIECE_SCALE           :: 0.90;
+WIRE_OPEN_INPUT_GRACE_SECONDS   :: 0.15;
 WIRE_PRESET_COUNT               :: 5;
 
 WIRE_TILE_EMPTY    :: 0;
@@ -125,6 +126,7 @@ Wire_Puzzle_Effect :: class : Effect_Base {
     drag_pos: v2;
 
     success_time: float;
+    opened_at: float;
 
     init_textures :: method() {
         if bg_texture != null {
@@ -187,6 +189,7 @@ Wire_Puzzle_Effect :: class : Effect_Base {
         drag_offset = v2{0.0, 0.0};
         drag_pos = v2{0.0, 0.0};
         success_time = 0.0;
+        opened_at = get_time();
     }
 
     effect_start :: method() {
@@ -608,7 +611,9 @@ draw_wire_puzzle_panel :: proc(player: Player, effect: Wire_Puzzle_Effect, succe
         UI.quad(panel_rect, core_globals.white_sprite, v4{0.1, 0.1, 0.1, 0.98});
     }
 
-    if draw_wire_close_button(panel_rect) {
+    input_ready := get_time() - effect.opened_at >= WIRE_OPEN_INPUT_GRACE_SECONDS;
+
+    if input_ready && draw_wire_close_button(panel_rect) {
         return true;
     }
 
@@ -657,7 +662,7 @@ draw_wire_puzzle_panel :: proc(player: Player, effect: Wire_Puzzle_Effect, succe
 
     drag_release_pos := v2{0.0, 0.0};
     drag_released := false;
-    if effect.dragging {
+    if input_ready && effect.dragging {
         UI.push_id("wire_cell_%", {effect.drag_from});
         defer UI.pop_id();
 
@@ -690,7 +695,7 @@ draw_wire_puzzle_panel :: proc(player: Player, effect: Wire_Puzzle_Effect, succe
             cell = cell.inset_unscaled(cell_pad, cell_pad, cell_pad, cell_pad);
 
             idx := wire_tile_index(col, row);
-            if draw_only {
+            if draw_only || !input_ready {
                 if !effect.revealed[idx] {
                     if effect.lid_texture != null {
                         UI.quad(cell.fit_aspect(effect.lid_texture.get_aspect(), .KEEP_HEIGHT), effect.lid_texture, v4{1.0, 1.0, 1.0, 1.0});

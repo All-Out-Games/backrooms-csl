@@ -3,7 +3,7 @@
 2942145226
 {
   "name": "Task Zone",
-  "local_enabled": true,
+  "local_enabled": false,
   "local_position": {
     "X": 107.1702194213867188,
     "Y": -16.2894935607910156

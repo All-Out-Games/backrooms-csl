@@ -205,6 +205,8 @@ ENTITY_NOISEMAKER_DEBUFF_ICON_PATH :: "AbilityIcons/Noisemaker.png";
 ENTITY_DEBUFF_ICON_TIMER_GAP :: 110.0;
 ENTITY_DEBUFF_ICON_SPACING :: 48.0;
 ENTITY_DEBUFF_ICON_SIZE :: 48.0;
+ENTITY_DEBUFF_ICON_HEAD_OFFSET := v2.{0.0, 2.28};
+ENTITY_DEBUFF_ICON_GLOW_GROW :: 7.0;
 ENTITY_REVEALED_EYE_ICON_PATH :: "UI/Eye.png";
 ENTITY_REVEALED_EYE_ICON_HALF_SIZE :: 22.0;
 ENTITY_REVEALED_EYE_ICON_NAMEPLATE_OFFSET :: 14.0;
@@ -218,7 +220,7 @@ JUMPSCARE_OVERLAY_LAYER :: 2500;
 PLAYER_WINS_SAVE_KEY :: "playerWins";
 ROUND_SURVIVOR_NORMAL_MOVEMENT_MULTIPLIER :: 0.90;
 DOWNED_SURVIVOR_MOVEMENT_MULTIPLIER :: 0.30;
-DOWNED_BLEED_OUT_SECONDS :: 30.0;
+DOWNED_BLEED_OUT_OVERLAY_RAMP_SECONDS :: 30.0;
 DOWNED_BLEED_OUT_OVERLAY_PATH :: "bleedingout.png";
 DOWNED_BLEED_OUT_OVERLAY_LAYER :: -1;
 DOWNED_SCREAM_INTERVAL_SECONDS :: 10.0;
@@ -247,6 +249,7 @@ MINION_FLASHBANG_SCALE_PULSE_SPEED :: 18.0;
 VIEWFINDER_COLOR_FILTER := v3.{0.9, 0.9, 0.9};
 VIEWFINDER_SATURATION :: 1;
 VIEWFINDER_CONTRAST :: 1.1;
+VIEWFINDER_CONTRASTZ2 :: 1.02;
 VIEWFINDER_FILM_GRAIN_STRENGTH :: 0.16;
 VIEWFINDER_FILM_GRAIN_NOISE_SCALE :: 36.0;
 VIEWFINDER_CHROMATIC_OFFSET := v3.{-0.004, 0.0, 0.004};
@@ -389,7 +392,7 @@ Player :: class : Player_Base {
     local_voice_chat_enabled_range: float;
     local_voice_chat_muted_for_round_dead: bool;
     downed_scream_remaining: float;
-    downed_bleed_out_ends_at: float;
+    downed_bleed_out_started_at: float;
     vent_cooldown_ends_at: float;
     warp_to_backrooms_static_started_at: float;
     end_game_cutscene_dance_triggered: bool;
@@ -981,7 +984,7 @@ Player :: class : Player_Base {
         local_voice_chat_enabled_range = 0.0;
         local_voice_chat_muted_for_round_dead = false;
         downed_scream_remaining = 0.0;
-        downed_bleed_out_ends_at = 0.0;
+        downed_bleed_out_started_at = 0.0;
         vent_cooldown_ends_at = 0.0;
         warp_to_backrooms_static_started_at = 0.0;
         end_game_cutscene_dance_triggered = false;
@@ -1114,7 +1117,7 @@ Player :: class : Player_Base {
     clear_round_downed_state :: method(reset_animation: bool = false) {
         round_downed = false;
         downed_scream_remaining = 0.0;
-        downed_bleed_out_ends_at = 0.0;
+        downed_bleed_out_started_at = 0.0;
 
         if animator != null && animator.instance != null {
             animator.state_machine.set_bool("downed", false);
@@ -1259,7 +1262,7 @@ Player :: class : Player_Base {
 
         round_downed = true;
         downed_scream_remaining = DOWNED_SCREAM_INTERVAL_SECONDS;
-        downed_bleed_out_ends_at = get_time() + DOWNED_BLEED_OUT_SECONDS;
+        downed_bleed_out_started_at = get_time();
         sprint_input_held = false;
         sprint_active = false;
 
@@ -1393,41 +1396,32 @@ Player :: class : Player_Base {
         }
     }
 
-    get_downed_bleed_out_seconds_remaining :: method() -> s64 {
+    get_downed_bleed_out_overlay_t :: method() -> float {
         if !this.is_round_downed() {
-            return 0;
+            return 0.0;
         }
 
-        rem := downed_bleed_out_ends_at - get_time();
-        if rem <= 0.0 {
-            return 0;
+        if downed_bleed_out_started_at <= 0.0 {
+            return 0.0;
         }
 
-        secs := (rem + 0.999).(s64);
-        one: s64 = 1;
-        if secs < one {
-            secs = one;
+        elapsed := get_time() - downed_bleed_out_started_at;
+        if elapsed <= 0.0 {
+            return 0.0;
         }
-        return secs;
+
+        return clamp(elapsed / DOWNED_BLEED_OUT_OVERLAY_RAMP_SECONDS, 0.0, 1.0);
     }
 
-    tick_downed_bleed_out_state :: method() {
+    tick_downed_overlay_state :: method() {
         if !this.is_round_downed() {
-            downed_bleed_out_ends_at = 0.0;
+            downed_bleed_out_started_at = 0.0;
             return;
         }
 
-        if downed_bleed_out_ends_at <= 0.0 {
-            downed_bleed_out_ends_at = get_time() + DOWNED_BLEED_OUT_SECONDS;
+        if downed_bleed_out_started_at <= 0.0 {
+            downed_bleed_out_started_at = get_time();
         }
-        if get_time() < downed_bleed_out_ends_at {
-            return;
-        }
-
-        if animator != null && animator.instance != null {
-            this.start_round_death_animation();
-        }
-        this.mark_round_dead();
     }
 
     enter_round_dead_ghost_state :: method() {
@@ -1507,7 +1501,7 @@ Player :: class : Player_Base {
         }
         this.handle_round_revive_request();
 
-        this.tick_downed_bleed_out_state();
+        this.tick_downed_overlay_state();
 
         should_use_entity_override := false;
         if this.is_round_entity() {
@@ -2048,10 +2042,15 @@ Player :: class : Player_Base {
     }
 
     apply_viewfinder_post_processing :: proc(using this: Player) {
+        contrast := VIEWFINDER_CONTRAST;
+        if current_zone == .Zone2 {
+            contrast = VIEWFINDER_CONTRASTZ2;
+        }
+
         color_grade := Post_Processing.Color_Grade_Config{
             color_filter = VIEWFINDER_COLOR_FILTER,
             saturation = VIEWFINDER_SATURATION,
-            contrast = VIEWFINDER_CONTRAST
+            contrast = contrast
         };
         Post_Processing.color_grade(color_grade);
 
@@ -2124,7 +2123,12 @@ Player :: class : Player_Base {
     }
 
     draw_entity_status_debuff_icons :: proc(using this: Player) {
-        if !this.is_local_or_server() || !this.is_round_entity() {
+        if !this.is_local_or_server() {
+            return;
+        }
+
+        entity_player := get_round_entity_player();
+        if !#alive(entity_player) || !#alive(entity_player.entity) {
             return;
         }
 
@@ -2132,7 +2136,7 @@ Player :: class : Player_Base {
         icon_alphas: [6]float;
         icon_count: s64 = 0;
 
-        flashbang_alpha := get_entity_flashbang_alpha(this);
+        flashbang_alpha := get_entity_flashbang_alpha(entity_player);
         if flashbang_alpha > 0.0 {
             icon_paths[icon_count] = ENTITY_FLASHBANG_DEBUFF_ICON_PATH;
             icon_alphas[icon_count] = flashbang_alpha;
@@ -2149,35 +2153,32 @@ Player :: class : Player_Base {
             return;
         }
 
-        debuff_rect := UIK.rect_topbar().offset(0.0, -(MATCH_TIMER_TOP_DOWN_OFFSET + ENTITY_DEBUFF_ICON_TIMER_GAP));
-        UIK.begin(UIK.window(debuff_rect));
+        screen_pos := world_to_screen(entity_player.entity.world_position + ENTITY_DEBUFF_ICON_HEAD_OFFSET);
+        total_width := ENTITY_DEBUFF_ICON_SIZE + (icon_count.(float) - 1.0) * ENTITY_DEBUFF_ICON_SPACING;
+        start_x := screen_pos.x - total_width * 0.5 + ENTITY_DEBUFF_ICON_SIZE * 0.5;
+        half_size := ENTITY_DEBUFF_ICON_SIZE * 0.5;
+        pulse := 1.0 + sin(get_time() * 8.0 + entity_player.entity.world_position.x) * 0.035;
 
-        shell := UIK.layout_centered(UIK.flex(1), UIK.flex(1));
-        shell.show_background = false;
-        UIK.panel_begin(shell);
+        UI.push_screen_draw_context();
+        defer UI.pop_draw_context();
 
-        row := UIK.layout_row(UIK.fit(), UIK.pixels(ENTITY_DEBUFF_ICON_SIZE), ENTITY_DEBUFF_ICON_SPACING - ENTITY_DEBUFF_ICON_SIZE);
-        row.main_align = .CENTER;
-        row.cross_align = .CENTER;
-        row.show_background = false;
-        UIK.panel_begin(row);
+        UI.push_layer(ENTITY_REVEALED_EYE_ICON_LAYER);
+        defer UI.pop_layer();
 
         i: s64 = 0;
         while i < icon_count {
             icon := get_asset(Texture_Asset, icon_paths[i]);
             if icon != null {
-                icon_slot := UIK.layout_centered(UIK.pixels(ENTITY_DEBUFF_ICON_SIZE), UIK.pixels(ENTITY_DEBUFF_ICON_SIZE));
-                icon_slot.show_background = false;
-                UIK.panel_begin(icon_slot);
-                UIK.image_fitted(icon, UIK.image_desc(.CONTAIN), v4{1.0, 1.0, 1.0, icon_alphas[i]});
-                UIK.panel_end();
+                icon_center := v2{start_x + i.(float) * ENTITY_DEBUFF_ICON_SPACING, screen_pos.y};
+                icon_rect := Rect{icon_center, icon_center}.grow(half_size * pulse);
+                glow_rect := icon_rect.grow(ENTITY_DEBUFF_ICON_GLOW_GROW);
+                alpha := icon_alphas[i];
+
+                UI.quad(glow_rect.fit_aspect(icon.get_aspect(), .KEEP_BIGGER), icon, v4{1.0, 0.92, 0.36, alpha * 0.22});
+                UI.quad(icon_rect.fit_aspect(icon.get_aspect(), .KEEP_BIGGER), icon, v4{1.0, 1.0, 1.0, alpha});
             }
             i += 1;
         }
-
-        UIK.panel_end();
-        UIK.panel_end();
-        UIK.end();
     }
 
     draw_revealed_survivor_eye_icons :: proc(using this: Player) {
@@ -2324,13 +2325,17 @@ Player :: class : Player_Base {
         entity_scream_reveal_remaining = max(entity_scream_reveal_remaining, fade_out_seconds);
     }
 
-    show_entity_scream_arrows :: proc(using this: Player, duration_seconds: float) {
+    show_entity_scream_arrows :: proc(using this: Player, duration_seconds: float, require_same_zone: bool = true) {
         if duration_seconds <= 0.0 {
             return;
         }
 
         entity_scream_arrow_remaining = max(entity_scream_arrow_remaining, duration_seconds);
-        entity_scream_arrow_zone = current_zone;
+        if require_same_zone {
+            entity_scream_arrow_zone = current_zone;
+        } else {
+            entity_scream_arrow_zone = .None;
+        }
         entity_scream_arrow_target_user_ids.clear();
     }
 
@@ -2542,6 +2547,10 @@ Player :: class : Player_Base {
                 di.entity.set_local_enabled(false);
             } else {
                 di.update_visibility();
+                viewfinder_only := di.entity.get_component(ViewfinderOnly);
+                if #alive(viewfinder_only) {
+                    viewfinder_only.sync_visibility();
+                }
             }
         }
     }
@@ -2797,14 +2806,8 @@ Player :: class : Player_Base {
             return;
         }
 
-        seconds_remaining := this.get_downed_bleed_out_seconds_remaining();
-        if seconds_remaining <= 0 {
-            return;
-        }
-
-        if downed_bleed_out_ends_at > 0.0 {
-            elapsed := DOWNED_BLEED_OUT_SECONDS - (downed_bleed_out_ends_at - get_time());
-            t := clamp(elapsed / DOWNED_BLEED_OUT_SECONDS, 0.0, 1.0);
+        if downed_bleed_out_started_at > 0.0 {
+            t := this.get_downed_bleed_out_overlay_t();
             eased := pow(t, 1.4);
 
             overlay_tex := get_asset(Texture_Asset, DOWNED_BLEED_OUT_OVERLAY_PATH);
@@ -2833,9 +2836,8 @@ Player :: class : Player_Base {
         shell.padding = v4{16, 12, 16, 12};
         UIK.panel_begin(shell);
 
-        UIK.text("Bleeding Out", UIK.text_body());
-        UIK.text(format_string("%", {seconds_remaining}), UIK.text_title());
-        UIK.text("seconds until death", UIK.text_body());
+        UIK.text("Downed", UIK.text_title());
+        UIK.text("Wait for a Survivor to revive you", UIK.text_body());
 
         UIK.panel_end();
         UIK.end();

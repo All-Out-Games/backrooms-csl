@@ -28,7 +28,7 @@
     "RadioPuzzle": 2938296857,
     "LobbySpawn": 2948362439,
     "SurvivorSpawn": 2950830672,
-    "ReconnectWiresSpawns": 2949722784,
+    "ReconnectWiresSpawns": 2950787963,
     "RadioSpawns": 2951500453,
     "EntitySpawns": 2938623902,
     "BrokenCameraSpawns": 2938661806,

@@ -340,6 +340,9 @@ Ghost_Item_Ping_Interactable :: class : Component {
         if dropped_item.exclusive_to_player.count > 0 {
             return false;
         }
+        if is_blocked_vhs_tape_pickup(player, dropped_item) {
+            return false;
+        }
         if player.ghost_item_ping_cooldown_ends_at > get_time() {
             return false;
         }
@@ -420,4 +423,27 @@ install_ghost_item_ping_listener :: proc(dropped_item: Dropped_Item) {
         listener = dropped_item.entity.add_component(Ghost_Item_Ping_Interactable);
     }
     listener.setup(dropped_item);
+}
+
+configure_vhs_tape_dropped_item :: proc(dropped_item: Dropped_Item) {
+    if !#alive(dropped_item) || !#alive(dropped_item.entity) {
+        return;
+    }
+
+    install_ghost_item_ping_listener(dropped_item);
+    if dropped_item.sprite != null {
+        dropped_item.sprite.mask_in_shadow = true;
+    }
+    if dropped_item.starburst != null {
+        dropped_item.starburst.mask_in_shadow = true;
+    }
+    if dropped_item.shadow != null {
+        dropped_item.shadow.mask_in_shadow = true;
+    }
+
+    viewfinder_only := dropped_item.entity.get_component(ViewfinderOnly);
+    if !#alive(viewfinder_only) {
+        viewfinder_only = dropped_item.entity.add_component(ViewfinderOnly);
+    }
+    viewfinder_only.sync_visibility();
 }

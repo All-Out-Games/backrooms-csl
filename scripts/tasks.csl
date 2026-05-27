@@ -3,12 +3,16 @@ TASK_ID_ENTER_KEYCODE     :: "enter_keycode";
 TASK_ID_RESTART_GENERATOR :: "restart_generator";
 TASK_ID_LIGHTS_OUT_GENERATOR :: "lights_out_generator";
 TASK_ID_RECONNECT_WIRE    :: "reconnect_wire";
+TASK_ID_FIND_BECK_TAPES   :: "find_beck_tapes";
+TASK_ID_DESCEND_LEVEL_2   :: "descend_level_2";
 TASK_ID_FIND_ASYNC_KEYCARDS :: "find_async_keycards";
 TASK_ID_SCAN_KEYCARDS :: "scan_keycards";
 TASK_ID_PULL_BOTH_LEVERS :: "pull_both_levers";
 TASK_ID_REPAIR_LAPTOP     :: "repair_laptop";
 TASK_ID_FIX_CAMERA        :: "fix_camera";
 TASK_ASYNC_KEYCARDS_REQUIRED :: 2;
+TASK_FIRST_BECK_TAPES_REQUIRED :: 3;
+TASK_SECOND_BECK_TAPES_REQUIRED :: 6;
 
 // --- Task SFX helpers copied with the Repair Laptop task ---
 RR_TASK_SFX_TILE_CLICK   :: "task_click_tile_8ba441.wav";
@@ -41,6 +45,7 @@ TASK_TEX_PROGRESS_EXIT    :: "ExitDoorOpenIcon.png";
 TASK_TAPE_COUNT :: 8;
 TASK_TAPE_UNCOLLECTED_TINT := v4.{0.75, 0.75, 0.75, 0.65};
 TASK_TAPE_COLLECTED_TINT := v4.{1.0, 1.0, 1.0, 1.0};
+TASK_ASYNC_KEYCARD_ICON :: "sprites/Zone1b/ASYNC_keycard_drop.png";
 TASK_TAPE_ITEM_YELLOW :: "tape_vhs_yellow";
 TASK_TAPE_ITEM_BLACK :: "tape_vhs_black";
 TASK_TAPE_ITEM_WHITE :: "tape_vhs_white";
@@ -230,11 +235,17 @@ is_task_unlocked_for_player :: proc(player: Player, task_id: string) -> bool {
         gm := get_game_manager();
         return #alive(gm) && gm.lights_out_active;
     }
-    if task_id == TASK_ID_RECONNECT_WIRE {
+    if task_id == TASK_ID_FIND_BECK_TAPES {
         return is_task_completed(player, TASK_ID_FIX_CAMERA);
     }
-    if task_id == TASK_ID_FIND_ASYNC_KEYCARDS {
+    if task_id == TASK_ID_RECONNECT_WIRE {
+        return is_task_completed(player, TASK_ID_FIND_BECK_TAPES);
+    }
+    if task_id == TASK_ID_DESCEND_LEVEL_2 {
         return is_task_completed(player, TASK_ID_RECONNECT_WIRE);
+    }
+    if task_id == TASK_ID_FIND_ASYNC_KEYCARDS {
+        return is_task_completed(player, TASK_ID_DESCEND_LEVEL_2);
     }
     if task_id == TASK_ID_SCAN_KEYCARDS {
         return is_task_completed(player, TASK_ID_FIND_ASYNC_KEYCARDS);
@@ -246,6 +257,33 @@ is_task_unlocked_for_player :: proc(player: Player, task_id: string) -> bool {
         return true;
     }
     return false;
+}
+
+is_zone_at_or_past_zone2 :: proc(zone: CurrentZone) -> bool {
+    return zone == .Zone2 || zone == .Zone3;
+}
+
+are_all_surviving_survivors_at_or_past_zone2 :: proc() -> bool {
+    found_survivor := false;
+    gm := get_game_manager();
+    for player: component_iterator(Player) {
+        if #alive(gm) {
+            if !gm.is_survivor_player(player) || player.is_round_entity() || player.is_round_minion() {
+                continue;
+            }
+        } else if !player.is_round_survivor() || player.is_round_entity() {
+            continue;
+        }
+        if player.is_round_dead() {
+            continue;
+        }
+
+        found_survivor = true;
+        if !is_zone_at_or_past_zone2(player.current_zone) {
+            return false;
+        }
+    }
+    return found_survivor;
 }
 
 get_required_task_counts :: proc(total: ref int, remaining: ref int) {
@@ -298,9 +336,10 @@ ensure_task_assigned :: proc(player: Player, task_id: string) -> Task_Base {
 
 complete_task_for_survivors :: proc(task_id: string) {
     for player: component_iterator(Player) {
-        if !player.is_round_survivor() {
+        if !player.is_round_survivor() || player.is_round_entity() || player.is_round_minion() {
             continue;
         }
+        ensure_task_assigned(player, task_id);
         set_task_completed(player, task_id, true);
     }
 
@@ -502,6 +541,30 @@ complete_wire_task_cheat :: proc(player: Player) -> bool {
     return false;
 }
 
+ensure_round_tapes_collected_count :: proc(required_count: s64) -> bool {
+    gm := get_game_manager();
+    if !#alive(gm) {
+        return false;
+    }
+
+    collected := get_round_tapes_found_count(gm);
+    if collected >= required_count {
+        return true;
+    }
+
+    for i: 0..TASK_TAPE_COUNT - 1 {
+        if gm.round_tapes_collected[i] {
+            continue;
+        }
+        gm.round_tapes_collected[i] = true;
+        collected += 1;
+        if collected >= required_count {
+            return true;
+        }
+    }
+    return collected >= required_count;
+}
+
 complete_current_assigned_task_cheat :: proc(player: Player) -> string {
     current_task := find_current_assigned_task_cheat(player);
     if current_task == null {
@@ -513,6 +576,15 @@ complete_current_assigned_task_cheat :: proc(player: Player) -> string {
         if !complete_camera_task_cheat(player, current_task) {
             return "";
         }
+        update_survivor_task_progression(player);
+        return current_task.id;
+    }
+
+    if current_task.id == TASK_ID_FIND_BECK_TAPES {
+        if !ensure_round_tapes_collected_count(TASK_FIRST_BECK_TAPES_REQUIRED) {
+            return "";
+        }
+        complete_task_for_survivors(current_task.id);
         update_survivor_task_progression(player);
         return current_task.id;
     }
@@ -549,10 +621,20 @@ complete_current_assigned_task_cheat :: proc(player: Player) -> string {
         return current_task.id;
     }
 
+    if current_task.id == TASK_ID_DESCEND_LEVEL_2 {
+        complete_task_for_survivors(current_task.id);
+        update_survivor_task_progression(player);
+        return current_task.id;
+    }
+
     if current_task.id == TASK_ID_FIND_ASYNC_KEYCARDS {
+        if !ensure_round_tapes_collected_count(TASK_SECOND_BECK_TAPES_REQUIRED) {
+            return "";
+        }
         if !complete_keycard_find_task_cheat(player, current_task) {
             return "";
         }
+        complete_task_for_survivors(current_task.id);
         update_survivor_task_progression(player);
         return current_task.id;
     }
@@ -589,12 +671,14 @@ get_task_display_name :: proc(task_id: string) -> string {
         case TASK_ID_ENTER_KEYCODE:     return "Enter Keycode";
         case TASK_ID_RESTART_GENERATOR: return "Restart Generator";
         case TASK_ID_LIGHTS_OUT_GENERATOR: return "Restart Generator";
-        case TASK_ID_RECONNECT_WIRE:    return "Viewfinder: Wires Panel";
-        case TASK_ID_FIND_ASYNC_KEYCARDS: return "Find 2 Keycards";
+        case TASK_ID_FIND_BECK_TAPES:   return "Find 3 Beck Tapes";
+        case TASK_ID_RECONNECT_WIRE:    return "Reconnect Wires";
+        case TASK_ID_DESCEND_LEVEL_2:   return "Descend to Level 2";
+        case TASK_ID_FIND_ASYNC_KEYCARDS: return "Find 2 Keycards and 3 Tapes";
         case TASK_ID_SCAN_KEYCARDS: return "Scan Keycards at Doors";
         case TASK_ID_PULL_BOTH_LEVERS: return "Pull Both Levers";
         case TASK_ID_REPAIR_LAPTOP:     return "Repair Laptop";
-        case TASK_ID_FIX_CAMERA:        return "Find and Fix handheld Camera";
+        case TASK_ID_FIX_CAMERA:        return "Find and Fix a Broken Camera";
     }
     return "Unknown Task";
 }
@@ -613,11 +697,17 @@ get_task_description :: proc(task_id: string) -> string {
         case TASK_ID_LIGHTS_OUT_GENERATOR: {
             return "Restore power to end Lights Out.";
         }
+        case TASK_ID_FIND_BECK_TAPES: {
+            return "Use the fixed camera to reveal and collect 3 Beck Tapes.";
+        }
         case TASK_ID_RECONNECT_WIRE: {
             return "Use the Viewfinder to reveal the Wires panel, then repair the circuit powering the blast door.";
         }
+        case TASK_ID_DESCEND_LEVEL_2: {
+            return "Get every surviving Survivor through the first blast door and down to Level 2.";
+        }
         case TASK_ID_FIND_ASYNC_KEYCARDS: {
-            return "Search the facility for Async keycards.";
+            return "Collectively find 2 Async keycards and 3 more Beck Tapes.";
         }
         case TASK_ID_SCAN_KEYCARDS: {
             return "Scan both collected keycards at the blast door scanners.";
@@ -747,16 +837,34 @@ collect_tape_inventory_items :: proc(player: Player) {
     }
 }
 
+complete_tape_task_if_ready :: proc(task_id: string, required_tapes: s64) -> bool {
+    gm := get_game_manager();
+    if !#alive(gm) {
+        return false;
+    }
+    if get_round_tapes_found_count(gm) < required_tapes {
+        return false;
+    }
+
+    assign_task_to_survivors(task_id);
+    if !is_task_completed_for_survivors(task_id) {
+        complete_task_for_survivors(task_id);
+    }
+    return true;
+}
+
 update_keycard_task_progression :: proc() {
+    if !is_task_completed_for_survivors(TASK_ID_DESCEND_LEVEL_2) {
+        return;
+    }
     if count_survivor_inventory_item_id(ASYNC_KEYCARD_ITEM_ID) < TASK_ASYNC_KEYCARDS_REQUIRED {
+        return;
+    }
+    if !complete_tape_task_if_ready(TASK_ID_FIND_ASYNC_KEYCARDS, TASK_SECOND_BECK_TAPES_REQUIRED) {
         return;
     }
 
     assign_task_to_survivors(TASK_ID_FIND_ASYNC_KEYCARDS);
-    if !is_task_completed_for_survivors(TASK_ID_FIND_ASYNC_KEYCARDS) {
-        complete_task_for_survivors(TASK_ID_FIND_ASYNC_KEYCARDS);
-    }
-
     assign_task_to_survivors(TASK_ID_SCAN_KEYCARDS);
     if are_all_keycard_scanners_scanned() && !is_task_completed_for_survivors(TASK_ID_SCAN_KEYCARDS) {
         complete_task_for_survivors(TASK_ID_SCAN_KEYCARDS);
@@ -788,14 +896,27 @@ update_survivor_task_progression :: proc(player: Player) {
         return;
     }
 
+    beck_tapes_task := ensure_task_assigned(player, TASK_ID_FIND_BECK_TAPES);
+    complete_tape_task_if_ready(TASK_ID_FIND_BECK_TAPES, TASK_FIRST_BECK_TAPES_REQUIRED);
+    if !is_task_completed_for_player(player, beck_tapes_task) {
+        return;
+    }
+
     wire_task := ensure_task_assigned(player, TASK_ID_RECONNECT_WIRE);
     if is_wire_connected() && !wire_task.completed {
-        wire_task.started = true;
-        wire_task.complete_attempt(player, true);
+        complete_task_for_survivors(TASK_ID_RECONNECT_WIRE);
         return;
     }
 
     if is_task_completed_for_player(player, wire_task) {
+        descend_task := ensure_task_assigned(player, TASK_ID_DESCEND_LEVEL_2);
+        if are_all_surviving_survivors_at_or_past_zone2() && !is_task_completed_for_survivors(TASK_ID_DESCEND_LEVEL_2) {
+            complete_task_for_survivors(TASK_ID_DESCEND_LEVEL_2);
+        }
+        if !is_task_completed_for_player(player, descend_task) {
+            return;
+        }
+
         ensure_task_assigned(player, TASK_ID_FIND_ASYNC_KEYCARDS);
         update_keycard_task_progression();
     }
@@ -1732,7 +1853,13 @@ draw_task_progress_bar :: proc(player: Player, screen: Rect) {
         return;
     }
 
-    tape_bar_w := tape_count.(float) * TAPE_SLOT_W + (tape_count - 1).(float) * TAPE_GAP;
+    keycard_slot_count: s64 = 0;
+    if player.current_zone == .Zone2 {
+        keycard_slot_count = TASK_ASYNC_KEYCARDS_REQUIRED;
+    }
+
+    total_slot_count := tape_count + keycard_slot_count;
+    tape_bar_w := total_slot_count.(float) * TAPE_SLOT_W + (total_slot_count - 1).(float) * TAPE_GAP;
     progress_rect := screen.top_rect().center_rect().offset(0.0, -TOP_MARGIN).grow(0.0, tape_bar_w * 0.5, TAPE_BAR_H, tape_bar_w * 0.5);
     tape_paths: [TASK_TAPE_COUNT]string = {
         "tapes/vhs_yellow.png",
@@ -1772,6 +1899,29 @@ draw_task_progress_bar :: proc(player: Player, screen: Rect) {
         UIK.panel_begin(tape_slot);
         UIK.image_fitted(tape, UIK.image_desc(.CONTAIN), tint);
         UIK.panel_end();
+    }
+
+    if keycard_slot_count > 0 {
+        keycard_tex := get_asset(Texture_Asset, TASK_ASYNC_KEYCARD_ICON);
+        keycards_found := count_survivor_inventory_item_id(ASYNC_KEYCARD_ITEM_ID).(s64);
+        if keycards_found > keycard_slot_count {
+            keycards_found = keycard_slot_count;
+        }
+
+        for i: 0..keycard_slot_count - 1 {
+            tint := TASK_TAPE_UNCOLLECTED_TINT;
+            if i < keycards_found {
+                tint = TASK_TAPE_COLLECTED_TINT;
+            }
+
+            keycard_slot := UIK.layout_centered(UIK.flex(1), UIK.flex(1));
+            keycard_slot.show_background = false;
+            UIK.panel_begin(keycard_slot);
+            if keycard_tex != null {
+                UIK.image_fitted(keycard_tex, UIK.image_desc(.CONTAIN), tint);
+            }
+            UIK.panel_end();
+        }
     }
 
     UIK.panel_end();
