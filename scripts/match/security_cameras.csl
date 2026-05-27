@@ -9,6 +9,9 @@ Security_Camera :: class : Interactable {
     destroyed: bool @ao_serialize;
     view_offset: v2 @ao_serialize;
     view_size: float @ao_serialize;
+    visual_cache_initialized: bool;
+    visual_destroyed_cached: bool;
+    visual_sprite: Sprite_Renderer;
 
     ao_start :: method() {
         this.set_listener(this);
@@ -47,24 +50,33 @@ Security_Camera :: class : Interactable {
     }
 
     sync_visual_state :: method() {
+        if visual_cache_initialized && visual_destroyed_cached == destroyed && #alive(visual_sprite) {
+            return;
+        }
+
+        visual_cache_initialized = true;
+        visual_destroyed_cached = destroyed;
+
         if destroyed {
             this.set_text("Camera Destroyed");
         } else {
             this.set_text("Security Camera");
         }
 
-        sprite := entity.get_component(Sprite_Renderer);
-        if sprite == null {
+        if !#alive(visual_sprite) {
+            visual_sprite = entity.get_component(Sprite_Renderer);
+        }
+        if !#alive(visual_sprite) {
             return;
         }
 
-        color := sprite.color;
+        color := visual_sprite.color;
         if destroyed {
             color.w = 0.35;
         } else {
             color.w = 1.0;
         }
-        sprite.color = color;
+        visual_sprite.color = color;
     }
 }
 

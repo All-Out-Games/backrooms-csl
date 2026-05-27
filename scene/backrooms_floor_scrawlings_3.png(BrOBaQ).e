@@ -5,17 +5,17 @@
   "name": "backrooms_floor_scrawlings_3.png",
   "local_enabled": true,
   "local_position": {
-    "X": 52.1764831542968750,
-    "Y": -50.8165779113769531
+    "X": 269.4766845703125000,
+    "Y": -53.5089302062988281
   },
   "local_rotation": 0,
   "local_scale": {
     "X": 1.2563879489898682,
     "Y": 1.2563879489898682
   },
-  "previous_sibling": 1805310548,
-  "next_sibling": 1805960585,
-  "parent": 1808447826
+  "previous_sibling": 2959510870,
+  "next_sibling": 2947288031,
+  "parent": 2943964615
 },
 {
   "cid": 1,

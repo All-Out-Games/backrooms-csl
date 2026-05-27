@@ -12,7 +12,7 @@
     "X": 1,
     "Y": 1
   },
-  "next_sibling": 2941662231
+  "next_sibling": 2947812243
 },
 {
   "cid": 1,
@@ -36,6 +36,8 @@
     "ItemSpawns": 2942794679,
     "AsyncSpawns": 2940883308,
     "EndOfGameWarp": 2946391297,
+    "VO": 2943964615,
+    "Shadows": 2947812243,
     "RoundItemIds": [
       "flashbang",
       "noisemaker",

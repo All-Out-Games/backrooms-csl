@@ -1,7 +1,7 @@
 import "core:ao"
 
 DANGER_PING_COOLDOWN_SECONDS :: 1.0;
-DANGER_PING_LIFETIME_SECONDS :: 3.0;
+DANGER_PING_LIFETIME_SECONDS :: 5.0;
 DANGER_PING_RANGE :: 12.0;
 DANGER_PING_AOE_RADIUS :: 2.4;
 DANGER_PING_MIN_AIM_DISTANCE :: 0.15;
@@ -14,11 +14,18 @@ DANGER_PING_ICON_PATH :: "warning-alert-icon_592ad7.png";
 INFO_PING_ICON_PATH :: "info_icon_880603.png";
 DANGER_PING_PREFAB_PATH :: "WarningPing.prefab";
 
-is_alive_survivor_for_danger_ping :: proc(player: Player) -> bool {
+is_survivor_for_danger_ping :: proc(player: Player) -> bool {
     if player == null || !#alive(player.entity) {
         return false;
     }
-    if !player.is_round_survivor() || player.is_round_dead() || player.is_round_downed() {
+    if !player.is_round_survivor() || player.is_round_dead() {
+        return false;
+    }
+    return true;
+}
+
+is_alive_survivor_for_ping_ability :: proc(player: Player) -> bool {
+    if !is_survivor_for_danger_ping(player) || player.is_round_downed() {
         return false;
     }
     return true;
@@ -180,6 +187,7 @@ collect_warning_ping_visual_components :: proc(target: Entity, components: ref [
 }
 
 Warning_Ping_Fade_Out :: class : Component {
+    owner_user_id: string;
     elapsed: float;
     duration_seconds: float;
     icon_path: string;
@@ -268,6 +276,7 @@ Warning_Ping_Fade_Out :: class : Component {
 
 Danger_Ping_Nav_Path_Probe :: class : Component {
     owner_user_id: string;
+    source_user_id: string;
     target_position: v2;
     expires_at: float;
     path_complete: bool;
@@ -276,13 +285,16 @@ Danger_Ping_Nav_Path_Probe :: class : Component {
     navmesh: Navmesh;
     agent: Movement_Agent;
 
-    setup :: method(owner: Player, target: v2, path_navmesh: Navmesh, duration_seconds: float) {
+    setup :: method(owner: Player, source: Player, target: v2, path_navmesh: Navmesh, duration_seconds: float) {
         if owner == null || !#alive(owner.entity) {
             expires_at = get_time();
             return;
         }
 
         owner_user_id = owner.get_user_id();
+        if source != null {
+            source_user_id = source.get_user_id();
+        }
         navmesh = path_navmesh;
         expires_at = get_time() + duration_seconds;
         path_complete = false;
@@ -376,7 +388,7 @@ Danger_Ping_Nav_Path_Probe :: class : Component {
     }
 }
 
-spawn_danger_ping_nav_path_probe :: proc(owner: Player, target_position: v2, navmesh: Navmesh, duration_seconds: float) {
+spawn_danger_ping_nav_path_probe :: proc(owner: Player, source: Player, target_position: v2, navmesh: Navmesh, duration_seconds: float) {
     if owner == null || !#alive(owner.entity) || !#alive(navmesh) {
         return;
     }
@@ -387,10 +399,33 @@ spawn_danger_ping_nav_path_probe :: proc(owner: Player, target_position: v2, nav
 
     e.add_component(Movement_Agent);
     probe := e.add_component(Danger_Ping_Nav_Path_Probe);
-    probe.setup(owner, target_position, navmesh, duration_seconds);
+    probe.setup(owner, source, target_position, navmesh, duration_seconds);
 }
 
-ping_danger_for_alive_survivors :: proc(ping_position: v2) {
+clear_active_survivor_ping :: proc(owner: Player) {
+    if owner == null {
+        return;
+    }
+
+    owner_user_id := owner.get_user_id();
+    if owner_user_id.count <= 0 {
+        return;
+    }
+
+    for ping: component_iterator(Warning_Ping_Fade_Out) {
+        if ping.owner_user_id == owner_user_id && #alive(ping.entity) {
+            ping.entity.destroy();
+        }
+    }
+
+    for probe: component_iterator(Danger_Ping_Nav_Path_Probe) {
+        if probe.source_user_id == owner_user_id && #alive(probe.entity) {
+            probe.entity.destroy();
+        }
+    }
+}
+
+ping_danger_for_alive_survivors :: proc(source: Player, ping_position: v2) {
     navmesh := get_danger_ping_navmesh();
     if !#alive(navmesh) {
         return;
@@ -401,11 +436,11 @@ ping_danger_for_alive_survivors :: proc(ping_position: v2) {
             continue;
         }
 
-        spawn_danger_ping_nav_path_probe(survivor, ping_position, navmesh, DANGER_PING_PATH_SECONDS);
+        spawn_danger_ping_nav_path_probe(survivor, source, ping_position, navmesh, DANGER_PING_PATH_SECONDS);
     }
 }
 
-spawn_warning_ping_with_icon :: proc(position: v2, icon_path: string) {
+spawn_warning_ping_with_icon :: proc(owner: Player, position: v2, icon_path: string) {
     prefab := get_asset(Prefab_Asset, DANGER_PING_PREFAB_PATH);
     ping_entity := Scene.instantiate(prefab, position);
     if !#alive(ping_entity) {
@@ -414,12 +449,15 @@ spawn_warning_ping_with_icon :: proc(position: v2, icon_path: string) {
 
     set_warning_ping_visual_icon(ping_entity, icon_path);
     fade := ping_entity.add_component(Warning_Ping_Fade_Out);
+    if owner != null {
+        fade.owner_user_id = owner.get_user_id();
+    }
     fade.duration_seconds = DANGER_PING_LIFETIME_SECONDS;
     fade.icon_path = icon_path;
 }
 
-spawn_warning_ping :: proc(position: v2) {
-    spawn_warning_ping_with_icon(position, DANGER_PING_ICON_PATH);
+spawn_warning_ping :: proc(owner: Player, position: v2) {
+    spawn_warning_ping_with_icon(owner, position, DANGER_PING_ICON_PATH);
 }
 
 draw_danger_ping_nav_paths_ui :: proc(player: Player) {
@@ -485,7 +523,7 @@ Survivor_Danger_Ping_Ability :: class : Ability_Base {
     }
 
     can_use :: method() -> bool {
-        if !is_alive_survivor_for_danger_ping(player) {
+        if !is_survivor_for_danger_ping(player) {
             return false;
         }
 
@@ -494,7 +532,7 @@ Survivor_Danger_Ping_Ability :: class : Ability_Base {
             return false;
         }
 
-        return player.entity.get_active_effect() == null;
+        return player.is_round_downed() || player.entity.get_active_effect() == null;
     }
 
     on_update :: method(params: ref Ability_Update_Params) {
@@ -524,8 +562,9 @@ Survivor_Danger_Ping_Ability :: class : Ability_Base {
             return;
         }
 
-        spawn_warning_ping(target_position);
-        ping_danger_for_alive_survivors(target_position);
+        clear_active_survivor_ping(player);
+        spawn_warning_ping(player, target_position);
+        ping_danger_for_alive_survivors(player, target_position);
         current_cooldown = DANGER_PING_COOLDOWN_SECONDS;
     }
 
@@ -542,7 +581,7 @@ Survivor_Info_Ping_Ability :: class : Ability_Base {
     }
 
     can_use :: method() -> bool {
-        if !is_alive_survivor_for_danger_ping(player) {
+        if !is_alive_survivor_for_ping_ability(player) {
             return false;
         }
 
@@ -581,8 +620,9 @@ Survivor_Info_Ping_Ability :: class : Ability_Base {
             return;
         }
 
-        spawn_warning_ping_with_icon(target_position, INFO_PING_ICON_PATH);
-        ping_danger_for_alive_survivors(target_position);
+        clear_active_survivor_ping(player);
+        spawn_warning_ping_with_icon(player, target_position, INFO_PING_ICON_PATH);
+        ping_danger_for_alive_survivors(player, target_position);
         current_cooldown = DANGER_PING_COOLDOWN_SECONDS;
     }
 

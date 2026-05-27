@@ -319,9 +319,6 @@ format_countdown_mm_ss :: proc(total_seconds: s64) -> string {
 
 MATCH_TIMER_TOP_DOWN_OFFSET :: 90.0;
 INTRO_SPAWN_TRANSITION_UI_LAYER :: 10000;
-ZONE1_TAPE_GOAL_COUNT :: 3;
-ZONE2_TAPE_GOAL_COUNT :: 6;
-ZONE3_TAPE_GOAL_COUNT :: 8;
 
 draw_match_status_ui :: proc(title: string, value: string) {
     UIK.begin(UIK.window(UIK.rect_topbar().offset(0.0, -MATCH_TIMER_TOP_DOWN_OFFSET)));
@@ -394,13 +391,32 @@ get_round_tapes_found_count :: proc(gm: Game_Manager) -> s64 {
     return found;
 }
 
-get_tape_goal_count_for_zone :: proc(zone: CurrentZone) -> s64 {
-    switch zone {
-        case .Zone1: return ZONE1_TAPE_GOAL_COUNT;
-        case .Zone2: return ZONE2_TAPE_GOAL_COUNT;
-        case .Zone3: return ZONE3_TAPE_GOAL_COUNT;
-        default:     return 0;
+get_round_tapes_found_count_for_zone :: proc(gm: Game_Manager, zone: CurrentZone) -> s64 {
+    if !#alive(gm) {
+        return 0;
     }
+
+    found: s64 = 0;
+    for i: 0..TASK_TAPE_COUNT - 1 {
+        if gm.round_tape_zones[i] == zone && gm.round_tapes_collected[i] {
+            found += 1;
+        }
+    }
+    return found;
+}
+
+get_round_tape_count_for_zone :: proc(gm: Game_Manager, zone: CurrentZone) -> s64 {
+    if !#alive(gm) {
+        return 0;
+    }
+
+    count: s64 = 0;
+    for i: 0..TASK_TAPE_COUNT - 1 {
+        if gm.round_tape_zones[i] == zone {
+            count += 1;
+        }
+    }
+    return count;
 }
 
 get_end_countdown_seconds :: proc(gm: Game_Manager) -> s64 {
@@ -428,11 +444,16 @@ draw_entity_scream_arrow_ui :: proc(player: Player) {
     if player.entity_scream_arrow_remaining <= 0.0 {
         return;
     }
+    if player.entity_scream_arrow_zone == .None || player.current_zone != player.entity_scream_arrow_zone {
+        return;
+    }
 
-    for other: component_iterator(Player) {
-        if other == player continue;
+    for target_user_id: player.entity_scream_arrow_target_user_ids {
+        other, found := find_player_by_user_id(target_user_id);
+        if !found || other == player continue;
         if !other.is_round_survivor() continue;
         if !#alive(other.entity) continue;
+        if other.current_zone != player.entity_scream_arrow_zone continue;
 
         to_survivor := other.entity.world_position - player.entity.world_position;
         distance := length(to_survivor);
@@ -456,6 +477,12 @@ draw_entity_target_ping_arrow_ui :: proc(player: Player) {
     target, found := find_player_by_user_id(player.entity_target_ping_user_id);
     if !found || target == player || !#alive(target.entity) || !target.is_round_survivor() {
         return;
+    }
+    if player.entity_target_ping_requires_same_zone {
+        zone := player.entity_target_ping_source_zone;
+        if zone == .None || player.current_zone != zone || target.current_zone != zone {
+            return;
+        }
     }
 
     to_survivor := target.entity.world_position - player.entity.world_position;
@@ -493,6 +520,17 @@ draw_entity_scream_nav_paths_ui :: proc(player: Player) {
         }
         if now >= probe.expires_at {
             continue;
+        }
+        if probe.require_same_zone {
+            zone := probe.source_zone;
+            if zone == .None || player.current_zone != zone {
+                continue;
+            }
+
+            target, found := find_player_by_user_id(probe.target_user_id);
+            if !found || !#alive(target.entity) || target.current_zone != zone {
+                continue;
+            }
         }
         if probe.points.count < 2 {
             continue;
@@ -621,9 +659,9 @@ draw_match_timer_ui :: proc(player: Player) {
         UIK.text("Paused", UIK.text_body());
     }
     if player.is_round_survivor() {
-        tape_goal_count := get_tape_goal_count_for_zone(player.current_zone);
+        tape_goal_count := get_round_tape_count_for_zone(gm, player.current_zone);
         if tape_goal_count > 0 {
-            tapes_found := get_round_tapes_found_count(gm);
+            tapes_found := get_round_tapes_found_count_for_zone(gm, player.current_zone);
             UIK.text(format_string("Tapes Found %/%", {tapes_found, tape_goal_count}), UIK.text_body());
         }
     }
@@ -856,6 +894,8 @@ Game_Manager :: class : Component {
     ItemSpawns: Entity @ao_serialize;
     AsyncSpawns: Entity @ao_serialize;
     EndOfGameWarp: Entity @ao_serialize;
+    VO: Entity @ao_serialize;
+    Shadows: Entity @ao_serialize;
     RoundItemIds: [..]string @ao_serialize;
     RoundItemWeights: [..]s64 @ao_serialize;
     MinRoundItemSpawnCount: s64 @ao_serialize;
@@ -888,6 +928,7 @@ Game_Manager :: class : Component {
 
     match_rng: u64;
     hearing_radius_sprite: Sprite_Renderer;
+    navmesh_lock_refresh_elapsed: float;
     // Includes every world-owned round pickup, including Broken Cameras and VHS tapes.
     spawned_round_items: [..]Dropped_Item;
     spawned_async_deads: [..]Entity;
@@ -899,6 +940,7 @@ Game_Manager :: class : Component {
     entity_next_zone_progression_unlocked: bool;
     entity_jumpscare_sabotage_unlocked: bool;
     round_tapes_collected: [8]bool;
+    round_tape_zones: [8]CurrentZone;
     async_keycard_pickup_notifications_sent: int;
     lights_out_active: bool;
     lights_out_cooldown_ends_at: float;
@@ -953,6 +995,7 @@ Game_Manager :: class : Component {
         lights_out_previous_task_zone_position = v2.{0.0, 0.0};
         reset_round_tapes_collected();
         match_rng = rng_root_seed();
+        navmesh_lock_refresh_elapsed = 0.0;
         if !#alive(LobbySpawn) {
             LobbySpawn = Scene.get_entity_by_name("LobbySpawn");
         }
@@ -962,6 +1005,10 @@ Game_Manager :: class : Component {
         if !#alive(EndOfGameWarp) {
             EndOfGameWarp = Scene.get_entity_by_name("EndOfGameWarp");
         }
+        if !#alive(VO) {
+            VO = Scene.get_entity_by_name("ViewfinderOnly");
+        }
+        sync_viewfinder_only_group_visibility();
         hide_task_zone();
         set_blast_door_sprite_enabled(true);
         cache_hearing_radius_sprite();
@@ -983,6 +1030,9 @@ Game_Manager :: class : Component {
         clear_spawned_async_entities();
         clear_all_corpses();
         sync_entity_hearing_radius_visual(0.0);
+        if #alive(VO) {
+            VO.set_local_enabled(false);
+        }
         hide_task_zone();
         if game_manager_singleton == this {
             game_manager_singleton = null;
@@ -990,6 +1040,8 @@ Game_Manager :: class : Component {
     }
 
     ao_update :: method(dt: float) {
+        sync_viewfinder_only_group_visibility();
+
         if phase == .ENDED {
             sync_entity_hearing_radius_visual(0.0);
             if end_game_cutscene_ends_at > 0.0 && get_time() >= end_game_cutscene_ends_at {
@@ -1001,7 +1053,7 @@ Game_Manager :: class : Component {
             return;
         }
 
-        sync_player_navmesh_locks();
+        sync_player_navmesh_locks(dt);
         if phase == .SURVIVOR_HEAD_START || phase == .ACTIVE {
             sync_entity_hearing_radius_visual(dt);
         } else {
@@ -1071,6 +1123,18 @@ Game_Manager :: class : Component {
 
     is_round_in_progress :: method() -> bool {
         return phase == .SURVIVOR_HEAD_START || phase == .ACTIVE;
+    }
+
+    sync_viewfinder_only_group_visibility :: method() {
+        if !#alive(VO) {
+            VO = Scene.get_entity_by_name("ViewfinderOnly");
+        }
+        if !#alive(VO) {
+            return;
+        }
+
+        should_show := is_local_viewfinder_active();
+        VO.set_local_enabled(should_show);
     }
 
     set_round_timer_paused :: method(paused: bool) -> bool {
@@ -1380,7 +1444,13 @@ Game_Manager :: class : Component {
         hearing_radius_sprite.color = tint;
     }
 
-    sync_player_navmesh_locks :: method() {
+    sync_player_navmesh_locks :: method(dt: float) {
+        navmesh_lock_refresh_elapsed += dt;
+        if navmesh_lock_refresh_elapsed < 0.75 {
+            return;
+        }
+        navmesh_lock_refresh_elapsed = 0.0;
+
         if !#alive(navmesh_to_lock_to) {
             navmesh_to_lock_to = find_scene_navmesh();
         }
@@ -1434,6 +1504,7 @@ Game_Manager :: class : Component {
             offset := v2{cos(angle) * radius, sin(angle) * radius};
             player.entity.set_local_position(spawn_origin + offset);
             player.entity.mark_teleported();
+            player.current_zone = .Zone1;
         }
     }
 
@@ -1779,6 +1850,25 @@ Game_Manager :: class : Component {
         return "";
     }
 
+    get_vhs_tape_zone_for_spawn_ref :: method(spawn_ref: Entity) -> CurrentZone {
+        if !#alive(spawn_ref) {
+            return .None;
+        }
+
+        spawn_name := spawn_ref.get_name();
+        if spawn_name.count <= 0 {
+            return .None;
+        }
+
+        zone_prefix := string_substring(spawn_name, 0, 1);
+        switch zone_prefix {
+            case "1": return .Zone1;
+            case "2": return .Zone2;
+            case "3": return .Zone3;
+        }
+        return .None;
+    }
+
     spawn_vhs_tape_item_at_reference :: method(spawn_ref: Entity, tape_index: s64) -> Dropped_Item {
         if !#alive(spawn_ref) {
             return null;
@@ -1854,8 +1944,10 @@ Game_Manager :: class : Component {
             }
 
             spawn_index := rng_range_int(ref match_rng, 0, valid_spawns.count - 1);
-            dropped_item := spawn_vhs_tape_item_at_reference(valid_spawns[spawn_index], tape_index);
+            spawn_ref := valid_spawns[spawn_index];
+            dropped_item := spawn_vhs_tape_item_at_reference(spawn_ref, tape_index);
             if #alive(dropped_item) {
+                round_tape_zones[tape_index] = get_vhs_tape_zone_for_spawn_ref(spawn_ref);
                 spawned_round_items.append(dropped_item);
             }
             valid_spawns.unordered_remove_by_index(spawn_index);
@@ -2145,6 +2237,7 @@ Game_Manager :: class : Component {
     reset_round_tapes_collected :: method() {
         for i: 0..7 {
             round_tapes_collected[i] = false;
+            round_tape_zones[i] = .None;
         }
     }
 
@@ -2366,7 +2459,11 @@ Game_Manager :: class : Component {
         reset_all_wire_puzzles_for_round((next_head_start_ends_at * 1000.0).(u64));
 
         for i: 0..players.count - 1 {
-            players[i].current_zone = .None;
+            if players[i].get_user_id() == entity_user_id {
+                players[i].current_zone = .None;
+            } else {
+                players[i].current_zone = .Zone1;
+            }
             players[i].clear_round_minion_state();
             players[i].clear_round_death_state(false);
             clear_player_tasks(players[i]);
@@ -2705,6 +2802,29 @@ Game_Manager :: class : Component {
             entity_player.remove_freeze_reason(FREEZE_ENTITY_HEAD_START);
         }
     }
+
+    recalculate_survivors_alive :: method() {
+        if phase != .SURVIVOR_HEAD_START && phase != .ACTIVE {
+            survivors_alive = 0;
+            return;
+        }
+
+        alive_count := 0;
+        for player: component_iterator(Player) {
+            if player == null || !#alive(player.entity) {
+                continue;
+            }
+            if !is_survivor_player(player) || player.is_round_dead() || player.is_round_minion() {
+                continue;
+            }
+            alive_count += 1;
+        }
+
+        survivors_alive = alive_count;
+        if survivors_alive > 0 {
+            entity_win_delay_ends_at = 0.0;
+        }
+    }
 }
 
 start :: proc(player: Player) {
@@ -2719,6 +2839,57 @@ start :: proc(player: Player) {
     } else {
         log_info("start: unable to start match from current state", {});
     }
+} @chat_command
+
+revive :: proc(player: Player, target: Player = null) {
+    gm := get_game_manager();
+    if !#alive(gm) {
+        Notifier.notify(player, "No match manager found.");
+        return;
+    }
+    if gm.phase != .SURVIVOR_HEAD_START && gm.phase != .ACTIVE {
+        Notifier.notify(player, "Start a round before using /revive.");
+        return;
+    }
+
+    revive_target := target;
+    if revive_target == null {
+        revive_target = player;
+    }
+    if revive_target == null || !#alive(revive_target.entity) {
+        Notifier.notify(player, "Revive target not found.");
+        return;
+    }
+    if gm.is_entity_player(revive_target) {
+        Notifier.notify(player, "The Entity cannot be revived as a Survivor.");
+        return;
+    }
+    if revive_target.round_dead_was_minion || revive_target.is_round_minion() {
+        Notifier.notify(player, "Minions cannot be revived as Survivors.");
+        return;
+    }
+
+    if revive_target.is_round_dead() {
+        if !revive_target.revive_from_dead() {
+            Notifier.notify(player, "Could not revive %.", {revive_target.get_username()});
+            return;
+        }
+        gm.recalculate_survivors_alive();
+    } else if revive_target.is_round_downed() {
+        if !revive_target.revive_from_downed() {
+            Notifier.notify(player, "Could not revive %.", {revive_target.get_username()});
+            return;
+        }
+    } else {
+        Notifier.notify(player, "% is not dead or downed.", {revive_target.get_username()});
+        return;
+    }
+
+    Notifier.notify(player, "Revived %.", {revive_target.get_username()});
+    if revive_target != player {
+        Notifier.notify(revive_target, "You were revived.");
+    }
+    log_info("revive: % revived %", {player.get_username(), revive_target.get_username()});
 } @chat_command
 
 task :: proc(player: Player) {

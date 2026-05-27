@@ -1712,12 +1712,28 @@ draw_task_progress_bar :: proc(player: Player, screen: Rect) {
         return;
     }
 
-    TAPE_BAR_W :: 620.0;
+    TAPE_SLOT_W :: 70.0;
     TAPE_BAR_H :: 46.0;
     TAPE_GAP :: 8.0;
     TOP_MARGIN :: 35.0;
 
-    progress_rect := screen.top_rect().center_rect().offset(0.0, -TOP_MARGIN).grow(0.0, TAPE_BAR_W * 0.5, TAPE_BAR_H, TAPE_BAR_W * 0.5);
+    gm := get_game_manager();
+    if !#alive(gm) {
+        return;
+    }
+
+    tape_count: s64 = 0;
+    for i: 0..TASK_TAPE_COUNT - 1 {
+        if gm.round_tape_zones[i] == player.current_zone {
+            tape_count += 1;
+        }
+    }
+    if tape_count <= 0 {
+        return;
+    }
+
+    tape_bar_w := tape_count.(float) * TAPE_SLOT_W + (tape_count - 1).(float) * TAPE_GAP;
+    progress_rect := screen.top_rect().center_rect().offset(0.0, -TOP_MARGIN).grow(0.0, tape_bar_w * 0.5, TAPE_BAR_H, tape_bar_w * 0.5);
     tape_paths: [TASK_TAPE_COUNT]string = {
         "tapes/vhs_yellow.png",
         "tapes/vhs_black.png",
@@ -1729,8 +1745,6 @@ draw_task_progress_bar :: proc(player: Player, screen: Rect) {
         "tapes/vhs_green.png"
     };
 
-    gm := get_game_manager();
-
     UIK.begin(UIK.window(progress_rect));
     tape_row := UIK.layout_row(UIK.flex(1), UIK.flex(1), TAPE_GAP);
     tape_row.show_background = false;
@@ -1739,6 +1753,10 @@ draw_task_progress_bar :: proc(player: Player, screen: Rect) {
     UIK.panel_begin(tape_row);
 
     for i: 0..TASK_TAPE_COUNT - 1 {
+        if gm.round_tape_zones[i] != player.current_zone {
+            continue;
+        }
+
         tape := get_asset(Texture_Asset, tape_paths[i]);
         if tape == null {
             continue;

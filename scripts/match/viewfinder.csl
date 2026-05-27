@@ -6,89 +6,16 @@ is_local_viewfinder_active :: proc() -> bool {
     return local_player.viewfinder_active && local_player.equipped_weapon_type == .CAMERA;
 }
 
-collect_viewfinder_only_visual_components :: proc(target: Entity, components: ref [..]Component, original_enabled: ref [..]bool) {
-    if !#alive(target) {
-        return;
-    }
-
-    component := target.get_first_component();
-    while component != null {
-        if component.#type == Sprite_Renderer || component.#type == Spine_Animator || component.#type == Light {
-            components.append(component);
-            original_enabled.append(component.get_enabled());
-        }
-        component = component.get_next_component_on_entity();
-    }
-
-    child := target.get_first_child();
-    while child != null {
-        collect_viewfinder_only_visual_components(child, ref components, ref original_enabled);
-        child = child.get_next_sibling();
-    }
-}
-
 ViewfinderOnly :: class : Component {
-    visible_to_local_player: bool;
-    visuals_initialized: bool;
-    visual_components: [..]Component;
-    visual_original_enabled: [..]bool;
-
-    ao_start :: method() {
-        visible_to_local_player = true;
-        this.ensure_visuals_initialized();
-        this.sync_visibility();
-    }
-
-    ao_update :: method(dt: float) {
-        this.sync_visibility();
-    }
-
-    ao_end :: method() {
-        this.apply_visual_visibility(true);
-        visual_components.clear();
-        visual_original_enabled.clear();
-    }
-
-    ensure_visuals_initialized :: method() {
-        if visuals_initialized {
-            return;
-        }
-
-        visuals_initialized = true;
-        visual_components.clear();
-        visual_original_enabled.clear();
-        collect_viewfinder_only_visual_components(entity, ref visual_components, ref visual_original_enabled);
-    }
-
-    apply_visual_visibility :: method(visible: bool) {
-        this.ensure_visuals_initialized();
-
-        i: s64 = 0;
-        while i < visual_components.count {
-            component := visual_components[i];
-            if #alive(component) {
-                should_enable := visible && visual_original_enabled[i];
-                component.set_enabled(should_enable);
-            }
-            i += 1;
-        }
-    }
-
     sync_visibility :: method() {
-        this.ensure_visuals_initialized();
-        should_show := is_local_viewfinder_active();
-        if should_show == visible_to_local_player {
-            return;
-        }
-
-        visible_to_local_player = should_show;
-        this.apply_visual_visibility(should_show);
+        sync_all_viewfinder_only_visibility();
     }
 }
 
 sync_all_viewfinder_only_visibility :: proc() {
-    for viewfinder_only: component_iterator(ViewfinderOnly) {
-        viewfinder_only.sync_visibility();
+    gm := get_game_manager();
+    if #alive(gm) {
+        gm.sync_viewfinder_only_group_visibility();
     }
 }
 

@@ -50,7 +50,7 @@ find_round_entity_for_mold_vomit :: proc(owner_user_id: string) -> Player {
 }
 
 ping_survivor_from_mold_vomit :: proc(entity_player: Player, survivor: Player) {
-    ping_survivor_with_entity_scream(entity_player, survivor);
+    ping_survivor_with_entity_scream(entity_player, survivor, true);
 }
 
 Mold_Vomit_Tripmine :: class : Component {

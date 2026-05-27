@@ -147,6 +147,13 @@ Entity_Wall_Seep_Ability :: class : Ability_Base {
     }
 
     on_update :: method(params: ref Ability_Update_Params) {
+        if !params.can_use {
+            if player != null && player.active_ability != null && player.active_ability.type == Entity_Wall_Seep_Ability {
+                player.active_ability = null;
+            }
+            return;
+        }
+
         targeted := Ability_Utilities.update_targeted_ability(player, this, ref params);
         if !targeted.targeting {
             return;
@@ -168,10 +175,6 @@ Entity_Wall_Seep_Ability :: class : Ability_Base {
         }
 
         player.active_ability = null;
-        if !params.can_use {
-            return;
-        }
-
         target_position, found := resolve_wall_seep_target(player, ref params, aiming.aim_direction);
         if !found {
             return;

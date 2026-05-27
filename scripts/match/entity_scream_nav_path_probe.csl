@@ -10,12 +10,14 @@ Entity_Scream_Nav_Path_Probe :: class : Component {
     target_position: v2;
     expires_at: float;
     path_complete: bool;
+    require_same_zone: bool;
+    source_zone: CurrentZone;
     points: [..]v2;
 
     navmesh: Navmesh;
     agent: Movement_Agent;
 
-    setup :: method(owner: Player, target: Player, path_navmesh: Navmesh, duration_seconds: float) {
+    setup :: method(owner: Player, target: Player, path_navmesh: Navmesh, duration_seconds: float, path_requires_same_zone: bool = false) {
         if owner == null || target == null || !#alive(owner.entity) || !#alive(target.entity) {
             expires_at = get_time();
             return;
@@ -23,6 +25,12 @@ Entity_Scream_Nav_Path_Probe :: class : Component {
 
         owner_user_id = owner.get_user_id();
         target_user_id = target.get_user_id();
+        require_same_zone = path_requires_same_zone;
+        if require_same_zone {
+            source_zone = owner.current_zone;
+        } else {
+            source_zone = .None;
+        }
         navmesh = path_navmesh;
         expires_at = get_time() + duration_seconds;
         path_complete = false;
@@ -116,7 +124,24 @@ Entity_Scream_Nav_Path_Probe :: class : Component {
     }
 }
 
-spawn_entity_scream_nav_path_probe :: proc(owner: Player, target: Player, navmesh: Navmesh, duration_seconds: float) {
+clear_entity_detected_path_for_survivor :: proc(target: Player) {
+    if target == null {
+        return;
+    }
+
+    target_user_id := target.get_user_id();
+    if target_user_id.count <= 0 {
+        return;
+    }
+
+    for probe: component_iterator(Entity_Scream_Nav_Path_Probe) {
+        if probe.target_user_id == target_user_id && #alive(probe.entity) {
+            probe.entity.destroy();
+        }
+    }
+}
+
+spawn_entity_scream_nav_path_probe :: proc(owner: Player, target: Player, navmesh: Navmesh, duration_seconds: float, require_same_zone: bool = false) {
     if owner == null || target == null || !#alive(owner.entity) || !#alive(target.entity) {
         return;
     }
@@ -124,11 +149,13 @@ spawn_entity_scream_nav_path_probe :: proc(owner: Player, target: Player, navmes
         return;
     }
 
+    clear_entity_detected_path_for_survivor(target);
+
     e := Scene.create_entity();
     e.set_local_position(owner.entity.world_position);
     e.mark_teleported();
 
     e.add_component(Movement_Agent);
     probe := e.add_component(Entity_Scream_Nav_Path_Probe);
-    probe.setup(owner, target, navmesh, duration_seconds);
+    probe.setup(owner, target, navmesh, duration_seconds, require_same_zone);
 }

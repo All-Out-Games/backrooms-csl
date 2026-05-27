@@ -5,17 +5,17 @@
   "name": "backrooms_wall_scrawlings3.png",
   "local_enabled": true,
   "local_position": {
-    "X": 24.2393035888671875,
-    "Y": -53.5256462097167969
+    "X": 241.5395202636718750,
+    "Y": -56.2179985046386719
   },
   "local_rotation": 0,
   "local_scale": {
     "X": 1,
     "Y": 1
   },
-  "previous_sibling": 1799013367,
-  "next_sibling": 2948599217,
-  "parent": 1808447826
+  "previous_sibling": 1798837904,
+  "next_sibling": 2936484116,
+  "parent": 2943964615
 },
 {
   "cid": 1,

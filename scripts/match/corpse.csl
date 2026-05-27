@@ -54,6 +54,19 @@ spawn_corpse_for_player :: proc(player: Player) -> Corpse {
     return corpse;
 }
 
+clear_corpses_for_player :: proc(player: Player) {
+    if player == null {
+        return;
+    }
+
+    user_id := player.get_user_id();
+    for corpse: component_iterator(Corpse) {
+        if corpse.owner_user_id == user_id && #alive(corpse.entity) {
+            corpse.entity.destroy();
+        }
+    }
+}
+
 clear_all_corpses :: proc() {
     for corpse: component_iterator(Corpse) {
         if #alive(corpse.entity) {

@@ -5,6 +5,7 @@ VITALS_LOOP_ALIVE_ANIM :: "Loop_Alive";
 VITALS_LOOP_DEAD_ANIM :: "Loop_Dead";
 VITALS_STATUS_ALIVE_COLOR := v4.{0.30, 0.95, 0.40, 1.0};
 VITALS_STATUS_DOWNED_COLOR := v4.{1.0, 0.65, 0.20, 1.0};
+VITALS_STATUS_MIA_COLOR := v4.{1.0, 0.45, 0.20, 1.0};
 VITALS_STATUS_DEAD_COLOR := v4.{1.0, 0.30, 0.30, 1.0};
 VITALS_MAX_ROWS :: 16;
 
@@ -140,6 +141,8 @@ sync_vitals_ui_animation :: proc(entry: ref Vitals_UI_Entry, target_player: Play
     desired_speed: float = 1.0;
     if target_player != null && target_player.is_round_dead() {
         desired = VITALS_LOOP_DEAD_ANIM;
+    } else if target_player != null && target_player.is_round_minion() {
+        desired = VITALS_LOOP_DEAD_ANIM;
     } else if target_player != null && target_player.is_round_downed() {
         desired_speed = 0.5;
     }
@@ -207,6 +210,9 @@ draw_vitals_hud_row_uik :: proc(target_player: Player, row_index: s64) -> Vitals
     if target_player.is_round_dead() {
         status_label = "DEAD";
         status_color = VITALS_STATUS_DEAD_COLOR;
+    } else if target_player.is_round_minion() {
+        status_label = "MIA";
+        status_color = VITALS_STATUS_MIA_COLOR;
     } else if target_player.is_round_downed() {
         status_label = "DOWNED";
         status_color = VITALS_STATUS_DOWNED_COLOR;

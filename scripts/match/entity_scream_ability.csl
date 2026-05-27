@@ -16,11 +16,24 @@ play_entity_scream_sfx :: proc(player: Player) {
     SFX.play(get_asset(SFX_Asset, "SFX/entityscream.wav"), desc);
 }
 
-ping_survivor_with_entity_scream :: proc(entity_player: Player, survivor: Player) {
+players_are_in_same_active_zone :: proc(a: Player, b: Player) -> bool {
+    if a == null || b == null {
+        return false;
+    }
+    if a.current_zone == .None || b.current_zone == .None {
+        return false;
+    }
+    return a.current_zone == b.current_zone;
+}
+
+ping_survivor_with_entity_scream :: proc(entity_player: Player, survivor: Player, require_same_zone: bool = false) {
     if survivor == null || !#alive(survivor.entity) {
         return;
     }
     if !survivor.is_round_survivor() || survivor.is_round_dead() {
+        return;
+    }
+    if require_same_zone && !players_are_in_same_active_zone(entity_player, survivor) {
         return;
     }
 
@@ -32,7 +45,7 @@ ping_survivor_with_entity_scream :: proc(entity_player: Player, survivor: Player
         return;
     }
 
-    entity_player.show_entity_target_ping_arrow(survivor, ENTITY_SCREAM_ARROW_SECONDS);
+    entity_player.show_entity_target_ping_arrow(survivor, ENTITY_SCREAM_ARROW_SECONDS, require_same_zone);
 
     if !sound_sight_interfered {
         gm := get_game_manager();
@@ -40,15 +53,21 @@ ping_survivor_with_entity_scream :: proc(entity_player: Player, survivor: Player
         if #alive(gm) {
             navmesh = gm.get_navmesh_to_lock_to();
         }
-        spawn_entity_scream_nav_path_probe(entity_player, survivor, navmesh, ENTITY_SCREAM_PATH_SECONDS);
+        spawn_entity_scream_nav_path_probe(entity_player, survivor, navmesh, ENTITY_SCREAM_PATH_SECONDS, require_same_zone);
     }
 }
 
 ping_all_survivors_with_entity_scream :: proc(entity_player: Player) {
+    if entity_player != null {
+        entity_player.show_entity_scream_arrows(ENTITY_SCREAM_ARROW_SECONDS);
+    }
+
     for other: component_iterator(Player) {
         if other == entity_player continue;
         if !other.is_round_survivor() continue;
-        ping_survivor_with_entity_scream(entity_player, other);
+        if !players_are_in_same_active_zone(entity_player, other) continue;
+        entity_player.add_entity_scream_arrow_target(other);
+        ping_survivor_with_entity_scream(entity_player, other, true);
     }
 }
 
@@ -98,7 +117,6 @@ Entity_Scream_Ability :: class : Ability_Base {
 
         play_entity_scream_sfx(player);
         ping_all_survivors_with_entity_scream(player);
-        player.show_entity_scream_arrows(ENTITY_SCREAM_ARROW_SECONDS);
 
         current_cooldown = ENTITY_SCREAM_COOLDOWN_SECONDS;
     }

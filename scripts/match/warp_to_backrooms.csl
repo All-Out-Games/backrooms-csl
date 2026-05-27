@@ -30,7 +30,8 @@ WarpToBackrooms :: class : Interactable {
 
         is_survivor := player.is_round_survivor();
         is_entity := player.is_round_entity();
-        if !is_survivor && !is_entity {
+        is_minion := player.is_round_minion();
+        if !is_survivor && !is_entity && !is_minion {
             return false;
         }
 
