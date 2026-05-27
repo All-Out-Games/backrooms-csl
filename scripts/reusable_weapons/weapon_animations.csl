@@ -1,3 +1,40 @@
+setup_jumpscare_fear_stun_player_state_machine :: proc(sm: State_Machine, base_layer: State_Machine_Layer, ao_idle: State_Machine_State) {
+    jumpscare_state := base_layer.try_get_state("Emote/Jumpscare");
+    if jumpscare_state == null {
+        jumpscare_state = base_layer.create_state("Emote/Jumpscare", false);
+    }
+    fear_stunned_state := base_layer.try_get_state("Idle_Drowsy");
+    if fear_stunned_state == null {
+        fear_stunned_state = base_layer.create_state("Idle_Drowsy", true);
+    }
+    jumpscared_var := sm.try_get_variable("jumpscared");
+    if jumpscared_var == null {
+        jumpscared_var = sm.create_variable("jumpscared", .BOOL);
+    }
+    jumpscare_trigger := sm.try_get_variable("jumpscare");
+    if jumpscare_trigger == null {
+        jumpscare_trigger = sm.create_variable("jumpscare", .TRIGGER);
+    }
+    fear_stun_trigger := sm.try_get_variable("jumpscare_fear_stun");
+    if fear_stun_trigger == null {
+        fear_stun_trigger = sm.create_variable("jumpscare_fear_stun", .TRIGGER);
+    }
+    minion_slowed_var := sm.try_get_variable("minion_slowed");
+    if minion_slowed_var == null {
+        minion_slowed_var = sm.create_variable("minion_slowed", .BOOL);
+    }
+
+    base_layer.create_global_transition(jumpscare_state, true).create_trigger_condition(jumpscare_trigger);
+    fear_stun_global := base_layer.create_global_transition(fear_stunned_state, true);
+    fear_stun_global.create_trigger_condition(fear_stun_trigger);
+    fear_stun_global.create_bool_condition(jumpscared_var, true);
+    jumpscare_to_fear_stunned := base_layer.create_transition(jumpscare_state, fear_stunned_state, true);
+    jumpscare_to_fear_stunned.create_bool_condition(jumpscared_var, true);
+    fear_stunned_to_idle := base_layer.create_transition(fear_stunned_state, ao_idle, false);
+    fear_stunned_to_idle.create_bool_condition(jumpscared_var, false);
+    fear_stunned_to_idle.create_bool_condition(minion_slowed_var, false);
+}
+
 setup_reusable_weapons_player_state_machine :: proc(player: Player) {
     sm := player.animator.state_machine;
     base_layer := sm.try_get_layer("main");
@@ -32,6 +69,9 @@ setup_reusable_weapons_player_state_machine :: proc(player: Player) {
     minion_slowed_var := sm.create_variable("minion_slowed", .BOOL);
     minion_bite_hit_reacting_var := sm.create_variable("minion_bite_hit_reacting", .BOOL);
     minion_bite_hit_var := sm.create_variable("minion_bite_hit", .TRIGGER);
+    jumpscared_var := sm.create_variable("jumpscared", .BOOL);
+    sm.create_variable("jumpscare", .TRIGGER);
+    sm.create_variable("jumpscare_fear_stun", .TRIGGER);
     sprint_state := base_layer.create_state("SL/Sprint", true);
 
     //--- Base Layer: IK variables ---//
@@ -44,6 +84,7 @@ setup_reusable_weapons_player_state_machine :: proc(player: Player) {
     idle_to_run.create_bool_condition(round_dead_var, false);
     idle_to_run.create_bool_condition(downed_var, false);
     idle_to_run.create_bool_condition(minion_slowed_var, false);
+    idle_to_run.create_bool_condition(jumpscared_var, false);
     idle_to_run.create_bool_condition(end_game_cutscene_var, false);
     idle_to_run.create_bool_condition(use_2h_ik, false);
     idle_to_run.create_bool_condition(use_1h_ik, false);
@@ -54,6 +95,7 @@ setup_reusable_weapons_player_state_machine :: proc(player: Player) {
     to_normal_run.create_bool_condition(round_dead_var, false);
     to_normal_run.create_bool_condition(downed_var, false);
     to_normal_run.create_bool_condition(minion_slowed_var, false);
+    to_normal_run.create_bool_condition(jumpscared_var, false);
     to_normal_run.create_bool_condition(end_game_cutscene_var, false);
     to_normal_run.create_bool_condition(use_2h_ik, false);
     to_normal_run.create_bool_condition(use_1h_ik, false);
@@ -128,6 +170,7 @@ setup_reusable_weapons_player_state_machine :: proc(player: Player) {
     to_sprint.create_bool_condition(round_dead_var, false);
     to_sprint.create_bool_condition(downed_var, false);
     to_sprint.create_bool_condition(minion_slowed_var, false);
+    to_sprint.create_bool_condition(jumpscared_var, false);
     to_sprint.create_bool_condition(end_game_cutscene_var, false);
     to_sprint.create_bool_condition(use_2h_ik, false);
     to_sprint.create_bool_condition(use_1h_ik, false);
@@ -138,6 +181,7 @@ setup_reusable_weapons_player_state_machine :: proc(player: Player) {
     back_to_run.create_bool_condition(sprinting_var, false);
     back_to_run.create_bool_condition(round_dead_var, false);
     back_to_run.create_bool_condition(minion_slowed_var, false);
+    back_to_run.create_bool_condition(jumpscared_var, false);
     back_to_run.create_bool_condition(end_game_cutscene_var, false);
     back_to_run.create_bool_condition(use_2h_ik, false);
     back_to_run.create_bool_condition(use_1h_ik, false);
@@ -149,6 +193,7 @@ setup_reusable_weapons_player_state_machine :: proc(player: Player) {
     to_minion_slowed_idle.create_bool_condition(downed_var, false);
     to_minion_slowed_idle.create_bool_condition(end_game_cutscene_var, false);
     to_minion_slowed_idle.create_bool_condition(minion_bite_hit_reacting_var, false);
+    to_minion_slowed_idle.create_bool_condition(jumpscared_var, false);
 
     to_minion_slowed_run := base_layer.create_global_transition(minion_slowed_run, false);
     to_minion_slowed_run.create_bool_condition(minion_slowed_var, true);
@@ -157,22 +202,27 @@ setup_reusable_weapons_player_state_machine :: proc(player: Player) {
     to_minion_slowed_run.create_bool_condition(downed_var, false);
     to_minion_slowed_run.create_bool_condition(end_game_cutscene_var, false);
     to_minion_slowed_run.create_bool_condition(minion_bite_hit_reacting_var, false);
+    to_minion_slowed_run.create_bool_condition(jumpscared_var, false);
 
     minion_slowed_idle_to_run := base_layer.create_transition(minion_slowed_idle, minion_slowed_run, false);
     minion_slowed_idle_to_run.create_bool_condition(moving_var, true);
     minion_slowed_idle_to_run.create_bool_condition(minion_slowed_var, true);
+    minion_slowed_idle_to_run.create_bool_condition(jumpscared_var, false);
 
     minion_slowed_run_to_idle := base_layer.create_transition(minion_slowed_run, minion_slowed_idle, false);
     minion_slowed_run_to_idle.create_bool_condition(moving_var, false);
     minion_slowed_run_to_idle.create_bool_condition(minion_slowed_var, true);
+    minion_slowed_run_to_idle.create_bool_condition(jumpscared_var, false);
 
     minion_slowed_idle_to_idle := base_layer.create_transition(minion_slowed_idle, ao_idle, false);
     minion_slowed_idle_to_idle.create_bool_condition(minion_slowed_var, false);
     minion_slowed_idle_to_idle.create_bool_condition(moving_var, false);
+    minion_slowed_idle_to_idle.create_bool_condition(jumpscared_var, false);
 
     minion_slowed_run_to_run := base_layer.create_transition(minion_slowed_run, ao_run, false);
     minion_slowed_run_to_run.create_bool_condition(minion_slowed_var, false);
     minion_slowed_run_to_run.create_bool_condition(moving_var, true);
+    minion_slowed_run_to_run.create_bool_condition(jumpscared_var, false);
 
     to_minion_bite_hit := base_layer.create_global_transition(minion_bite_hit, true);
     to_minion_bite_hit.create_trigger_condition(minion_bite_hit_var);
@@ -317,27 +367,5 @@ setup_reusable_weapons_player_state_machine :: proc(player: Player) {
     // The end-game cutscene bool only locks locomotion transitions. Routing every
     // player through a global dance transition has been crash-prone at match end.
 
-    jumpscare_state := base_layer.try_get_state("Emote/Jumpscare");
-    if jumpscare_state == null {
-        jumpscare_state = base_layer.create_state("Emote/Jumpscare", false);
-    }
-    jumpscare_idle_state := base_layer.try_get_state("Idle_Drowsy");
-    if jumpscare_idle_state == null {
-        jumpscare_idle_state = base_layer.create_state("Idle_Drowsy", true);
-    }
-    jumpscared_var := sm.try_get_variable("jumpscared");
-    if jumpscared_var == null {
-        jumpscared_var = sm.create_variable("jumpscared", .BOOL);
-    }
-    jumpscare_trigger := sm.try_get_variable("jumpscare");
-    if jumpscare_trigger == null {
-        jumpscare_trigger = sm.create_variable("jumpscare", .TRIGGER);
-    }
-
-    base_layer.create_global_transition(jumpscare_state, true).create_trigger_condition(jumpscare_trigger);
-    jumpscare_to_idle := base_layer.create_transition(jumpscare_state, jumpscare_idle_state, true);
-    jumpscare_to_idle.create_bool_condition(jumpscared_var, true);
-    jumpscare_idle_to_idle := base_layer.create_transition(jumpscare_idle_state, ao_idle, false);
-    jumpscare_idle_to_idle.create_bool_condition(jumpscared_var, false);
-    jumpscare_idle_to_idle.create_bool_condition(minion_slowed_var, false);
+    setup_jumpscare_fear_stun_player_state_machine(sm, base_layer, ao_idle);
 }

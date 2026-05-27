@@ -232,6 +232,7 @@ ENTITY_AFK_MOVED_DISTANCE :: 0.25;
 ENTITY_AFK_MOVED_DISTANCE_SQ :: ENTITY_AFK_MOVED_DISTANCE * ENTITY_AFK_MOVED_DISTANCE;
 HELD_ITEM_BONE_NAME :: "Finger_R2";
 HELD_ITEM_SCALE := v2.{0.35, 0.35};
+HELD_STIM_ITEM_SCALE := v2.{0.70, 0.70};
 HELD_ITEM_RENDER_LAYER :: 1;
 
 ENTITY_OVERRIDE_RIG_PATH :: "Animations/Bacteria/Backrooms_Monster.spine";
@@ -698,7 +699,11 @@ Player :: class : Player_Base {
         new_held_item.set_local_enabled(true);
         new_held_item.set_local_position(v2.{0.0, 0.0});
         new_held_item.set_local_rotation(0.0);
-        new_held_item.set_local_scale(HELD_ITEM_SCALE);
+        held_scale := HELD_ITEM_SCALE;
+        if wt == .STIM {
+            held_scale = HELD_STIM_ITEM_SCALE;
+        }
+        new_held_item.set_local_scale(held_scale);
 
         sprite := new_held_item.add_component(Sprite_Renderer);
         sprite.set_texture(held_texture);
@@ -742,11 +747,16 @@ Player :: class : Player_Base {
 
         held_item_entity.set_local_position(v2{hand_local.x * hand_scale.x, hand_local.y * hand_scale.y});
 
-        held_scale_x := HELD_ITEM_SCALE.x;
-        if hand_scale.x < 0.0 {
-            held_scale_x = -HELD_ITEM_SCALE.x;
+        held_scale := HELD_ITEM_SCALE;
+        if equipped_weapon_type == .STIM {
+            held_scale = HELD_STIM_ITEM_SCALE;
         }
-        held_item_entity.set_local_scale(v2{held_scale_x, HELD_ITEM_SCALE.y});
+
+        held_scale_x := held_scale.x;
+        if hand_scale.x < 0.0 {
+            held_scale_x = -held_scale.x;
+        }
+        held_item_entity.set_local_scale(v2{held_scale_x, held_scale.y});
     }
 
     sync_local_camera_size :: proc(using this: Player) {
@@ -1871,7 +1881,11 @@ Player :: class : Player_Base {
                 if active_effect == null {
                     draw_entity_ability_button(this, Entity_Bite_Ability, 0, "AbilityIcons/Bite.png");
                     draw_entity_ability_button(this, Entity_Scream_Ability, 1, "AbilityIcons/Scream.png");
-                    draw_entity_ability_button(this, Entity_Vomit_Ability, 2, ENTITY_VOMIT_ICON_PATH);
+                    if is_entity_toxic_rain_sabotage_unlocked() {
+                        draw_ability_button(this, Entity_Toxic_Rain_Ability, 2);
+                    } else {
+                        draw_entity_ability_button(this, Entity_Vomit_Ability, 2, ENTITY_VOMIT_ICON_PATH);
+                    }
                     draw_entity_ability_button(this, Entity_Lurch_Ability, 3, "AbilityIcons/SprintIcon.png");
                     draw_entity_ability_button(this, Entity_Wall_Seep_Ability, 4, "AbilityIcons/Scream.png");
                     if is_entity_ability_type_unlocked(this, Entity_Convert_Minion_Ability) && find_downed_minion_conversion_target(this) != null {

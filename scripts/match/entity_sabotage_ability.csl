@@ -5,9 +5,11 @@ ENTITY_SABOTAGE_LIGHTS_ICON_PATH :: "bulb_off_d8e1f5.png";
 ENTITY_SABOTAGE_JUMPSCARE_ICON_PATH :: "AbilityIcons/Bite.png";
 ENTITY_SABOTAGE_TOXIC_RAIN_ICON_PATH :: "oil_sludge_3_a58110.png";
 ENTITY_JUMPSCARE_EFFECT_SECONDS :: 10.0;
+ENTITY_JUMPSCARE_FEAR_STUN_DELAY_SECONDS :: 1.3;
 ENTITY_JUMPSCARE_COOLDOWN_SECONDS :: 120.0;
 ENTITY_JUMPSCARE_MODAL_MAX_TARGETS :: 32;
 TOXIC_RAIN_PREFAB_PATH :: "ToxicRain.prefab";
+TOXIC_RAIN_LOOP_SFX_PATH :: "acid_rain_loop_c090eb.wav";
 TOXIC_RAIN_COOLDOWN_SECONDS :: 60.0;
 TOXIC_RAIN_LIFETIME_SECONDS :: 30.0;
 TOXIC_RAIN_SCAN_SECONDS :: 1.0;
@@ -18,6 +20,8 @@ TOXIC_RAIN_PREFAB_SCALE :: 2.0;
 TOXIC_RAIN_TARGETING_FREEZE_REASON :: "toxic_rain_targeting";
 TOXIC_RAIN_RETICLE_RANGE_FALLBACK :: 4.0;
 TOXIC_RAIN_EFFECT_RADIUS :: TOXIC_RAIN_RETICLE_RANGE_FALLBACK;
+TOXIC_RAIN_MIN_AIM_DISTANCE :: 0.15;
+TOXIC_RAIN_SPAWN_OFFSET := v2.{0.0, 3.0};
 
 get_toxic_rain_effect_center :: proc(entity: Entity) -> v2 {
     if !#alive(entity) {
@@ -80,6 +84,58 @@ can_start_toxic_rain_targeting :: proc(player: Player) -> bool {
     return true;
 }
 
+get_toxic_rain_target_origin_position :: proc(player: Player, aim_direction: v2) -> v2 {
+    return player.entity.world_position;
+}
+
+get_toxic_rain_aim_distance :: proc(player: Player, params: ref Ability_Update_Params, aim_direction: v2) -> float {
+    if player.device_kind == .PC {
+        aim_origin := get_toxic_rain_target_origin_position(player, aim_direction);
+        aim_offset := get_mouse_world_position() - aim_origin;
+        return max(length(aim_offset), TOXIC_RAIN_MIN_AIM_DISTANCE);
+    }
+
+    drag_t := clamp(length(params.drag_offset), 0.0, 1.0);
+    return lerp(TOXIC_RAIN_MIN_AIM_DISTANCE, player.camera.size, drag_t);
+}
+
+get_toxic_rain_target_position_from_player :: proc(player: Player, aim_direction: v2, aim_distance: float) -> v2 {
+    dir := normalize(aim_direction);
+    origin_position := get_toxic_rain_target_origin_position(player, dir);
+    clamped_aim_distance := max(aim_distance, TOXIC_RAIN_MIN_AIM_DISTANCE);
+    return origin_position + dir * clamped_aim_distance;
+}
+
+resolve_toxic_rain_target :: proc(player: Player, aim_direction: v2, aim_distance: float) -> v2, bool {
+    if player == null || !#alive(player.entity) {
+        return v2{0.0, 0.0}, false;
+    }
+
+    selected_position := get_toxic_rain_target_position_from_player(player, aim_direction, aim_distance);
+    return selected_position, true;
+}
+
+draw_toxic_rain_target_preview :: proc(position: v2, valid: bool) {
+    UI.push_screen_draw_context();
+    defer UI.pop_draw_context();
+
+    UI.push_layer(1100);
+    defer UI.pop_layer();
+
+    center := world_to_screen(position);
+    edge := world_to_screen(position + v2{TOXIC_RAIN_EFFECT_RADIUS, 0.0});
+    radius_px := max(length(edge - center), 24.0);
+    color := v4{0.28, 1.0, 0.12, 0.85};
+    if !valid {
+        color = v4{0.65, 0.65, 0.65, 0.45};
+    }
+
+    UI.wire_circle(center, radius_px, 4.0, color, 64);
+    UI.wire_circle(center, 14.0, 3.0, v4{1.0, 1.0, 1.0, color.w}, 32);
+    UI.line(center - v2{24.0, 0.0}, center + v2{24.0, 0.0}, 3.0, core_globals.white_sprite, v4{1.0, 1.0, 1.0, color.w * 0.82}, false);
+    UI.line(center - v2{0.0, 24.0}, center + v2{0.0, 24.0}, 3.0, core_globals.white_sprite, v4{1.0, 1.0, 1.0, color.w * 0.82}, false);
+}
+
 is_valid_jumpscare_target :: proc(player: Player) -> bool {
     if player == null || !#alive(player.entity) {
         return false;
@@ -91,7 +147,10 @@ is_valid_jumpscare_target :: proc(player: Player) -> bool {
 }
 
 Jumpscared_Effect :: class : Effect_Base {
+    fear_stun_triggered: bool;
+
     effect_start :: method() {
+        fear_stun_triggered = false;
         player_specific.freeze_player = true;
         set_duration(ENTITY_JUMPSCARE_EFFECT_SECONDS);
 
@@ -101,7 +160,10 @@ Jumpscared_Effect :: class : Effect_Base {
         if #alive(player.agent) {
             player.agent.velocity = v2{0.0, 0.0};
         }
+        player.sprint_input_held = false;
+        player.sprint_active = false;
         if player.animator != null && player.animator.state_machine != null {
+            player.animator.state_machine.set_bool("sprinting", false);
             player.animator.state_machine.set_bool("jumpscared", true);
             player.animator.state_machine.set_trigger("jumpscare");
         }
@@ -118,6 +180,20 @@ Jumpscared_Effect :: class : Effect_Base {
         }
 
         player.reveal_for_entity_jumpscare_local_view(0.25);
+        if !fear_stun_triggered && get_elapsed_time() >= ENTITY_JUMPSCARE_FEAR_STUN_DELAY_SECONDS && player.animator != null && player.animator.state_machine != null {
+            sm := player.animator.state_machine;
+            layer := sm.try_get_layer("main");
+            if layer != null {
+                current_state := layer.get_current_state();
+                if current_state != null && current_state.get_name() == "Idle_Drowsy" {
+                    fear_stun_triggered = true;
+                    return;
+                }
+            }
+
+            sm.set_bool("jumpscared", true);
+            sm.set_trigger("jumpscare_fear_stun");
+        }
     }
 
     effect_end :: method(interrupt: bool) {
@@ -211,11 +287,15 @@ ToxicRaincloud :: class : Component {
     circle_collider: Circle_Collider;
     expires_at: float;
     next_scan_at: float;
+    effect_center: v2;
+    has_effect_center: bool;
+    loop_sound_id: u64;
 
     ao_start :: method() {
         circle_collider = entity.get_component(Circle_Collider);
         expires_at = get_time() + TOXIC_RAIN_LIFETIME_SECONDS;
         next_scan_at = 0.0;
+        loop_sound_id = 0;
     }
 
     ao_update :: method(dt: float) {
@@ -230,6 +310,8 @@ ToxicRaincloud :: class : Component {
             return;
         }
 
+        this.ensure_loop_sfx();
+
         if circle_collider == null {
             circle_collider = entity.get_component(Circle_Collider);
         }
@@ -241,8 +323,41 @@ ToxicRaincloud :: class : Component {
         this.scan_for_survivors();
     }
 
+    ao_end :: method() {
+        if loop_sound_id != 0 {
+            SFX.stop(loop_sound_id);
+            loop_sound_id = 0;
+        }
+    }
+
+    get_effect_center :: method() -> v2 {
+        if has_effect_center {
+            return effect_center;
+        }
+        return get_toxic_rain_effect_center(entity);
+    }
+
+    ensure_loop_sfx :: method() {
+        if loop_sound_id != 0 {
+            return;
+        }
+
+        sound := get_asset(SFX_Asset, TOXIC_RAIN_LOOP_SFX_PATH);
+        if sound == null {
+            return;
+        }
+
+        desc := SFX.default_sfx_desc();
+        desc.local_only = false;
+        desc.loop = true;
+        desc.volume = 0.45;
+        desc.range_multiplier = 4.0;
+        desc.set_position(this.get_effect_center());
+        loop_sound_id = SFX.play(sound, desc);
+    }
+
     scan_for_survivors :: method() {
-        center := get_toxic_rain_effect_center(entity);
+        center := this.get_effect_center();
         radius := get_toxic_rain_effect_radius(entity);
         radius_sq := radius * radius;
         entity_player := get_round_entity_player();
@@ -285,15 +400,18 @@ spawn_toxic_rain_sabotage :: proc(entity_player: Player, position: v2) -> bool {
         return false;
     }
 
-    rain_entity := Scene.instantiate(prefab, position);
+    rain_entity := Scene.instantiate(prefab, position + TOXIC_RAIN_SPAWN_OFFSET);
     if !#alive(rain_entity) {
         return false;
     }
 
     rain_entity.mark_teleported();
-    if rain_entity.get_component(ToxicRaincloud) == null {
-        rain_entity.add_component(ToxicRaincloud);
+    toxic_rain := rain_entity.get_component(ToxicRaincloud);
+    if toxic_rain == null {
+        toxic_rain = rain_entity.add_component(ToxicRaincloud);
     }
+    toxic_rain.effect_center = position;
+    toxic_rain.has_effect_center = true;
     return true;
 }
 
@@ -400,18 +518,8 @@ draw_entity_sabotage_modal_ui :: proc(player: Player) {
     } else if get_time() < player.jumpscare_cooldown_ends_at {
         jumpscare_cooldown_label = format_sabotage_cooldown(player.jumpscare_cooldown_ends_at - get_time());
     }
-    toxic_rain_unlocked := is_entity_toxic_rain_sabotage_unlocked();
-    toxic_rain_disabled := !toxic_rain_unlocked || get_time() < player.toxic_rain_cooldown_ends_at || player.toxic_rain_targeting_active;
-    toxic_rain_cooldown_label := "";
-    if !toxic_rain_unlocked {
-        toxic_rain_cooldown_label = "Locked";
-    } else if get_time() < player.toxic_rain_cooldown_ends_at {
-        toxic_rain_cooldown_label = format_sabotage_cooldown(player.toxic_rain_cooldown_ends_at - get_time());
-    }
-
     lights_out_handle := draw_entity_sabotage_option_button("sabotage_lights_out", "Lights Out", ENTITY_SABOTAGE_LIGHTS_ICON_PATH, lights_disabled, lights_cooldown_label);
     jumpscare_handle := draw_entity_sabotage_option_button("sabotage_jumpscare", "Jumpscare", ENTITY_SABOTAGE_JUMPSCARE_ICON_PATH, jumpscare_disabled, jumpscare_cooldown_label);
-    toxic_rain_handle := draw_entity_sabotage_option_button("sabotage_toxic_rain", "Toxic Rain", ENTITY_SABOTAGE_TOXIC_RAIN_ICON_PATH, toxic_rain_disabled, toxic_rain_cooldown_label);
 
     UIK.panel_end();
     UIK.panel_end();
@@ -428,9 +536,6 @@ draw_entity_sabotage_modal_ui :: proc(player: Player) {
     if !jumpscare_disabled && UIK.clicked(jumpscare_handle) {
         player.sabotage_modal_open = false;
         player.jumpscare_target_modal_open = true;
-    }
-    if !toxic_rain_disabled && UIK.clicked(toxic_rain_handle) {
-        player.start_toxic_rain_targeting();
     }
 }
 
@@ -565,5 +670,73 @@ Entity_Sabotage_Ability :: class : Ability_Base {
 
     on_draw_button :: proc(instance: Entity_Sabotage_Ability, rect: Rect) {
         draw_ability_name_label(rect, "Sabotage");
+    }
+}
+
+Entity_Toxic_Rain_Ability :: class : Ability_Base {
+    on_init :: method() {
+        name = "Toxic Rain";
+        icon = get_asset(Texture_Asset, ENTITY_SABOTAGE_TOXIC_RAIN_ICON_PATH);
+        is_aimed_ability = true;
+        
+    }
+
+    can_use :: method() -> bool {
+        return can_start_toxic_rain_targeting(player);
+    }
+
+    on_update :: method(params: ref Ability_Update_Params) {
+        if !params.can_use {
+            if player != null && player.active_ability != null && player.active_ability.type == Entity_Toxic_Rain_Ability {
+                player.active_ability = null;
+            }
+            return;
+        }
+
+        was_targeting := player.active_ability != null && player.active_ability.type == Entity_Toxic_Rain_Ability;
+        targeted := Ability_Utilities.update_targeted_ability(player, this, ref params);
+        if !targeted.targeting {
+            return;
+        }
+        if !was_targeting {
+            player.toxic_rain_targeting_started_frame = get_frame_number();
+        }
+
+        aiming := Ability_Utilities.update_aiming_ability(player, ref params);
+        if aiming.cancel {
+            player.active_ability = null;
+            player.toxic_rain_targeting_started_frame = 0;
+            return;
+        }
+
+        aim_direction := normalize(aiming.aim_direction);
+        aim_distance := get_toxic_rain_aim_distance(player, ref params, aim_direction);
+        target_position, found := resolve_toxic_rain_target(player, aim_direction, aim_distance);
+        if aiming.aim {
+            player.last_aim_direction = aim_direction;
+            draw_toxic_rain_target_preview(target_position, found);
+        }
+
+        if !aiming.activate {
+            return;
+        }
+        if player.device_kind == .PC && get_frame_number() <= player.toxic_rain_targeting_started_frame {
+            return;
+        }
+
+        player.active_ability = null;
+        player.toxic_rain_targeting_started_frame = 0;
+        if !params.can_use || !found {
+            return;
+        }
+
+        if spawn_toxic_rain_sabotage(player, target_position) {
+            player.toxic_rain_cooldown_ends_at = get_time() + TOXIC_RAIN_COOLDOWN_SECONDS;
+            current_cooldown = TOXIC_RAIN_COOLDOWN_SECONDS;
+        }
+    }
+
+    on_draw_button :: proc(instance: Entity_Toxic_Rain_Ability, rect: Rect) {
+        draw_ability_name_label(rect, "Rain");
     }
 }
