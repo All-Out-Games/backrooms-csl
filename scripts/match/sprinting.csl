@@ -121,7 +121,15 @@ draw_stamina_bar :: proc(player: Player) {
     UI.push_scale_factor(5.0 / 540.0);
     defer UI.pop_scale_factor();
 
-    UI.push_player_material(player);
+    material_player := player;
+    if player.is_round_minion() {
+        local_player := get_local_player();
+        if #alive(local_player) {
+            material_player = local_player;
+        }
+    }
+
+    UI.push_player_material(material_player);
     defer UI.pop_material();
 
     stamina_rect := player.username_rect.top_center_rect().offset(0, 5);
