@@ -2302,6 +2302,9 @@ Player :: class : Player_Base {
         UI.push_layer(ENTITY_REVEALED_EYE_ICON_LAYER);
         defer UI.pop_layer();
 
+        UI.push_player_material(target);
+        defer UI.pop_material();
+
         i: s64 = 0;
         while i < icon_count {
             icon := get_asset(Texture_Asset, icon_paths[i]);
