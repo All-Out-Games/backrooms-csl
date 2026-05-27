@@ -2576,7 +2576,7 @@ Game_Manager :: class : Component {
         }
 
         if entity_player, ok := find_player_by_user_id(entity_user_id); ok {
-            put_entity_abilities_on_standard_cooldown(entity_player);
+            clear_player_ability_cooldowns(entity_player);
             entity_player.remove_freeze_reason(FREEZE_ENTITY_HEAD_START);
         }
 
