@@ -3024,7 +3024,7 @@ end :: proc(player: Player) {
     log_info("end: % forced a Survivor win", {player.get_username()});
 } @chat_command
 
-pause_round_timer :: proc(player: Player) {
+pause :: proc(player: Player) {
     gm := get_game_manager();
     if !#alive(gm) {
         Notifier.notify(player, "No match manager found.");
@@ -3033,13 +3033,13 @@ pause_round_timer :: proc(player: Player) {
 
     if gm.set_round_timer_paused(true) {
         Notifier.notify(player, "Round timer paused.");
-        log_info("pause_round_timer: % paused the round timer", {player.get_username()});
+        log_info("pause: % paused the round timer", {player.get_username()});
     } else {
         Notifier.notify(player, "Round timer can only be paused during the hunt.");
     }
 } @chat_command
 
-resume_round_timer :: proc(player: Player) {
+resume :: proc(player: Player) {
     gm := get_game_manager();
     if !#alive(gm) {
         Notifier.notify(player, "No match manager found.");
@@ -3048,7 +3048,7 @@ resume_round_timer :: proc(player: Player) {
 
     if gm.set_round_timer_paused(false) {
         Notifier.notify(player, "Round timer resumed.");
-        log_info("resume_round_timer: % resumed the round timer", {player.get_username()});
+        log_info("resume: % resumed the round timer", {player.get_username()});
     } else {
         Notifier.notify(player, "Round timer can only be resumed during the hunt.");
     }
