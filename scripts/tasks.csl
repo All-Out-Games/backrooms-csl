@@ -178,6 +178,16 @@ is_task_completed_for_player :: proc(player: Player, task: Task_Base) -> bool {
     return task.completed;
 }
 
+is_task_checked_for_task_list_viewer :: proc(viewer: Player, task_owner: Player, task: Task_Base) -> bool {
+    if task == null {
+        return false;
+    }
+    if viewer != null && viewer.is_round_entity() && task.id == TASK_ID_FIX_CAMERA {
+        return true;
+    }
+    return is_task_completed_for_player(task_owner, task);
+}
+
 is_task_completed :: proc(player: Player, task_id: string) -> bool {
     task := find_task(player, task_id);
     return is_task_completed_for_player(player, task);
@@ -1771,14 +1781,42 @@ draw_task_help_entry_list :: proc(scroll_id: string, entries: ref [..]Task_Help_
     UIK.list_end();
 }
 
-draw_task_help_panel :: proc(player: Player) {
+get_task_list_source_player :: proc(viewer: Player) -> Player {
+    if viewer == null {
+        return null;
+    }
+    if !viewer.is_round_entity() {
+        return viewer;
+    }
+
+    gm := get_game_manager();
+    if !#alive(gm) {
+        return viewer;
+    }
+
+    for survivor: component_iterator(Player) {
+        if !gm.is_survivor_player(survivor) || survivor.is_round_entity() || survivor.is_round_minion() || survivor.is_round_dead() {
+            continue;
+        }
+        if survivor.active_tasks.elements.count > 0 {
+            return survivor;
+        }
+    }
+
+    return viewer;
+}
+
+draw_task_help_panel :: proc(player: Player, task_source: Player) {
     if player == null return;
     if !player.task_help_open return;
+    if task_source == null {
+        task_source = player;
+    }
 
     entries: [..]Task_Help_Entry;
-    if player.active_tasks.elements.count > 0 {
-        for i: 0..player.active_tasks.elements.count - 1 {
-            task := player.active_tasks.elements[i];
+    if task_source.active_tasks.elements.count > 0 {
+        for i: 0..task_source.active_tasks.elements.count - 1 {
+            task := task_source.active_tasks.elements[i];
             if task == null {
                 continue;
             }
@@ -2018,11 +2056,11 @@ draw_task_progress_bar :: proc(player: Player, screen: Rect) {
     UIK.end();
 }
 
-draw_task_entry :: proc(entry_rect: Rect, task: Task_Base, player: Player) {
+draw_task_entry :: proc(entry_rect: Rect, task: Task_Base, task_owner: Player, viewer: Player) {
     entry_content := entry_rect.inset(0.0, 9.0, 0.0, 9.0);
     checkbox_slot := entry_content.cut_left(36.0);
     checkbox_rect := checkbox_slot.center_rect().grow(TASK_CHECKBOX_HALF_SIZE);
-    checked_off := is_task_completed_for_player(player, task);
+    checked_off := is_task_checked_for_task_list_viewer(viewer, task_owner, task);
     draw_task_checkbox(checkbox_rect, checked_off);
 
     text_rect := entry_content;
@@ -2043,7 +2081,7 @@ draw_task_entry :: proc(entry_rect: Rect, task: Task_Base, player: Player) {
     task_ts.autofit_max_size = 36;
     UI.text(text_rect.inset(0, 6, 0, 6), task_ts, get_task_display_name(task.id));
 
-    if task.id == TASK_ID_REPAIR_LAPTOP && player != null && !task.started && !task.completed {
+    if task.id == TASK_ID_REPAIR_LAPTOP && viewer != null && viewer == task_owner && !task.started && !task.completed {
         UI.push_id("start_repair_laptop_task");
         defer UI.pop_id();
 
@@ -2059,9 +2097,9 @@ draw_task_entry :: proc(entry_rect: Rect, task: Task_Base, player: Player) {
 
         if UI.button(entry_rect, start_bs, .{}, "").clicked {
             if task.#type == Task_Repair_Laptop {
-                task.(Task_Repair_Laptop).start_attempt(player);
+                task.(Task_Repair_Laptop).start_attempt(viewer);
             } else {
-                task.start_attempt(player);
+                task.start_attempt(viewer);
             }
         }
     }
@@ -2082,7 +2120,12 @@ draw_task_list_ui :: proc(player: Player) {
     if gm.phase != .SURVIVOR_HEAD_START && gm.phase != .ACTIVE {
         return;
     }
-    if !gm.is_survivor_player(player) || player.is_round_entity() || player.is_round_dead() {
+    if ((!gm.is_survivor_player(player) && !player.is_round_entity()) || player.is_round_dead()) {
+        return;
+    }
+
+    task_source := get_task_list_source_player(player);
+    if task_source == null {
         return;
     }
 
@@ -2092,7 +2135,7 @@ draw_task_list_ui :: proc(player: Player) {
     }
 
     if player.task_help_open {
-        draw_task_help_panel(player);
+        draw_task_help_panel(player, task_source);
         return;
     }
 
@@ -2105,19 +2148,19 @@ draw_task_list_ui :: proc(player: Player) {
     screen := UI.get_safe_screen_rect();
     draw_task_progress_bar(player, screen);
     header_rect := draw_task_list_header(screen, player);
-    draw_task_help_panel(player);
+    draw_task_help_panel(player, task_source);
     if !player.task_list_open {
         return;
     }
 
-    task_count := player.active_tasks.elements.count;
+    task_count := task_source.active_tasks.elements.count;
     if task_count <= 0 {
         task_count = 1;
     }
 
     list_height := TASK_LIST_PADDING * 2.0 + task_count.(float) * TASK_ENTRY_HEIGHT;
-    if player.active_tasks.elements.count > 1 {
-        list_height += (player.active_tasks.elements.count - 1).(float) * TASK_ENTRY_GAP;
+    if task_source.active_tasks.elements.count > 1 {
+        list_height += (task_source.active_tasks.elements.count - 1).(float) * TASK_ENTRY_GAP;
     }
 
     list_rect := header_rect.bottom_left_rect().grow(0.0, TASK_LIST_WIDTH, list_height, 0.0);
@@ -2129,7 +2172,7 @@ draw_task_list_ui :: proc(player: Player) {
     }
 
     list_content := list_rect.inset(TASK_LIST_PADDING, 15.0, TASK_LIST_PADDING, 15.0);
-    if player.active_tasks.elements.count == 0 {
+    if task_source.active_tasks.elements.count == 0 {
         empty_ts := UI.default_text_settings();
         empty_ts.size = 30;
         empty_ts.color = v4.{0.85, 0.85, 0.9, 0.8};
@@ -2143,15 +2186,15 @@ draw_task_list_ui :: proc(player: Player) {
         return;
     }
 
-    for i: 0..player.active_tasks.elements.count - 1 {
-        task := player.active_tasks.elements[i];
+    for i: 0..task_source.active_tasks.elements.count - 1 {
+        task := task_source.active_tasks.elements[i];
         if task == null {
             continue;
         }
 
         entry_rect := list_content.cut_top(TASK_ENTRY_HEIGHT);
-        draw_task_entry(entry_rect, task, player);
-        if i < player.active_tasks.elements.count - 1 {
+        draw_task_entry(entry_rect, task, task_source, player);
+        if i < task_source.active_tasks.elements.count - 1 {
             list_content.cut_top(TASK_ENTRY_GAP);
         }
     }

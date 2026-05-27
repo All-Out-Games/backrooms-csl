@@ -28,17 +28,4 @@
     },
     "layer": -3
   }
-},
-{
-  "cid": 3,
-  "aoid": 2948629795,
-  "component_type": "Internal_Component",
-  "internal_component_type": "EscapeTheBackrooms",
-  "data": {
-    "radius": 2,
-    "required_hold_time": 0.6000000238418579,
-    "prompt_offset": {
-      "Y": 1
-    }
-  }
 }
