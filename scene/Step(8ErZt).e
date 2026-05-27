@@ -5,7 +5,7 @@
   "name": "Step",
   "local_enabled": true,
   "local_position": {
-    "X": 20.9937286376953125,
+    "X": 21.5613250732421875,
     "Y": -23.7737121582031250
   },
   "local_rotation": 0,

@@ -24,7 +24,7 @@
   "internal_component_type": "Sprite_Renderer",
   "data": {
     "texture": "sprites/Zone1b/chair (1).png",
-    "depth_offset": -0.0979356765747070,
+    "depth_offset": -0.1797571331262589,
     "tint": {
       "X": 0.3810517787933350,
       "Y": 0.4061306416988373
@@ -37,13 +37,15 @@
   "component_type": "Internal_Component",
   "internal_component_type": "Box_Collider",
   "data": {
+    "make_navmesh_loop": true,
+    "flip_navmesh_loop": true,
     "size": {
       "X": 0.5848388671875000,
-      "Y": 0.4085521697998047
+      "Y": 0.3765316009521484
     },
     "offset": {
       "X": -0.0031738281250000,
-      "Y": -0.4169626235961914
+      "Y": -0.4329729080200195
     }
   }
 }
