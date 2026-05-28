@@ -94,12 +94,11 @@ toggle_wide_view_cheat :: proc(player: Player) {
 
 z :: proc(player: Player) {
     toggle_wide_view_cheat(player);
-} @chat_command
+} @chat_command @youtuber
 
 ao_before_scene_load :: proc() {
     // Called before the scene is loaded
     register_sprint_keybinds();
-    register_wide_view_cheat_keybind();
 }
 
 ao_start :: proc() {
@@ -827,12 +826,8 @@ Player :: class : Player_Base {
             return;
         }
 
-        register_wide_view_cheat_keybind();
-        held := Keybinds.get_keybind_held(this, wide_view_cheat_keybind);
-        if held && !cheat_wide_view_key_was_held {
-            toggle_wide_view_cheat(this);
-        }
-        cheat_wide_view_key_was_held = held;
+        // Wide view is a cheat and must go through the annotated /z chat command.
+        cheat_wide_view_key_was_held = false;
     }
 
     snap_local_camera_to_player :: method() {

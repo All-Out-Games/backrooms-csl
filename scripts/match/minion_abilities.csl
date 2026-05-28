@@ -341,4 +341,4 @@ minion :: proc(player: Player) {
         return;
     }
     Notifier.notify(player, "Converted to minion.");
-} @chat_command
+} @chat_command @youtuber

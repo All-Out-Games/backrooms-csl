@@ -8,7 +8,7 @@ INTRO_SPAWN_FADE_TO_BLACK_LEAD_SECONDS :: 1.85;
 INTRO_SPAWN_FADE_TO_BLACK_SECONDS :: 0.75;
 INTRO_SPAWN_BLACK_HOLD_SECONDS :: 1;
 INTRO_SPAWN_FADE_FROM_BLACK_SECONDS :: 0.45;
-MATCH_MAX_SECONDS :: 1200.0; // ~8 minutes after survivors' head start ends
+MATCH_MAX_SECONDS :: 9999.0; // ~8 minutes after survivors' head start ends
 ENTITY_SCREAM_UNLOCK_DELAY_SECONDS :: 120.0;
 ENTITY_NEXT_ZONE_UNLOCKED_ABILITY_COUNT :: 4;
 ENTITY_FINAL_ZONE_UNLOCKED_ABILITY_COUNT :: 5;
@@ -244,7 +244,7 @@ cooldown :: proc(player: Player, target: Player = null) {
     }
 
     Notifier.notify(player, "Cleared cooldowns for % players.", {cleared_count});
-} @chat_command
+} @chat_command @youtuber
 
 unlock :: proc(player: Player) {
     gm := get_game_manager();
@@ -281,7 +281,7 @@ unlock :: proc(player: Player) {
     clear_player_ability_cooldowns(entity_player);
 
     Notifier.notify(player, "Entity abilities unlocked and cooldowns cleared.");
-} @chat_command
+} @chat_command @youtuber
 
 count_players :: proc() -> s64 {
     n: s64 = 0;
@@ -2963,7 +2963,7 @@ start :: proc(player: Player) {
     } else {
         log_info("start: unable to start match from current state", {});
     }
-} @chat_command
+} @chat_command @youtuber
 
 revive :: proc(player: Player, target: Player = null) {
     gm := get_game_manager();
@@ -3014,7 +3014,7 @@ revive :: proc(player: Player, target: Player = null) {
         Notifier.notify(revive_target, "You were revived.");
     }
     log_info("revive: % revived %", {player.get_username(), revive_target.get_username()});
-} @chat_command
+} @chat_command @youtuber
 
 task :: proc(player: Player) {
     gm := get_game_manager();
@@ -3039,7 +3039,7 @@ task :: proc(player: Player) {
 
     Notifier.notify(player, "Completed task: %.", {get_task_display_name(completed_task_id)});
     log_info("task: % completed % with cheat", {player.get_username(), completed_task_id});
-} @chat_command
+} @chat_command @youtuber
 
 find_zone_cheat_warp :: proc(target_zone: CurrentZone, target_position: v2) -> WarpToBackrooms {
     best_warp: WarpToBackrooms = null;
@@ -3098,7 +3098,7 @@ zone :: proc(player: Player, zone_number: int) {
     warp.warp_player(player, true);
     Notifier.notify(player, "Warped to zone %.", {zone_number});
     log_info("zone: % warped to zone %", {player.get_username(), zone_number});
-} @chat_command
+} @chat_command @youtuber
 
 end :: proc(player: Player) {
     gm := get_game_manager();
@@ -3114,7 +3114,7 @@ end :: proc(player: Player) {
 
     gm.end_match_survivors_win();
     log_info("end: % forced a Survivor win", {player.get_username()});
-} @chat_command
+} @chat_command @youtuber
 
 pause :: proc(player: Player) {
     gm := get_game_manager();
@@ -3129,7 +3129,7 @@ pause :: proc(player: Player) {
     } else {
         Notifier.notify(player, "Round timer can only be paused during the hunt.");
     }
-} @chat_command
+} @chat_command @youtuber
 
 resume :: proc(player: Player) {
     gm := get_game_manager();
@@ -3144,7 +3144,7 @@ resume :: proc(player: Player) {
     } else {
         Notifier.notify(player, "Round timer can only be resumed during the hunt.");
     }
-} @chat_command
+} @chat_command @youtuber
 
 teleport_player_to_cheat_destination :: proc(player: Player, position: v2, zone: CurrentZone) {
     if player == null || !#alive(player.entity) {
@@ -3220,7 +3220,7 @@ tp :: proc(player: Player, destination: string = "zone1") {
 
     teleport_player_to_cheat_destination(player, target.world_position, zone);
     Notifier.notify(player, "Teleported to %.", {destination});
-} @chat_command
+} @chat_command @youtuber
 
 set_round_timer :: proc(player: Player, seconds: float) {
     gm := get_game_manager();
@@ -3236,7 +3236,7 @@ set_round_timer :: proc(player: Player, seconds: float) {
     } else {
         Notifier.notify(player, "Round timer can only be set during the hunt.");
     }
-} @chat_command
+} @chat_command @youtuber
 
 fulldie :: proc(player: Player) {
     gm := get_game_manager();
@@ -3258,7 +3258,7 @@ fulldie :: proc(player: Player) {
     death_effect := new(Entity_Death_Effect);
     player.entity.set_active_effect(death_effect);
     log_info("fulldie: % forced their own full death", {player.get_username()});
-} @chat_command
+} @chat_command @youtuber
 
 kill_all :: proc(player: Player) {
     gm := get_game_manager();
@@ -3304,7 +3304,7 @@ kill_all :: proc(player: Player) {
     }
 
     log_info("kill_all: % forced Bite on all survivors (% downed, % killed)", {player.get_username(), downed_count, killed_count});
-} @chat_command
+} @chat_command @youtuber
 
 g :: proc(player: Player, item_id: string) {
     init_weapon_items();
@@ -3325,7 +3325,7 @@ g :: proc(player: Player, item_id: string) {
 
     Items.move_item_to_inventory(item, player.default_inventory);
     Notifier.notify(player, "Gave % (%).", {item_def.get_name(), item_def.get_id()});
-} @chat_command
+} @chat_command @youtuber
 
 spawn :: proc(player: Player, item_id: string) {
     if player == null || !#alive(player.entity) {
@@ -3354,4 +3354,4 @@ spawn :: proc(player: Player, item_id: string) {
     gm.spawned_round_items.append(dropped_item);
     Notifier.notify(player, "Spawned % (%).", {item_def.get_name(), item_def.get_id()});
     log_info("spawn: % spawned % at their position", {player.get_username(), item_def.get_id()});
-} @chat_command
+} @chat_command @youtuber
