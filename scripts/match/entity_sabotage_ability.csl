@@ -348,7 +348,6 @@ ToxicRaincloud :: class : Component {
         }
 
         desc := SFX.default_sfx_desc();
-        desc.local_only = false;
         desc.loop = true;
         desc.volume = 0.45;
         desc.range_multiplier = 4.0;
@@ -429,7 +428,7 @@ format_sabotage_cooldown :: proc(remaining_seconds: float) -> string {
     return format_string("%:%", {minutes, seconds});
 }
 
-draw_entity_sabotage_option_button :: proc(id: string, label: string, icon_path: string, disabled: bool = false, cooldown_label: string = "") -> UIK.Interact_Handle {
+draw_entity_sabotage_option_button :: proc(id: string, label: string, icon_path: string, disabled: bool = false, cooldown_label: string = "") -> Interact_Result {
     icon := get_asset(Texture_Asset, icon_path);
     desc := UIK.widget_desc_button_default(.BUTTON_BASIC_GREY);
     desc.panel.width = UIK.flex(1);
@@ -581,7 +580,7 @@ draw_entity_jumpscare_target_modal_ui :: proc(player: Player) {
     content.main_align = .CENTER;
     UIK.panel_begin(content);
 
-    handles: [ENTITY_JUMPSCARE_MODAL_MAX_TARGETS]UIK.Interact_Handle;
+    handles: [ENTITY_JUMPSCARE_MODAL_MAX_TARGETS]Interact_Result;
     target_ids: [ENTITY_JUMPSCARE_MODAL_MAX_TARGETS]string;
     target_count: s64 = 0;
 

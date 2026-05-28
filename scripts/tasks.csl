@@ -1824,8 +1824,8 @@ draw_task_help_panel :: proc(player: Player, task_source: Player) {
         }
     }
 
-    exit_handle: UIK.Interact_Handle;
-    preview_handle: UIK.Interact_Handle;
+    exit_handle: Interact_Result;
+    preview_handle: Interact_Result;
     preview_available := is_generator_ui_preview_enabled();
 
     UIK.begin(UIK.modal(UIK.rect_window(), 500, v4{0.0, 0.0, 0.0, 0.72}));

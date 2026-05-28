@@ -155,7 +155,6 @@ ao_update :: proc(dt: float) {
 
     if entity_ambience_sound_id == 0 {
         entity_ambience_desc := SFX.default_sfx_desc();
-        entity_ambience_desc.local_only = false;
         entity_ambience_desc.loop = true;
         entity_ambience_desc.volume = 1;
         entity_ambience_desc.channel = .MUSIC;
@@ -3023,7 +3022,7 @@ Player :: class : Player_Base {
     // Draws a screen-space arrow pointing toward a world-space `position`.
     DrawArrowToPosition :: proc(using this: Player, position: v2, texture_path: string = "", label: string = "", icon_upright: bool = false, arrow_size_px: float = 40.0) {
         if this == null return;
-        if entity == null || entity.self == null return;
+        if !#alive(entity) return;
         if this.is_local() {
             if this.should_hide_arrow_overlays_for_modal_ui() {
                 return;

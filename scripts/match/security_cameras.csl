@@ -110,7 +110,7 @@ play_security_camera_ui_sfx :: proc(player: Player) {
     }
 
     desc := SFX.default_sfx_desc();
-    desc.local_only = true;
+    desc.specific_to_player = player;
     desc.volume = 0.55;
     desc.speed_perturb = 0.15;
     SFX.play(get_asset(SFX_Asset, SECURITY_CAMERA_SWITCH_SFX_PATH), desc);
@@ -118,7 +118,6 @@ play_security_camera_ui_sfx :: proc(player: Player) {
 
 play_security_camera_positional_sfx :: proc(position: v2) {
     desc := SFX.default_sfx_desc();
-    desc.local_only = false;
     desc.volume = 0.65;
     desc.range_multiplier = 2.0;
     desc.set_position(position);
@@ -244,10 +243,10 @@ draw_security_camera_controls :: proc(player: Player, camera_count: s64) {
         return;
     }
 
-    exit_handle: UIK.Interact_Handle;
-    next_handle: UIK.Interact_Handle;
-    prev_handle: UIK.Interact_Handle;
-    close_handle: UIK.Interact_Handle;
+    exit_handle: Interact_Result;
+    next_handle: Interact_Result;
+    prev_handle: Interact_Result;
+    close_handle: Interact_Result;
 
     UIK.begin(UIK.modal(UIK.rect_window_large(), 20, v4{0.0, 0.0, 0.0, 0.0}));
 

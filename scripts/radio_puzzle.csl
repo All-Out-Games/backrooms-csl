@@ -57,7 +57,6 @@ play_radio_sfx :: proc(asset_path: string, position: v2, volume: float, speed: f
     }
 
     desc := SFX.default_sfx_desc();
-    desc.local_only = false;
     desc.volume = volume;
     desc.speed = speed;
     desc.range_multiplier = range_multiplier;

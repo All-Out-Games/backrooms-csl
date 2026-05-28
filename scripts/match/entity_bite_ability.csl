@@ -12,7 +12,6 @@ play_entity_bite_sfx :: proc(player: Player) {
 
     desc := SFX.default_sfx_desc();
     desc.entity_to_follow = player.entity.id;
-    desc.local_only = false;
     desc.volume = 1.15;
     SFX.play(get_asset(SFX_Asset, "SFX/entitybite.wav"), desc);
 }
@@ -22,7 +21,6 @@ play_downed_survivor_scream_sfx :: proc(player: Player) {
 
     desc := SFX.default_sfx_desc();
     desc.entity_to_follow = player.entity.id;
-    desc.local_only = false;
     desc.volume = 0.9;
     desc.range_multiplier = 5.0;
     desc.speed_perturb = 0.08;

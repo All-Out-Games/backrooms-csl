@@ -19,8 +19,8 @@ Vitals_UI_Entry :: struct {
 }
 
 Vitals_Row_Handles :: struct {
-    avatar: UIK.Interact_Handle;
-    monitor: UIK.Interact_Handle;
+    avatar: Interact_Result;
+    monitor: Interact_Result;
 }
 
 HUD_VITALS_LAYER :: 50;
@@ -334,8 +334,8 @@ draw_vitals_hud :: proc(player: Player, dt: float) {
         sync_vitals_ui_animation(ref player.vitals_ui_entries[entry_index], other);
         tick_vitals_ui_entry(ref player.vitals_ui_entries[entry_index], dt);
 
-        avatar_rect := UIK.resolve(row_handles[i].avatar).rect;
-        monitor_rect := UIK.resolve(row_handles[i].monitor).rect;
+        avatar_rect := row_handles[i].avatar.rect;
+        monitor_rect := row_handles[i].monitor.rect;
 
         avatar_spine := player.vitals_ui_entries[entry_index].avatar_spine;
         if avatar_spine != null {

@@ -22,8 +22,8 @@
   "component_type": "Internal_Component",
   "internal_component_type": "Tilemap_Component",
   "data": {
-    "width_in_chunks": 1,
-    "height_in_chunks": 1,
+    "width_in_chunks": 2,
+    "height_in_chunks": 2,
     "layer_data": [
       {
         "layer_id": 1,

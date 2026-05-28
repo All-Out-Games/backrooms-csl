@@ -9,7 +9,6 @@ play_entity_scream_sfx :: proc(player: Player) {
     if player == null || !#alive(player.entity) return;
 
     desc := SFX.default_sfx_desc();
-    desc.local_only = false;
     desc.entity_to_follow = player.entity.id;
     desc.volume = 1;
     desc.range_multiplier = 7.0;
