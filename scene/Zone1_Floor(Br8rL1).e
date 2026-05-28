@@ -34,10 +34,6 @@
         "tile_size": 4,
         "chunks": [
           {
-            "chunk_x": 7,
-            "chunk_y": 4
-          },
-          {
             "tiles": [
               0,
               9223372034707292159,
