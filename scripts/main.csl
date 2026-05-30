@@ -99,6 +99,7 @@ z :: proc(player: Player) {
 ao_before_scene_load :: proc() {
     // Called before the scene is loaded
     register_sprint_keybinds();
+    register_wide_view_cheat_keybind();
 }
 
 ao_start :: proc() {
@@ -825,8 +826,12 @@ Player :: class : Player_Base {
             return;
         }
 
-        // Wide view is a cheat and must go through the annotated /z chat command.
-        cheat_wide_view_key_was_held = false;
+        register_wide_view_cheat_keybind();
+        held := Keybinds.get_keybind_held(this, wide_view_cheat_keybind);
+        if held && !cheat_wide_view_key_was_held && this.is_youtuber() {
+            toggle_wide_view_cheat(this);
+        }
+        cheat_wide_view_key_was_held = held;
     }
 
     snap_local_camera_to_player :: method() {
@@ -1835,6 +1840,8 @@ Player :: class : Player_Base {
             draw_hunt_begin_banner_ui(this);
             draw_exit_unlocked_banner_ui(this);
             draw_match_timer_ui(this);
+            draw_broken_camera_workbench_arrow_ui(this);
+            draw_reconnect_wires_task_arrow_ui(this);
             draw_match_end_ui(this);
             draw_task_list_ui(this);
             update_tasks(this);

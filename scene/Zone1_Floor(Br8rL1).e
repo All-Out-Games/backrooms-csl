@@ -5,8 +5,8 @@
   "name": "Zone1_Floor",
   "local_enabled": true,
   "local_position": {
-    "X": -1.3002166748046875,
-    "Y": -9.2883195877075195
+    "X": 62.9476776123046875,
+    "Y": 54.8556671142578125
   },
   "local_rotation": 0,
   "local_scale": {

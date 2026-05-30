@@ -8,7 +8,7 @@ INTRO_SPAWN_FADE_TO_BLACK_LEAD_SECONDS :: 1.85;
 INTRO_SPAWN_FADE_TO_BLACK_SECONDS :: 0.75;
 INTRO_SPAWN_BLACK_HOLD_SECONDS :: 1;
 INTRO_SPAWN_FADE_FROM_BLACK_SECONDS :: 0.45;
-MATCH_MAX_SECONDS :: 9999.0; // ~8 minutes after survivors' head start ends
+MATCH_MAX_SECONDS :: 1200.0; // ~8 minutes after survivors' head start ends
 ENTITY_SCREAM_UNLOCK_DELAY_SECONDS :: 120.0;
 ENTITY_NEXT_ZONE_UNLOCKED_ABILITY_COUNT :: 4;
 ENTITY_FINAL_ZONE_UNLOCKED_ABILITY_COUNT :: 5;
@@ -49,9 +49,12 @@ ENTITY_HEARING_VISUAL_FADE_SPEED :: 6.0;
 SURVIVOR_SPAWN_RADIUS :: 1.5;
 ROUND_ITEM_DESPAWN_TOTAL_SECONDS :: 9999.0;
 ROUND_ITEM_ENGINE_DESPAWN_WINDOW_SECONDS :: 40.0; // Dropped_Item warns for 30s and expires over the next 10s.
+ROUND_START_FLASHBANG_ITEM_ID :: "flashbang";
 SURVIVOR_ESCAPE_ENABLED :: true;
 TASK_ZONE_RANDOM_RADIUS :: 7.0;
 TASK_ZONE_ARROW_HIDE_DISTANCE :: 20.0;
+WORKBENCH_ARROW_ICON_PATH :: "UI/Arrow.png";
+RECONNECT_WIRES_ARROW_ICON_PATH :: "UI/WiresArrow.png";
 LIGHTS_OUT_SABOTAGE_COOLDOWN_SECONDS :: 120.0;
 SABOTAGE_START_COOLDOWN_FRACTION :: 0.5;
 
@@ -536,6 +539,69 @@ draw_entity_target_ping_arrow_ui :: proc(player: Player) {
 
     distance_units := (distance + 0.5).(s64);
     player.DrawArrowToPosition(target.entity.world_position, "UI/schleem_hologram.png", format_string("%m", {distance_units}), true);
+}
+
+find_workbench_entity :: proc() -> Entity {
+    for workshop: component_iterator(Workshop) {
+        if #alive(workshop.entity) {
+            return workshop.entity;
+        }
+    }
+
+    return Scene.get_entity_by_name("Workbench");
+}
+
+draw_broken_camera_workbench_arrow_ui :: proc(player: Player) {
+    if player == null || !player.is_local() || !player.is_round_survivor() {
+        return;
+    }
+    if player.is_round_dead() || player.is_round_downed() {
+        return;
+    }
+    if !player_inventory_has_item_id(player, BROKEN_CAMERA_ITEM_ID) {
+        return;
+    }
+
+    gm := get_game_manager();
+    if !#alive(gm) || !gm.is_round_in_progress() {
+        return;
+    }
+
+    workbench := find_workbench_entity();
+    if !#alive(workbench) {
+        return;
+    }
+
+    player.DrawArrowToPosition(workbench.world_position, WORKBENCH_ARROW_ICON_PATH);
+}
+
+draw_reconnect_wires_task_arrow_ui :: proc(player: Player) {
+    if player == null || !player.is_local() || !player.is_round_survivor() {
+        return;
+    }
+    if player.is_round_dead() || player.is_round_downed() {
+        return;
+    }
+
+    current_task := find_current_assigned_task_cheat(player);
+    if current_task == null || current_task.id != TASK_ID_RECONNECT_WIRE {
+        return;
+    }
+
+    gm := get_game_manager();
+    if !#alive(gm) || !gm.is_round_in_progress() {
+        return;
+    }
+    if gm.lights_out_active {
+        return;
+    }
+
+    wires_entity := gm.get_reconnect_wires_entity();
+    if !#alive(wires_entity) {
+        return;
+    }
+
+    player.DrawArrowToPosition(wires_entity.world_position, RECONNECT_WIRES_ARROW_ICON_PATH);
 }
 
 draw_entity_scream_nav_path_segment :: proc(a: v2, b: v2, alpha: float) {
@@ -1741,6 +1807,28 @@ Game_Manager :: class : Component {
         }
     }
 
+    give_round_start_flashbang :: method(player: Player) -> bool {
+        if player == null {
+            return false;
+        }
+
+        init_weapon_items();
+        item_def := get_registered_item_def_by_id(ROUND_START_FLASHBANG_ITEM_ID);
+        if item_def == null {
+            return false;
+        }
+
+        item := Items.create_item_instance(item_def, 1);
+        will_destroy_item: bool;
+        if !Items.can_move_item_to_inventory(item, player.default_inventory, ref will_destroy_item) {
+            Items.destroy_item_instance(item);
+            return false;
+        }
+
+        Items.move_item_to_inventory(item, player.default_inventory);
+        return true;
+    }
+
     clear_round_item_state :: method() {
         clear_all_player_round_inventories();
         clear_spawned_round_items();
@@ -2597,6 +2685,7 @@ Game_Manager :: class : Component {
             if players[i].get_user_id() != entity_user_id {
                 assign_default_survivor_tasks(players[i]);
             }
+            give_round_start_flashbang(players[i]);
         }
         spawn_round_items_for_match();
         spawn_broken_camera_items_for_match();
