@@ -1,0 +1,182 @@
+import "core:ao"
+
+MONSTER_QUEUE_PRODUCT_ID :: "6a1c59886a93c99e202b05c3";
+MONSTER_QUEUE_COST :: 39;
+MONSTER_QUEUE_SPARK_ICON_PATH :: "$AO/ui/kit/Icons/sparks/spark_large.png";
+MONSTER_QUEUE_BUTTON_LAYER :: 40;
+MONSTER_QUEUE_BANNER_LAYER :: 60;
+
+is_monster_queue_taken :: proc() -> bool {
+    gm := get_game_manager();
+    if !#alive(gm) {
+        return false;
+    }
+    return gm.guaranteed_monster_user_id.count > 0;
+}
+
+is_local_player_guaranteed_monster :: proc(player: Player) -> bool {
+    if player == null {
+        return false;
+    }
+    gm := get_game_manager();
+    if !#alive(gm) {
+        return false;
+    }
+    return gm.guaranteed_monster_user_id == player.get_user_id();
+}
+
+// Called by the engine when a store purchase finishes. Return true to grant it.
+ao_purchase_handler :: proc(player: Player, id: string) -> bool {
+    if id == MONSTER_QUEUE_PRODUCT_ID {
+        gm := get_game_manager();
+        if !#alive(gm) || gm.phase != .LOBBY {
+            return false;
+        }
+        // Someone already grabbed the Monster spot for next round.
+        if gm.guaranteed_monster_user_id.count > 0 {
+            return false;
+        }
+        gm.guaranteed_monster_user_id = player.get_user_id();
+        return true;
+    }
+
+    product := Purchasing.get_product(id);
+    return product.id.count > 0 && !product.consumable;
+}
+
+// Small button on the right that opens the "Be the Monster" buy popup.
+draw_monster_queue_button_ui :: proc(player: Player) {
+    if player == null || !player.is_local_or_server() {
+        return;
+    }
+    gm := get_game_manager();
+    if !#alive(gm) || gm.phase != .LOBBY {
+        return;
+    }
+    // Once someone buys the spot, hide the button for everyone.
+    if is_monster_queue_taken() {
+        return;
+    }
+    if player.monster_queue_modal_open {
+        return;
+    }
+
+    UIK.begin(UIK.window(UIK.rect_sidebar_right()));
+
+    column := UIK.layout_column();
+    column.width = UIK.flex(1);
+    column.height = UIK.flex(1);
+    column.main_align = .CENTER;
+    column.cross_align = .END;
+    column.show_background = false;
+    UIK.panel_begin(column);
+
+    btn_desc := UIK.widget_desc_button_default(.BUTTON_BASIC_PURPLE);
+    btn_desc.panel.width = UIK.pixels(280);
+    btn_desc.panel.height = UIK.pixels(90);
+    UIK.text_set_size_mult(&btn_desc.label_text, 0.8);
+    UIK.text_set_word_wrap(&btn_desc.label_text, false);
+    open_handle := UIK.button("monster_queue_open_btn", "Play as Monster", btn_desc);
+
+    UIK.panel_end();
+    UIK.end();
+
+    if UIK.clicked(open_handle) {
+        player.monster_queue_modal_open = true;
+    }
+}
+
+draw_monster_queue_modal_ui :: proc(player: Player) {
+    if player == null || !player.is_local_or_server() {
+        return;
+    }
+    if !player.monster_queue_modal_open {
+        return;
+    }
+
+    gm := get_game_manager();
+    if !#alive(gm) || gm.phase != .LOBBY || is_monster_queue_taken() {
+        player.monster_queue_modal_open = false;
+        return;
+    }
+
+    UIK.begin(UIK.modal(UIK.rect_window_small(), 200));
+
+    shell := UIK.panel_modal(.PURPLE);
+    shell.gap = 12;
+    shell.padding = v4{18, 18, 18, 18};
+    UIK.panel_begin(shell);
+
+    exit_handle := UIK.title_area(UIK.title_area_desc("Play as Monster"));
+
+    UIK.spacer(UIK.pixels(1), UIK.flex(0.4));
+
+    body := UIK.text_body();
+    UIK.text_set_halign(&body, .CENTER);
+    UIK.text("You are guaranteed to be the Backrooms Monster in the next game! Nobody else can take this spot once you grab it.", body);
+
+    UIK.spacer(UIK.pixels(1), UIK.flex(0.5));
+
+    row := UIK.layout_row(UIK.flex(1), UIK.fit(), 16);
+    UIK.panel_begin(row);
+
+    cancel_desc := UIK.widget_desc_button_default(.BUTTON_BASIC_RED);
+    cancel_desc.panel.width = UIK.flex(1);
+    cancel_desc.panel.height = UIK.pixels(96);
+    cancel_handle := UIK.button("monster_queue_cancel_btn", "No Thanks", cancel_desc);
+
+    buy_desc := UIK.widget_desc_button_default(.BUTTON_BASIC_GREEN);
+    buy_desc.panel.width = UIK.flex(1);
+    buy_desc.panel.height = UIK.pixels(96);
+    buy_handle := UIK.panel_begin_interactive("monster_queue_buy_btn", buy_desc.panel, false);
+    spark_icon := get_asset(Texture_Asset, MONSTER_QUEUE_SPARK_ICON_PATH);
+    UIK.currency(spark_icon, MONSTER_QUEUE_COST, UIK.text_button());
+    UIK.panel_end();
+
+    UIK.panel_end();
+
+    UIK.spacer(UIK.pixels(1), UIK.flex(0.1));
+
+    UIK.panel_end();
+    UIK.end();
+
+    if UIK.clicked(exit_handle) || UIK.clicked(cancel_handle) {
+        player.monster_queue_modal_open = false;
+        return;
+    }
+    if UIK.clicked(buy_handle) {
+        Purchasing.prompt_purchase(player, MONSTER_QUEUE_PRODUCT_ID);
+        player.monster_queue_modal_open = false;
+    }
+}
+
+// Banner at the top of the buyer's screen letting them know they're locked in.
+draw_monster_queue_banner_ui :: proc(player: Player) {
+    if player == null || !player.is_local_or_server() {
+        return;
+    }
+    gm := get_game_manager();
+    if !#alive(gm) || gm.phase != .LOBBY {
+        return;
+    }
+    if !is_local_player_guaranteed_monster(player) {
+        return;
+    }
+
+    UIK.begin(UIK.window(UIK.rect_topbar().offset(0.0, -180.0)));
+
+    shell := UIK.panel_modal(.PURPLE);
+    shell.cross_align = .CENTER;
+    shell.main_align = .CENTER;
+    shell.gap = 4;
+    shell.padding = v4{12, 18, 12, 18};
+    UIK.panel_begin(shell);
+
+    banner_text := UIK.text_title();
+    UIK.text_set_halign(&banner_text, .CENTER);
+    UIK.text_set_word_wrap(&banner_text, false);
+    UIK.text("You will be the Monster next game!", banner_text);
+
+    UIK.panel_end();
+    UIK.end();
+}

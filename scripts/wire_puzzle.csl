@@ -286,7 +286,7 @@ Wire_Puzzle :: class : Interactable {
         complete_task_for_survivors(TASK_ID_RECONNECT_WIRE);
         refresh_emergency_systems_online_state();
         play_blast_door_open_sfx();
-        notify_survivors("% reconnected the wire.", {player.get_username()});
+        notify_survivors("% fixed the wires!", {player.get_username()});
 
         gm := get_game_manager();
         if #alive(gm) {

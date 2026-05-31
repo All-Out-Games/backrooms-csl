@@ -7,7 +7,7 @@ Downed_Revive_Interactable :: class : Interactable {
 
     ao_start :: method() {
         this.set_listener(this);
-        this.set_text("Revive");
+        this.set_text("Help Up");
         required_hold_time = DOWNED_REVIVE_HOLD_SECONDS;
         priority = 25;
     }
