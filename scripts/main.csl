@@ -1865,7 +1865,9 @@ Player :: class : Player_Base {
                 this.draw_viewfinder_screen_overlay();
                 return;
             }
-            draw_vitals_hud(this, dt);
+            if this.is_local() {
+                draw_vitals_hud(this, dt);
+            }
             draw_entity_sabotage_modal_ui(this);
             draw_entity_jumpscare_target_modal_ui(this);
             draw_radio_hint_arrows(this);
