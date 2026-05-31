@@ -56,8 +56,8 @@ get_round_entity_player :: proc() -> Player {
         return null;
     }
 
-    entity_player, ok := find_player_by_user_id(gm.entity_user_id);
-    if !ok || !#alive(entity_player) || !#alive(entity_player.entity) {
+    entity_player := gm.get_entity_player();
+    if !#alive(entity_player) || !#alive(entity_player.entity) {
         return null;
     }
     return entity_player;

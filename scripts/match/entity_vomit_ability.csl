@@ -30,17 +30,25 @@ play_entity_vomit_sfx :: proc(player: Player) {
 }
 
 find_round_entity_for_mold_vomit :: proc(owner_user_id: string) -> Player {
+    gm := get_game_manager();
+
     if owner_user_id.count > 0 {
+        if #alive(gm) && owner_user_id == gm.entity_user_id {
+            owner := gm.get_entity_player();
+            if #alive(owner) && owner.is_round_entity() {
+                return owner;
+            }
+        }
+
         owner, found := find_player_by_user_id(owner_user_id);
         if found && owner.is_round_entity() {
             return owner;
         }
     }
 
-    gm := get_game_manager();
     if #alive(gm) && gm.entity_user_id.count > 0 {
-        owner, found := find_player_by_user_id(gm.entity_user_id);
-        if found && owner.is_round_entity() {
+        owner := gm.get_entity_player();
+        if #alive(owner) && owner.is_round_entity() {
             return owner;
         }
     }

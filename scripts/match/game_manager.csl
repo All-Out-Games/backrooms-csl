@@ -123,6 +123,10 @@ find_scene_navmesh :: proc() -> Navmesh {
 }
 
 find_player_by_user_id :: proc(user_id: string) -> Player, bool {
+    if user_id.count == 0 {
+        return null, false;
+    }
+
     for p: component_iterator(Player) {
         if p.get_user_id() == user_id {
             return p, true;
@@ -258,13 +262,7 @@ unlock :: proc(player: Player) {
 
     entity_player := player;
     if !#alive(entity_player) || !entity_player.is_round_entity() {
-        entity_player = null;
-        if gm.entity_user_id.count > 0 {
-            found_player, found := find_player_by_user_id(gm.entity_user_id);
-            if found && found_player.is_round_entity() {
-                entity_player = found_player;
-            }
-        }
+        entity_player = gm.get_entity_player();
     }
 
     if !#alive(entity_player) {
@@ -1196,6 +1194,7 @@ Game_Manager :: class : Component {
 
     // Authoritative identity for the Entity this round (synced with gameplay state).
     entity_user_id: string;
+    round_entity_player: Player;
 
     // User who paid to be guaranteed the Monster next round (empty if nobody bought it).
     guaranteed_monster_user_id: string;
@@ -1259,6 +1258,7 @@ Game_Manager :: class : Component {
         result = .NONE;
         set_matchmaking_priority_for_phase(phase);
         entity_user_id = "";
+        round_entity_player = null;
         guaranteed_monster_user_id = "";
         survivors_alive = 0;
         emergency_systems_online = false;
@@ -1417,6 +1417,25 @@ Game_Manager :: class : Component {
         return player.get_user_id() == entity_user_id;
     }
 
+    get_entity_player :: method() -> Player {
+        if entity_user_id.count == 0 {
+            round_entity_player = null;
+            return null;
+        }
+        if #alive(round_entity_player) && round_entity_player.get_user_id() == entity_user_id {
+            return round_entity_player;
+        }
+
+        found_player, found := find_player_by_user_id(entity_user_id);
+        if found {
+            round_entity_player = found_player;
+            return round_entity_player;
+        }
+
+        round_entity_player = null;
+        return null;
+    }
+
     is_survivor_player :: method(player: Player) -> bool {
         if entity_user_id.count == 0 {
             return false;
@@ -1562,15 +1581,16 @@ Game_Manager :: class : Component {
             }
         }
 
+        entity_player := get_entity_player();
         if unlocked_new_entity_power {
-            if entity_player, ok := find_player_by_user_id(entity_user_id); ok {
+            if #alive(entity_player) {
                 entity_player.jumpscare_cooldown_ends_at = 0.0;
                 entity_player.toxic_rain_cooldown_ends_at = 0.0;
             }
         }
 
         if player.current_zone == .Zone2 || player.current_zone == .Zone3 {
-            if entity_player, ok := find_player_by_user_id(entity_user_id); ok {
+            if #alive(entity_player) {
                 Notifier.notify(entity_player, "% snuck into %!", {player.get_username(), get_zone_display_name(player.current_zone)});
             }
         }
@@ -1767,7 +1787,8 @@ Game_Manager :: class : Component {
         in_round := phase == .SURVIVOR_HEAD_START || phase == .ACTIVE;
 
         if in_round {
-            if entity_player, ok := find_player_by_user_id(entity_user_id); ok && #alive(entity_player.entity) {
+            entity_player := get_entity_player();
+            if #alive(entity_player) && #alive(entity_player.entity) {
                 hearing_radius_entity.set_local_position(entity_player.entity.world_position);
 
                 local_player := get_local_player();
@@ -2546,22 +2567,19 @@ Game_Manager :: class : Component {
     }
 
     teleport_entity_to_random_spawn :: method() -> Entity {
-        if entity_player, ok := find_player_by_user_id(entity_user_id); ok {
-            if !#alive(entity_player.entity) {
-                return null;
-            }
-
-            spawn := pick_random_spawn_from_parent(EntitySpawns);
-            if !#alive(spawn) {
-                return null;
-            }
-
-            entity_player.entity.set_local_position(spawn.world_position);
-            entity_player.entity.mark_teleported();
-            return spawn;
+        entity_player := get_entity_player();
+        if !#alive(entity_player) || !#alive(entity_player.entity) {
+            return null;
         }
 
-        return null;
+        spawn := pick_random_spawn_from_parent(EntitySpawns);
+        if !#alive(spawn) {
+            return null;
+        }
+
+        entity_player.entity.set_local_position(spawn.world_position);
+        entity_player.entity.mark_teleported();
+        return spawn;
     }
 
     get_reconnect_wires_entity :: method() -> Entity {
@@ -2614,7 +2632,8 @@ Game_Manager :: class : Component {
     teleport_players_to_round_start_positions :: method() {
         round_start_positions_applied = true;
 
-        if entity_player, ok := find_player_by_user_id(entity_user_id); ok && #alive(entity_player.entity) && #alive(round_entity_spawn) {
+        entity_player := get_entity_player();
+        if #alive(entity_player) && #alive(entity_player.entity) && #alive(round_entity_spawn) {
             entity_player.entity.set_local_position(round_entity_spawn.world_position);
             entity_player.entity.mark_teleported();
         }
@@ -2822,10 +2841,12 @@ Game_Manager :: class : Component {
 
         guaranteed_monster_user_id = "";
         entity_user_id = chosen.get_user_id();
+        round_entity_player = chosen;
         survivors_alive = players.count - 1;
         entity_spawn := pick_random_spawn_from_parent(EntitySpawns);
         if !#alive(entity_spawn) {
             entity_user_id = "";
+            round_entity_player = null;
             survivors_alive = 0;
             players.clear();
             return false;
@@ -2833,6 +2854,7 @@ Game_Manager :: class : Component {
 
         if !#alive(GeneratorEntity) {
             entity_user_id = "";
+            round_entity_player = null;
             survivors_alive = 0;
             players.clear();
             return false;
@@ -2902,10 +2924,8 @@ Game_Manager :: class : Component {
         assign_mold_vomit_tripmine_owners_for_round();
         players.clear();
 
-        if entity_player, ok := find_player_by_user_id(entity_user_id); ok {
-            entity_player.current_zone = .Zone1;
-            entity_player.add_freeze_reason(FREEZE_ENTITY_HEAD_START);
-        }
+        chosen.current_zone = .Zone1;
+        chosen.add_freeze_reason(FREEZE_ENTITY_HEAD_START);
 
         head_start_ends_at = next_head_start_ends_at;
         role_selection_started_at = now;
@@ -2935,7 +2955,8 @@ Game_Manager :: class : Component {
             return;
         }
 
-        if entity_player, ok := find_player_by_user_id(entity_user_id); ok {
+        entity_player := get_entity_player();
+        if #alive(entity_player) {
             clear_player_ability_cooldowns(entity_player);
             entity_player.remove_freeze_reason(FREEZE_ENTITY_HEAD_START);
         }
@@ -3057,6 +3078,7 @@ Game_Manager :: class : Component {
         set_matchmaking_priority_for_phase(phase);
         result = .NONE;
         entity_user_id = "";
+        round_entity_player = null;
         survivors_alive = 0;
         emergency_systems_online = false;
         head_start_ends_at = 0.0;
@@ -3218,7 +3240,8 @@ Game_Manager :: class : Component {
 
     unfreeze_entity_if_needed :: method() {
         remove_intro_popup_freeze_from_all_players();
-        if entity_player, ok := find_player_by_user_id(entity_user_id); ok {
+        entity_player := get_entity_player();
+        if #alive(entity_player) {
             entity_player.remove_freeze_reason(FREEZE_ENTITY_HEAD_START);
         }
     }
@@ -3568,8 +3591,8 @@ kill_all :: proc(player: Player) {
         return;
     }
 
-    entity_player, found_entity := find_player_by_user_id(gm.entity_user_id);
-    if found_entity && #alive(entity_player.entity) {
+    entity_player := gm.get_entity_player();
+    if #alive(entity_player) && #alive(entity_player.entity) {
         entity_player.ensure_entity_override_rig();
         if entity_player.entity_override_state_machine != null {
             entity_player.entity_override_state_machine.set_trigger("bite");
