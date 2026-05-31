@@ -611,7 +611,7 @@ Player :: class : Player_Base {
         if !this.is_local_or_server() {
             return;
         }
-        if jumpscare_overlay_spine != null {
+        if #alive(jumpscare_overlay_spine) {
             jumpscare_overlay_spine.destroy();
             jumpscare_overlay_spine = null;
         }
@@ -1979,49 +1979,92 @@ Player :: class : Player_Base {
     }
 
     ao_end :: method() {
+        log_info("[Player.ao_end] begin", {});
+        if !#alive(this) {
+            log_warning("[Player.ao_end] abort: player handle is not alive", {});
+            return;
+        }
+
+        user_id := this.get_user_id();
+        log_info("[Player.ao_end] player=% clear footstep echoes", {user_id});
         clear_footstep_echoes_for_player(this);
 
+        log_info("[Player.ao_end] player=% notify game manager", {user_id});
         gm := get_game_manager();
         if #alive(gm) {
             gm.handle_round_player_left(this);
+        } else {
+            log_info("[Player.ao_end] player=% no live game manager", {user_id});
         }
 
+        log_info("[Player.ao_end] player=% clear name state", {user_id});
         this.remove_name_invisibility_reason(ENTITY_NAME_INVISIBILITY_REASON);
         entity_name_hidden = false;
 
-        if silhouette_material_applied && animator != null {
+        log_info("[Player.ao_end] player=% clear silhouette material", {user_id});
+        if silhouette_material_applied && #alive(animator) {
             animator.set_material(null, false);
+        } else if silhouette_material_applied {
+            log_warning("[Player.ao_end] player=% silhouette was marked applied but animator is not alive", {user_id});
         }
-        if silhouette_material != null {
+        if #alive(silhouette_material) {
             silhouette_material.destroy();
+            silhouette_material = null;
+        } else if silhouette_material != null {
+            log_warning("[Player.ao_end] player=% silhouette material handle was non-null but not alive", {user_id});
             silhouette_material = null;
         }
         silhouette_material_applied = false;
 
+        log_info("[Player.ao_end] player=% destroy held item visual", {user_id});
         this.destroy_held_item_visual();
+        log_info("[Player.ao_end] player=% destroy jumpscare overlay", {user_id});
         this.destroy_jumpscare_overlay();
+        log_info("[Player.ao_end] player=% destroy vitals ui entries", {user_id});
         destroy_vitals_ui_entries(this);
+        log_info("[Player.ao_end] player=% close security cameras", {user_id});
         close_security_cameras_for_player(this);
 
         // Local-only: destroy LOS light entity.
+        log_info("[Player.ao_end] player=% destroy local light", {user_id});
         if this.is_local_or_server() {
-            if local_light_entity != null && #alive(local_light_entity) {
+            if #alive(local_light_entity) {
                 local_light_entity.destroy();
+            } else if local_light_entity != null {
+                log_warning("[Player.ao_end] player=% local light entity handle was non-null but not alive", {user_id});
             }
             local_light_entity = null;
             local_light = null;
             local_light_caster = null;
         }
 
+        log_info("[Player.ao_end] player=% restore movement/animation state", {user_id});
         if #alive(agent) {
             agent.movement_speed = base_movement_speed;
+        } else if agent != null {
+            log_warning("[Player.ao_end] player=% agent handle was non-null but not alive", {user_id});
         }
-        if animator != null && animator.instance != null {
-            animator.instance.speed_multiplier = 1.0;
+        if #alive(animator) {
+            animator_instance := animator.instance;
+            if #alive(animator_instance) {
+                animator_instance.speed_multiplier = 1.0;
+            } else if animator_instance != null {
+                log_warning("[Player.ao_end] player=% animator instance handle was non-null but not alive", {user_id});
+            }
+        } else if animator != null {
+            log_warning("[Player.ao_end] player=% animator handle was non-null but not alive", {user_id});
         }
-        if #alive(override_rig) && override_rig.instance != null {
-            override_rig.instance.speed_multiplier = 1.0;
+        if #alive(override_rig) {
+            override_instance := override_rig.instance;
+            if #alive(override_instance) {
+                override_instance.speed_multiplier = 1.0;
+            } else if override_instance != null {
+                log_warning("[Player.ao_end] player=% override rig instance handle was non-null but not alive", {user_id});
+            }
+        } else if override_rig != null {
+            log_warning("[Player.ao_end] player=% override rig handle was non-null but not alive", {user_id});
         }
+        log_info("[Player.ao_end] player=% done", {user_id});
     }
 
     ao_can_use_ability :: method(ability: Ability_Base) -> bool {
