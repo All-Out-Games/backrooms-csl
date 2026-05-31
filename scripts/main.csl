@@ -1842,6 +1842,11 @@ Player :: class : Player_Base {
             draw_match_timer_ui(this);
             draw_broken_camera_workbench_arrow_ui(this);
             draw_reconnect_wires_task_arrow_ui(this);
+            draw_zone2_warp_arrow_ui(this);
+            draw_entity_zone2_warp_arrow_ui(this);
+            draw_scan_keycards_task_arrow_ui(this);
+            draw_zone3_warp_task_arrow_ui(this);
+            draw_entity_team_zone3_warp_arrow_ui(this);
             draw_match_end_ui(this);
             draw_task_list_ui(this);
             update_tasks(this);

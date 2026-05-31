@@ -551,6 +551,51 @@ find_workbench_entity :: proc() -> Entity {
     return Scene.get_entity_by_name("Workbench");
 }
 
+find_warp_to_zone2_entity :: proc() -> Entity {
+    warp_entity := Scene.get_entity_by_name("WarpToZone2");
+    if #alive(warp_entity) {
+        return warp_entity;
+    }
+
+    for warp: component_iterator(WarpToBackrooms) {
+        if warp.current_zone == .Zone2 && warp.RequireReconnectWires && #alive(warp.entity) {
+            return warp.entity;
+        }
+    }
+
+    return null;
+}
+
+find_warp_to_zone3_entity :: proc() -> Entity {
+    warp_entity := Scene.get_entity_by_name("WarpToZone3");
+    if #alive(warp_entity) {
+        return warp_entity;
+    }
+
+    for warp: component_iterator(WarpToBackrooms) {
+        if warp.current_zone == .Zone3 && warp.RequireLevers && #alive(warp.entity) {
+            return warp.entity;
+        }
+    }
+
+    return null;
+}
+
+find_keycard_scanner1_entity :: proc() -> Entity {
+    scanner_entity := Scene.get_entity_by_name("KeycardScanner1");
+    if #alive(scanner_entity) {
+        return scanner_entity;
+    }
+
+    for scanner: component_iterator(KeycardScanner) {
+        if #alive(scanner.entity) {
+            return scanner.entity;
+        }
+    }
+
+    return null;
+}
+
 draw_broken_camera_workbench_arrow_ui :: proc(player: Player) {
     if player == null || !player.is_local() || !player.is_round_survivor() {
         return;
@@ -602,6 +647,139 @@ draw_reconnect_wires_task_arrow_ui :: proc(player: Player) {
     }
 
     player.DrawArrowToPosition(wires_entity.world_position, RECONNECT_WIRES_ARROW_ICON_PATH);
+}
+
+draw_zone2_warp_arrow_ui :: proc(player: Player) {
+    if player == null || !player.is_local() || !player.is_round_survivor() {
+        return;
+    }
+    if player.is_round_dead() || player.is_round_downed() {
+        return;
+    }
+    if is_zone_at_or_past_zone2(player.current_zone) {
+        return;
+    }
+    if !is_task_completed(player, TASK_ID_RECONNECT_WIRE) {
+        return;
+    }
+
+    gm := get_game_manager();
+    if !#alive(gm) || !gm.is_round_in_progress() {
+        return;
+    }
+
+    warp_entity := find_warp_to_zone2_entity();
+    if !#alive(warp_entity) {
+        return;
+    }
+
+    player.DrawArrowToPosition(warp_entity.world_position);
+}
+
+draw_entity_zone2_warp_arrow_ui :: proc(player: Player) {
+    if player == null || !player.is_local() || !player.is_round_entity() {
+        return;
+    }
+    if is_zone_at_or_past_zone2(player.current_zone) {
+        return;
+    }
+    if !are_all_surviving_survivors_at_or_past_zone2() {
+        return;
+    }
+
+    gm := get_game_manager();
+    if !#alive(gm) || !gm.is_round_in_progress() {
+        return;
+    }
+
+    warp_entity := find_warp_to_zone2_entity();
+    if !#alive(warp_entity) {
+        return;
+    }
+
+    player.DrawArrowToPosition(warp_entity.world_position);
+}
+
+draw_entity_team_zone3_warp_arrow_ui :: proc(player: Player) {
+    if player == null || !player.is_local() {
+        return;
+    }
+    if !player.is_round_entity() && !player.is_round_minion() {
+        return;
+    }
+    if is_zone_at_or_past_zone3(player.current_zone) {
+        return;
+    }
+    if !are_all_surviving_survivors_at_or_past_zone3() {
+        return;
+    }
+
+    gm := get_game_manager();
+    if !#alive(gm) || !gm.is_round_in_progress() {
+        return;
+    }
+
+    warp_entity := find_warp_to_zone3_entity();
+    if !#alive(warp_entity) {
+        return;
+    }
+
+    player.DrawArrowToPosition(warp_entity.world_position);
+}
+
+draw_scan_keycards_task_arrow_ui :: proc(player: Player) {
+    if player == null || !player.is_local() || !player.is_round_survivor() {
+        return;
+    }
+    if player.is_round_dead() || player.is_round_downed() {
+        return;
+    }
+
+    current_task := find_current_assigned_task_cheat(player);
+    if current_task == null || current_task.id != TASK_ID_SCAN_KEYCARDS {
+        return;
+    }
+
+    gm := get_game_manager();
+    if !#alive(gm) || !gm.is_round_in_progress() {
+        return;
+    }
+
+    scanner_entity := find_keycard_scanner1_entity();
+    if !#alive(scanner_entity) {
+        return;
+    }
+
+    player.DrawArrowToPosition(scanner_entity.world_position);
+}
+
+draw_zone3_warp_task_arrow_ui :: proc(player: Player) {
+    if player == null || !player.is_local() || !player.is_round_survivor() {
+        return;
+    }
+    if player.is_round_dead() || player.is_round_downed() {
+        return;
+    }
+    if is_zone_at_or_past_zone3(player.current_zone) {
+        return;
+    }
+
+    current_task := find_current_assigned_task_cheat(player);
+    if current_task == null || current_task.id != TASK_ID_DESCEND_LEVEL_3 {
+        return;
+    }
+
+    gm := get_game_manager();
+    if !#alive(gm) || !gm.is_round_in_progress() {
+        return;
+    }
+
+    warp_entity := find_warp_to_zone3_entity();
+    if !#alive(warp_entity) {
+        return;
+    }
+
+    player.DrawArrowToPosition(warp_entity.world_position);
 }
 
 draw_entity_scream_nav_path_segment :: proc(a: v2, b: v2, alpha: float) {

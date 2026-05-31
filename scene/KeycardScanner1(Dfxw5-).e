@@ -2,7 +2,7 @@
 3582002724865
 3754364543
 {
-  "name": "metal_keypad.png",
+  "name": "KeycardScanner1",
   "local_enabled": true,
   "local_position": {
     "X": 1.5133666992187500,
