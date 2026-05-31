@@ -147,7 +147,7 @@ Generator :: class : Interactable {
 
         complete_task_for_survivors(TASK_ID_RESTART_GENERATOR);
         refresh_emergency_systems_online_state();
-        notify_survivors("% restarted the generator.", {player.get_username()});
+        notify_survivors("% turned the power back on!", {player.get_username()});
     }
 
     ao_update :: method(dt: float) {

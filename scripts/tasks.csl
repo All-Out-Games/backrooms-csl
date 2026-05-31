@@ -37,6 +37,7 @@ TASK_HELP_ENTRY_GAP      :: 12.0;
 
 TASK_TEX_CHECKBOX         :: "UI/task list/checkbox.png";
 TASK_TEX_CHECKBOX_FILLED  :: "UI/task list/checkbox_filled.png";
+TASK_TEX_COLLECTED_CHECKMARK :: "checkmark_icon_a9e5ac.png";
 TASK_TEX_HEADER           :: "UI/task list/task_backing.png";
 TASK_TEX_DROPDOWN_ARROW   :: "UI/task list/dropdown_arrow.png";
 TASK_TEX_LIST_BG          :: "UI/task list/task_list_dropdown_area.png";
@@ -730,23 +731,26 @@ notify_survivors :: proc(fmt: string, args: [^]any = {}) {
     }
 }
 
+ENTITY_HUNT_TASK_NAME :: "Catch the Survivors";
+ENTITY_HUNT_TASK_DESCRIPTION :: "You are the monster! Find all the players and catch them before they escape. Use your powers and traps to hunt them down.";
+
 get_task_display_name :: proc(task_id: string) -> string {
     switch task_id {
-        case TASK_ID_TUNE_RADIO:        return "Tune Radio";
-        case TASK_ID_ENTER_KEYCODE:     return "Enter Keycode";
-        case TASK_ID_RESTART_GENERATOR: return "Restart Generator";
-        case TASK_ID_LIGHTS_OUT_GENERATOR: return "Restart Generator";
-        case TASK_ID_FIND_BECK_TAPES:   return "Find 3 Beck Tapes";
-        case TASK_ID_RECONNECT_WIRE:    return "Reconnect Wires";
-        case TASK_ID_DESCEND_LEVEL_2:   return "Descend to Level 2";
+        case TASK_ID_TUNE_RADIO:        return "Fix the Radio";
+        case TASK_ID_ENTER_KEYCODE:     return "Type the Code";
+        case TASK_ID_RESTART_GENERATOR: return "Turn On the Power";
+        case TASK_ID_LIGHTS_OUT_GENERATOR: return "Turn On the Power";
+        case TASK_ID_FIND_BECK_TAPES:   return "Find 3 Tapes";
+        case TASK_ID_RECONNECT_WIRE:    return "Fix the Wires";
+        case TASK_ID_DESCEND_LEVEL_2:   return "Go Down to Level 2";
         case TASK_ID_FIND_ASYNC_KEYCARDS: return "Find 2 Keycards and 3 Tapes";
-        case TASK_ID_SCAN_KEYCARDS: return "Scan Keycards at Doors";
+        case TASK_ID_SCAN_KEYCARDS: return "Scan Keycards at the Doors";
         case TASK_ID_PULL_BOTH_LEVERS: return "Pull Both Levers";
-        case TASK_ID_DESCEND_LEVEL_3: return "Descend to Level 3";
+        case TASK_ID_DESCEND_LEVEL_3: return "Go Down to Level 3";
         case TASK_ID_FIND_LAST_TAPES: return "Find the Last 2 Tapes";
-        case TASK_ID_ESCAPE_BACKROOMS: return "Escape the Backrooms";
-        case TASK_ID_REPAIR_LAPTOP:     return "Repair Laptop";
-        case TASK_ID_FIX_CAMERA:        return "Find and Fix a Broken Camera";
+        case TASK_ID_ESCAPE_BACKROOMS: return "Escape!";
+        case TASK_ID_REPAIR_LAPTOP:     return "Fix the Laptop";
+        case TASK_ID_FIX_CAMERA:        return "Find and Fix a Camera";
     }
     return "Unknown Task";
 }
@@ -754,49 +758,49 @@ get_task_display_name :: proc(task_id: string) -> string {
 get_task_description :: proc(task_id: string) -> string {
     switch task_id {
         case TASK_ID_TUNE_RADIO: {
-            return "Tune the radio to hear the broadcast code.";
+            return "Turn the radio knobs until you hear the secret code.";
         }
         case TASK_ID_ENTER_KEYCODE: {
-            return "Enter the broadcast code into the exit keypad.";
+            return "Type the secret code into the door keypad.";
         }
         case TASK_ID_RESTART_GENERATOR: {
-            return "Restore power to the facility.";
+            return "Turn the power back on.";
         }
         case TASK_ID_LIGHTS_OUT_GENERATOR: {
-            return "Restore power to end Lights Out.";
+            return "Turn the power back on to fix the lights.";
         }
         case TASK_ID_FIND_BECK_TAPES: {
-            return "Use the fixed camera to reveal and collect 3 Beck Tapes.";
+            return "Use the camera to find and grab 3 tapes.";
         }
         case TASK_ID_RECONNECT_WIRE: {
-            return "Use the Viewfinder to reveal the Wires panel, then repair the circuit powering the blast door.";
+            return "Use the camera to find the wire box, then fix the wires to open the big door.";
         }
         case TASK_ID_DESCEND_LEVEL_2: {
-            return "Get every surviving Survivor through the first blast door and down to Level 2.";
+            return "Get every Survivor through the first big door and down to Level 2.";
         }
         case TASK_ID_FIND_ASYNC_KEYCARDS: {
-            return "Collectively find 2 Async keycards and 3 more Beck Tapes.";
+            return "As a team, find 2 keycards and 3 more tapes.";
         }
         case TASK_ID_SCAN_KEYCARDS: {
-            return "Scan both collected keycards at the blast door scanners.";
+            return "Scan both keycards at the big door scanners.";
         }
         case TASK_ID_PULL_BOTH_LEVERS: {
-            return "Pull both blast door levers within 5 seconds.";
+            return "Pull both big door levers really fast — within 5 seconds!";
         }
         case TASK_ID_DESCEND_LEVEL_3: {
-            return "Get every surviving Survivor through the second blast door and down to Level 3.";
+            return "Get every Survivor through the second big door and down to Level 3.";
         }
         case TASK_ID_FIND_LAST_TAPES: {
-            return "Use the Viewfinder to find the final 2 Beck Tapes in Level 3.";
+            return "Use the camera to find the last 2 tapes in Level 3.";
         }
         case TASK_ID_ESCAPE_BACKROOMS: {
-            return "Find the exit and escape the Backrooms.";
+            return "Find the way out and escape!";
         }
         case TASK_ID_REPAIR_LAPTOP: {
-            return "Drag each piece back into its correct slot on the laptop.";
+            return "Drag each piece back to the right spot on the laptop.";
         }
         case TASK_ID_FIX_CAMERA: {
-            return "Find a broken handheld camera and repair it at the workshop.";
+            return "Find a broken camera and fix it at the workshop.";
         }
     }
     return "";
@@ -906,7 +910,7 @@ collect_tape_inventory_items :: proc(player: Player) {
 
         if !gm.round_tapes_collected[tape_index] {
             tape_color := get_tape_color_name_for_index(tape_index);
-            notify_all_players("% found the % Beck Tape!", {player.get_username(), tape_color});
+            notify_all_players("% found the % tape!", {player.get_username(), tape_color});
         }
         gm.round_tapes_collected[tape_index] = true;
         Items.destroy_item_instance(item);
@@ -1770,7 +1774,7 @@ draw_task_help_entry_list :: proc(scroll_id: string, entries: ref [..]Task_Help_
     if entries.count <= 0 {
         empty_panel := UIK.layout_centered(UIK.flex(1), UIK.flex(1));
         UIK.panel_begin(empty_panel);
-        UIK.text("No tasks assigned.", UIK.text_body());
+        UIK.text("No jobs right now.", UIK.text_body());
         UIK.panel_end();
     } else {
         for i: 0..entries.count - 1 {
@@ -2017,8 +2021,9 @@ draw_task_progress_bar :: proc(player: Player, screen: Rect) {
             continue;
         }
 
+        collected := #alive(gm) && gm.round_tapes_collected[i];
         tint := TASK_TAPE_UNCOLLECTED_TINT;
-        if #alive(gm) && gm.round_tapes_collected[i] {
+        if collected {
             tint = TASK_TAPE_COLLECTED_TINT;
         }
 
@@ -2026,6 +2031,18 @@ draw_task_progress_bar :: proc(player: Player, screen: Rect) {
         tape_slot.show_background = false;
         UIK.panel_begin(tape_slot);
         UIK.image_fitted(tape, UIK.image_desc(.CONTAIN), tint);
+
+        if collected {
+            checkmark := get_asset(Texture_Asset, TASK_TEX_COLLECTED_CHECKMARK);
+            if checkmark != null {
+                check_panel := UIK.layout_centered(UIK.pixels(34), UIK.pixels(34));
+                check_panel.show_background = false;
+                UIK.overlay_begin(.CENTER, check_panel, v2{0, 0});
+                UIK.image_fitted(checkmark, UIK.image_desc(.CONTAIN));
+                UIK.overlay_end();
+            }
+        }
+
         UIK.panel_end();
     }
 
@@ -2105,6 +2122,116 @@ draw_task_entry :: proc(entry_rect: Rect, task: Task_Base, task_owner: Player, v
     }
 }
 
+draw_entity_hunt_entry :: proc(entry_rect: Rect, survivors_left: s64) {
+    entry_content := entry_rect.inset(0.0, 9.0, 0.0, 9.0);
+    icon_slot := entry_content.cut_left(36.0);
+    icon_rect := icon_slot.center_rect().grow(TASK_CHECKBOX_HALF_SIZE + 2.0);
+
+    skull := get_asset(Texture_Asset, ENTITY_SABOTAGE_JUMPSCARE_ICON_PATH);
+    if skull != null {
+        UI.quad(icon_rect.fit_aspect(skull.get_aspect()), skull, v4.{1, 0.4, 0.4, 1});
+    }
+
+    text_rect := entry_content;
+    task_ts := UI.default_text_settings();
+    task_ts.size = 36;
+    task_ts.color = v4.{1, 0.55, 0.55, 1};
+    task_ts.halign = .LEFT;
+    task_ts.valign = .CENTER;
+    task_ts.do_outline = true;
+    task_ts.outline_thickness = 6;
+    task_ts.outline_color = v4.{0.18, 0.07, 0.07, 1};
+    task_ts.do_autofit = true;
+    task_ts.autofit_min_size = 18;
+    task_ts.autofit_max_size = 36;
+
+    label := ENTITY_HUNT_TASK_NAME;
+    if survivors_left > 0 {
+        label = format_string("%  (% left)", {ENTITY_HUNT_TASK_NAME, survivors_left});
+    }
+    UI.text(text_rect.inset(0, 6, 0, 6), task_ts, label);
+}
+
+draw_entity_task_help_panel :: proc(player: Player) {
+    if player == null || !player.task_help_open {
+        return;
+    }
+
+    entries: [..]Task_Help_Entry;
+    append(ref entries, Task_Help_Entry.{"", ENTITY_HUNT_TASK_NAME, ENTITY_HUNT_TASK_DESCRIPTION});
+
+    UIK.begin(UIK.modal(UIK.rect_window(), 500, v4{0.0, 0.0, 0.0, 0.72}));
+
+    shell := UIK.panel_modal(.TRANSP_BLACK);
+    shell.gap = 10;
+    shell.padding = v4{16, 16, 16, 16};
+    UIK.panel_begin(shell);
+
+    title_desc := UIK.title_area_desc("Objective");
+    exit_handle := UIK.title_area(title_desc);
+
+    content := UIK.panel_interior(.INSET);
+    content.width = UIK.flex(1);
+    content.height = UIK.flex(1);
+    content.padding = v4{8, 8, 8, 8};
+    UIK.panel_begin(content);
+
+    draw_task_help_entry_list("entity_task_help_scroll", ref entries);
+
+    UIK.panel_end();
+    UIK.panel_end();
+    UIK.end();
+
+    if UIK.clicked(exit_handle) {
+        player.task_help_open = false;
+    }
+}
+
+draw_entity_task_list_ui :: proc(player: Player) {
+    if !player.task_list_inited {
+        player.task_list_inited = true;
+        player.task_list_open = true;
+    }
+
+    if player.task_help_open {
+        draw_entity_task_help_panel(player);
+        return;
+    }
+
+    UI.push_screen_draw_context();
+    defer UI.pop_draw_context();
+
+    UI.push_layer(100);
+    defer UI.pop_layer();
+
+    screen := UI.get_safe_screen_rect();
+    header_rect := draw_task_list_header(screen, player);
+    draw_entity_task_help_panel(player);
+    if !player.task_list_open {
+        return;
+    }
+
+    list_height := TASK_LIST_PADDING * 2.0 + TASK_ENTRY_HEIGHT;
+    list_rect := header_rect.bottom_left_rect().grow(0.0, TASK_LIST_WIDTH, list_height, 0.0);
+    list_bg := get_asset(Texture_Asset, TASK_TEX_LIST_BG);
+    if list_bg != null {
+        draw_task_nine_slice_panel(list_rect, list_bg, TASK_DROPDOWN_SLICE_PX);
+    } else {
+        UI.quad(list_rect, core_globals.white_sprite, v4.{0.04, 0.04, 0.06, 0.9});
+    }
+
+    list_content := list_rect.inset(TASK_LIST_PADDING, 15.0, TASK_LIST_PADDING, 15.0);
+
+    survivors_left: s64 = 0;
+    gm := get_game_manager();
+    if #alive(gm) {
+        survivors_left = gm.survivors_alive;
+    }
+
+    entry_rect := list_content.cut_top(TASK_ENTRY_HEIGHT);
+    draw_entity_hunt_entry(entry_rect, survivors_left);
+}
+
 draw_task_list_ui :: proc(player: Player) {
     if player == null {
         return;
@@ -2121,6 +2248,11 @@ draw_task_list_ui :: proc(player: Player) {
         return;
     }
     if ((!gm.is_survivor_player(player) && !player.is_round_entity()) || player.is_round_dead()) {
+        return;
+    }
+
+    if player.is_round_entity() {
+        draw_entity_task_list_ui(player);
         return;
     }
 
@@ -2182,7 +2314,7 @@ draw_task_list_ui :: proc(player: Player) {
         empty_ts.do_outline = true;
         empty_ts.outline_thickness = 3;
         empty_ts.outline_color = v4.{0, 0, 0, 1};
-        UI.text(list_content, empty_ts, "No tasks assigned.");
+        UI.text(list_content, empty_ts, "No jobs right now.");
         return;
     }
 

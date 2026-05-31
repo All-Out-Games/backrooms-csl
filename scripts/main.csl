@@ -33,6 +33,15 @@ CurrentZone :: enum {
     Zone3;
 }
 
+get_zone_display_name :: proc(zone: CurrentZone) -> string {
+    switch zone {
+        case .Zone1: return "Level 1";
+        case .Zone2: return "Level 2";
+        case .Zone3: return "Level 3";
+    }
+    return "the Backrooms";
+}
+
 is_round_audio_active :: proc() -> bool {
     gm := get_game_manager();
     if !#alive(gm) {
@@ -328,6 +337,7 @@ is_hidden_by_round_dead_local_view :: proc(player: Player) -> bool {
 Player :: class : Player_Base {
     // Lobby: prefer being randomly chosen as Entity (synced for match start).
     entity_opt_in: bool;
+    monster_queue_modal_open: bool;
     current_zone: CurrentZone;
     active_tasks: List(Task_Base);
     task_list_inited: bool;
@@ -1034,6 +1044,7 @@ Player :: class : Player_Base {
 
     ao_start :: method() {
         entity_opt_in = false;
+        monster_queue_modal_open = false;
         current_zone = .None;
         active_tasks = List(Task_Base).{};
         task_list_inited = false;
@@ -1871,14 +1882,9 @@ Player :: class : Player_Base {
             for lb: component_iterator(Leaderboard) {
                 lb.draw();
             }
-            gm := get_game_manager();
-            if #alive(gm) && gm.phase == .LOBBY {
-                if entity_opt_in {
-                    draw_ability_button(this, Lobby_Withdraw_Entity_Ability, 0);
-                } else {
-                    draw_ability_button(this, Lobby_Volunteer_Entity_Ability, 0);
-                }
-            }
+            draw_monster_queue_button_ui(this);
+            draw_monster_queue_modal_ui(this);
+            draw_monster_queue_banner_ui(this);
         }
 
         if is_local_or_server() {
@@ -3026,8 +3032,8 @@ Player :: class : Player_Base {
         shell.show_background = false;
         UIK.panel_begin(shell);
 
-        UIK.text("Downed", UIK.text_title());
-        UIK.text("Wait for a Survivor to revive you", UIK.text_body());
+        UIK.text("You're Down!", UIK.text_title());
+        UIK.text("Wait for a friend to help you up", UIK.text_body());
 
         UIK.panel_end();
         UIK.end();

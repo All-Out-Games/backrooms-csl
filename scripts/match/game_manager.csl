@@ -55,7 +55,7 @@ TASK_ZONE_RANDOM_RADIUS :: 7.0;
 TASK_ZONE_ARROW_HIDE_DISTANCE :: 20.0;
 WORKBENCH_ARROW_ICON_PATH :: "UI/Arrow.png";
 RECONNECT_WIRES_ARROW_ICON_PATH :: "UI/WiresArrow.png";
-LIGHTS_OUT_SABOTAGE_COOLDOWN_SECONDS :: 120.0;
+LIGHTS_OUT_SABOTAGE_COOLDOWN_SECONDS :: 180.0;
 SABOTAGE_START_COOLDOWN_FRACTION :: 0.5;
 
 Match_Phase :: enum {
@@ -323,7 +323,7 @@ draw_match_lobby_ui :: proc(player: Player) {
     shell.padding = v4{16, 14, 16, 14};
     UIK.panel_begin(shell);
 
-    UIK.text("Waiting for Players", UIK.text_title());
+    UIK.text("Waiting for Players...", UIK.text_title());
     min_req: s64 = MIN_TOTAL_PLAYERS.(s64);
     count_line := format_string("%/%", {n, min_req});
     UIK.text(count_line, UIK.text_body());
@@ -338,7 +338,7 @@ draw_match_lobby_ui :: proc(player: Player) {
         if secs < one && rem > 0.0 {
             secs = one;
         }
-        countdown_line := format_string("Game Starts in %", {secs});
+        countdown_line := format_string("Game starts in %!", {secs});
         UIK.text(countdown_line, UIK.text_title());
     }
 
@@ -937,20 +937,24 @@ draw_match_timer_ui :: proc(player: Player) {
     shell.show_background = false;
     UIK.panel_begin(shell);
 
-    time_remaining_text := UIK.text_title();
-    UIK.text_set_word_wrap(&time_remaining_text, false);
-    UIK.text_set_color(&time_remaining_text, v4{1.0, 0.95, 0.60, 1.0});
-    UIK.text("Time Remaining", time_remaining_text);
-    UIK.text(format_countdown_mm_ss(countdown), UIK.text_title());
-    if gm.round_timer_paused {
-        UIK.text("Paused", UIK.text_body());
-    }
     if player.is_round_survivor() {
         tape_goal_count := get_round_tape_count_for_zone(gm, player.current_zone);
         if tape_goal_count > 0 {
             tapes_found := get_round_tapes_found_count_for_zone(gm, player.current_zone);
-            UIK.text(format_string("Tapes Found %/%", {tapes_found, tape_goal_count}), UIK.text_body());
+            tapes_text := UIK.text_title();
+            UIK.text_set_word_wrap(&tapes_text, false);
+            UIK.text_set_size_mult(&tapes_text, 0.6);
+            UIK.text(format_string("Tapes Found %/%", {tapes_found, tape_goal_count}), tapes_text);
         }
+    }
+
+    time_remaining_text := UIK.text_title();
+    UIK.text_set_word_wrap(&time_remaining_text, false);
+    UIK.text_set_color(&time_remaining_text, v4{1.0, 0.95, 0.60, 1.0});
+    UIK.text("Time Left", time_remaining_text);
+    UIK.text(format_countdown_mm_ss(countdown), UIK.text_title());
+    if gm.round_timer_paused {
+        UIK.text("Paused", UIK.text_body());
     }
 
     if player.is_local() && !player.is_round_entity() && player.entity_scream_reveal_remaining > 0.0 {
@@ -1193,6 +1197,9 @@ Game_Manager :: class : Component {
     // Authoritative identity for the Entity this round (synced with gameplay state).
     entity_user_id: string;
 
+    // User who paid to be guaranteed the Monster next round (empty if nobody bought it).
+    guaranteed_monster_user_id: string;
+
     survivors_alive: int;
     emergency_systems_online: bool;
 
@@ -1252,6 +1259,7 @@ Game_Manager :: class : Component {
         result = .NONE;
         set_matchmaking_priority_for_phase(phase);
         entity_user_id = "";
+        guaranteed_monster_user_id = "";
         survivors_alive = 0;
         emergency_systems_online = false;
         head_start_ends_at = 0.0;
@@ -1560,6 +1568,13 @@ Game_Manager :: class : Component {
                 entity_player.toxic_rain_cooldown_ends_at = 0.0;
             }
         }
+
+        if player.current_zone == .Zone2 || player.current_zone == .Zone3 {
+            if entity_player, ok := find_player_by_user_id(entity_user_id); ok {
+                Notifier.notify(entity_player, "% snuck into %!", {player.get_username(), get_zone_display_name(player.current_zone)});
+            }
+        }
+
         update_survivor_task_progression(player);
     }
 
@@ -1729,7 +1744,7 @@ Game_Manager :: class : Component {
         }
 
         if task_id == TASK_ID_PULL_BOTH_LEVERS {
-            notify_all_players("Blast doors are opening!");
+            notify_all_players("The big doors are opening!");
             set_zone3_blast_doors_open(true);
         }
     }
@@ -2681,7 +2696,7 @@ Game_Manager :: class : Component {
 
         generator.reset_for_round((head_start_ends_at * 1000.0).(u64));
         assign_lights_out_generator_tasks();
-        notify_survivors("Lights Out! Restart the generator.");
+        notify_survivors("Lights out! Go turn the power back on!");
         return true;
     }
 
@@ -2724,9 +2739,9 @@ Game_Manager :: class : Component {
 
         remove_lights_out_generator_tasks();
         if player_who_completed != null {
-            notify_survivors("% restored the lights.", {player_who_completed.get_username()});
+            notify_survivors("% turned the lights back on!", {player_who_completed.get_username()});
         } else {
-            notify_survivors("The lights are back on.");
+            notify_survivors("The lights are back on!");
         }
     }
 
@@ -2775,20 +2790,37 @@ Game_Manager :: class : Component {
             return false;
         }
 
-        pool: [..]Player;
-        for i: 0..players.count - 1 {
-            if players[i].entity_opt_in {
-                pool.append(players[i]);
-            }
-        }
-        if pool.count == 0 {
+        chosen: Player = null;
+
+        // A player who paid the "Be the Monster" guarantee is always picked first.
+        if guaranteed_monster_user_id.count > 0 {
             for i: 0..players.count - 1 {
-                pool.append(players[i]);
+                if players[i].get_user_id() == guaranteed_monster_user_id {
+                    chosen = players[i];
+                    break;
+                }
             }
         }
 
-        pick_idx := rng_range_int(ref match_rng, 0, pool.count - 1);
-        chosen := pool[pick_idx];
+        if chosen == null {
+            pool: [..]Player;
+            for i: 0..players.count - 1 {
+                if players[i].entity_opt_in {
+                    pool.append(players[i]);
+                }
+            }
+            if pool.count == 0 {
+                for i: 0..players.count - 1 {
+                    pool.append(players[i]);
+                }
+            }
+
+            pick_idx := rng_range_int(ref match_rng, 0, pool.count - 1);
+            chosen = pool[pick_idx];
+            pool.clear();
+        }
+
+        guaranteed_monster_user_id = "";
         entity_user_id = chosen.get_user_id();
         survivors_alive = players.count - 1;
         entity_spawn := pick_random_spawn_from_parent(EntitySpawns);
@@ -2796,7 +2828,6 @@ Game_Manager :: class : Component {
             entity_user_id = "";
             survivors_alive = 0;
             players.clear();
-            pool.clear();
             return false;
         }
 
@@ -2804,7 +2835,6 @@ Game_Manager :: class : Component {
             entity_user_id = "";
             survivors_alive = 0;
             players.clear();
-            pool.clear();
             return false;
         }
 
@@ -2871,7 +2901,6 @@ Game_Manager :: class : Component {
         spawn_async_entities_for_match();
         assign_mold_vomit_tripmine_owners_for_round();
         players.clear();
-        pool.clear();
 
         if entity_player, ok := find_player_by_user_id(entity_user_id); ok {
             entity_player.current_zone = .Zone1;

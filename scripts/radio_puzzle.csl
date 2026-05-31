@@ -219,11 +219,11 @@ Radio_Puzzle :: class : Interactable {
         solved = true;
         in_use = false;
         solve_hold_progress = RADIO_LOCK_HOLD_SECONDS;
-        this.set_text("Signal Locked");
+        this.set_text("Code Found!");
 
         complete_task_for_survivors(TASK_ID_TUNE_RADIO);
         play_radio_sfx(RADIO_SUCCESS_SFX_PATH, entity.world_position, 0.45, range_multiplier=0.5);
-        notify_survivors("% tuned the radio. Use the broadcast code on the keypad.", {player.get_username()});
+        notify_survivors("% found the code on the radio! Type it into the keypad.", {player.get_username()});
     }
 }
 

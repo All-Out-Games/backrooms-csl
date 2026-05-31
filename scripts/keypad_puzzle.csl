@@ -262,7 +262,7 @@ Keypad_Puzzle :: class : Interactable {
 
         complete_task_for_survivors(TASK_ID_ENTER_KEYCODE);
         refresh_emergency_systems_online_state();
-        notify_survivors("% entered the keypad code.", {player.get_username()});
+        notify_survivors("% typed in the code!", {player.get_username()});
     }
 
     ao_update :: method(dt: float) {
@@ -285,7 +285,7 @@ Exit_Door :: class : Interactable {
 
     ao_start :: method() {
         this.set_listener(this);
-        this.set_text("Power Offline");
+        this.set_text("No Power");
         required_hold_time = 0.0;
         priority = 0;
 
@@ -346,9 +346,9 @@ Exit_Door :: class : Interactable {
         } else {
             gm := get_game_manager();
             if #alive(gm) && gm.emergency_systems_online {
-                this.set_text("Escape Disabled");
+                this.set_text("Locked");
             } else {
-                this.set_text("Power Offline");
+                this.set_text("No Power");
             }
         }
 

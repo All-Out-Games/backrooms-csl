@@ -35,7 +35,7 @@ DeadAsync :: class : Interactable {
 
     ao_start :: method() {
         this.set_listener(this);
-        this.set_text("Loot Corpse");
+        this.set_text("Search Body");
         this.required_hold_time = ASYNC_CORPSE_LOOT_HOLD_SECONDS;
         looted = false;
         apply_random_crewchsia_color();

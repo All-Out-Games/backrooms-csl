@@ -223,7 +223,7 @@ open_security_cameras_for_player :: proc(player: Player) -> bool {
 Security_Camera_Terminal :: class : Interactable {
     ao_start :: method() {
         this.set_listener(this);
-        this.set_text("Use Security Cameras");
+        this.set_text("Watch Cameras");
         required_hold_time = 0.35;
     }
 
