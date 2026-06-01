@@ -1865,7 +1865,7 @@ Player :: class : Player_Base {
                 this.draw_viewfinder_screen_overlay();
                 return;
             }
-            if this.is_local() {
+            if this.is_local_or_server() {
                 draw_vitals_hud(this, dt);
             }
             draw_entity_sabotage_modal_ui(this);

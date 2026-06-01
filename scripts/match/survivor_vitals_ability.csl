@@ -241,7 +241,7 @@ draw_vitals_hud_row_uik :: proc(target_player: Player, row_index: s64) -> Vitals
 }
 
 draw_vitals_hud :: proc(player: Player, dt: float) {
-    if player == null || !player.is_local() {
+    if player == null || !player.is_local_or_server() {
         return;
     }
     if player.is_round_entity() {
