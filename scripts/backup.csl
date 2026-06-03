@@ -27,7 +27,7 @@
 //                  completed + started task ids, last selected hotbar.
 //   World        : corpses (owner + pos), dropped items (pos + item +
 //                  qty + despawn timer), async deads (pos + looted),
-//                  mold tripmines (pos + owner + DontDelete).
+//                  mold tripmines (pos + DontDelete).
 //   Puzzles      : Generator / Keypad_Puzzle / Wire_Puzzle / Radio_Puzzle
 //                  `solved` flags, matched by world position.
 // =============================================================================
@@ -97,7 +97,6 @@ Backup_Async_Dead_Entry :: class {
 
 Backup_Mold_Tripmine_Entry :: class {
 	world_pos: v2 @ao_serialize;
-	owner_user_id: string @ao_serialize;
 	dont_delete: bool @ao_serialize;
 }
 
@@ -480,7 +479,6 @@ rr_backup_capture :: proc() {
 		if !#alive(m.entity) continue;
 		me := new(Backup_Mold_Tripmine_Entry);
 		me.world_pos = m.entity.world_position;
-		me.owner_user_id = m.owner_user_id;
 		me.dont_delete = m.DontDelete;
 		append(ref snap.mold_tripmines, me);
 	}
@@ -889,7 +887,6 @@ rr_backup_restore_mold_tripmines :: proc() {
 		tm := ent.get_component(Mold_Vomit_Tripmine);
 		if tm == null tm = ent.add_component(Mold_Vomit_Tripmine);
 		tm.DontDelete = me.dont_delete;
-		tm.set_owner_user_id(me.owner_user_id);
 	}
 }
 

@@ -153,26 +153,6 @@ ao_update :: proc(dt: float) {
         braam2_next_play_at = get_time() + BRAAM2_REPLAY_SECONDS;
     }
 
-    entity_player := get_round_entity_player();
-    if !#alive(entity_player) {
-        stop_entity_ambience_sound();
-        return;
-    }
-
-    if entity_ambience_sound_id != 0 && entity_ambience_user_id != entity_player.get_user_id() {
-        stop_entity_ambience_sound();
-    }
-
-    if entity_ambience_sound_id == 0 {
-        entity_ambience_desc := SFX.default_sfx_desc();
-        entity_ambience_desc.loop = true;
-        entity_ambience_desc.volume = 1;
-        entity_ambience_desc.channel = .MUSIC;
-        entity_ambience_desc.range_multiplier = 2.0;
-        entity_ambience_desc.entity_to_follow = entity_player.entity.id;
-        entity_ambience_sound_id = SFX.play(get_asset(SFX_Asset, "SFX/entityambience.wav"), entity_ambience_desc);
-        entity_ambience_user_id = entity_player.get_user_id();
-    }
 }
 
 ao_late_update :: proc(dt: float) {
@@ -1477,8 +1457,7 @@ Player :: class : Player_Base {
         gm := get_game_manager();
         if count_as_survivor_elimination && was_round_survivor && #alive(gm) && (gm.phase == .SURVIVOR_HEAD_START || gm.phase == .ACTIVE) {
             spawn_corpse_for_player(this);
-            entity_player := find_round_entity_for_mold_vomit("");
-            spawn_mold_vomit_at_position(death_position, entity_player);
+            spawn_mold_vomit_at_position(death_position);
         }
         if count_as_survivor_elimination && was_round_survivor && #alive(gm) {
             gm.register_survivor_eliminated();

@@ -1194,6 +1194,7 @@ Game_Manager :: class : Component {
 
     // Authoritative identity for the Entity this round (synced with gameplay state).
     entity_user_id: string;
+    // Cached Player component for easy per-round access; entity_user_id remains authoritative.
     round_entity_player: Player;
 
     // User who paid to be guaranteed the Monster next round (empty if nobody bought it).
@@ -1410,9 +1411,31 @@ Game_Manager :: class : Component {
 
     // --- Queries ---
 
+    cache_round_entity_player :: method(player: Player) {
+        if player == null {
+            entity_user_id = "";
+            round_entity_player = null;
+            return;
+        }
+
+        entity_user_id = player.get_user_id();
+        round_entity_player = player;
+    }
+
+    clear_round_entity_player :: method() {
+        entity_user_id = "";
+        round_entity_player = null;
+    }
+
     is_entity_player :: method(player: Player) -> bool {
+        if player == null {
+            return false;
+        }
         if entity_user_id.count == 0 {
             return false;
+        }
+        if #alive(round_entity_player) && player == round_entity_player {
+            return true;
         }
         return player.get_user_id() == entity_user_id;
     }
@@ -2005,16 +2028,6 @@ Game_Manager :: class : Component {
         spawned_async_molds.clear();
     }
 
-    assign_mold_vomit_tripmine_owners_for_round :: method() {
-        if entity_user_id.count == 0 {
-            return;
-        }
-
-        for tripmine: component_iterator(Mold_Vomit_Tripmine) {
-            tripmine.set_owner_user_id(entity_user_id);
-        }
-    }
-
     clear_all_player_round_inventories :: method() {
         for player: component_iterator(Player) {
             player.clear_round_inventory();
@@ -2504,7 +2517,6 @@ Game_Manager :: class : Component {
                 if tripmine == null {
                     tripmine = mold_entity.add_component(Mold_Vomit_Tripmine);
                 }
-                tripmine.setup(null);
                 spawned_async_molds.append(mold_entity);
             }
         }
@@ -2840,21 +2852,18 @@ Game_Manager :: class : Component {
         }
 
         guaranteed_monster_user_id = "";
-        entity_user_id = chosen.get_user_id();
-        round_entity_player = chosen;
+        cache_round_entity_player(chosen);
         survivors_alive = players.count - 1;
         entity_spawn := pick_random_spawn_from_parent(EntitySpawns);
         if !#alive(entity_spawn) {
-            entity_user_id = "";
-            round_entity_player = null;
+            clear_round_entity_player();
             survivors_alive = 0;
             players.clear();
             return false;
         }
 
         if !#alive(GeneratorEntity) {
-            entity_user_id = "";
-            round_entity_player = null;
+            clear_round_entity_player();
             survivors_alive = 0;
             players.clear();
             return false;
@@ -2921,7 +2930,6 @@ Game_Manager :: class : Component {
         spawn_broken_camera_items_for_match();
         spawn_vhs_tape_items_for_match();
         spawn_async_entities_for_match();
-        assign_mold_vomit_tripmine_owners_for_round();
         players.clear();
 
         chosen.current_zone = .Zone1;
@@ -2994,6 +3002,10 @@ Game_Manager :: class : Component {
 
     handle_round_player_joined :: method(player: Player) {
         if player == null || !is_round_in_progress() {
+            return;
+        }
+        if is_entity_player(player) {
+            round_entity_player = player;
             return;
         }
         if !is_survivor_player(player) {
@@ -3077,8 +3089,7 @@ Game_Manager :: class : Component {
         phase = .LOBBY;
         set_matchmaking_priority_for_phase(phase);
         result = .NONE;
-        entity_user_id = "";
-        round_entity_player = null;
+        clear_round_entity_player();
         survivors_alive = 0;
         emergency_systems_online = false;
         head_start_ends_at = 0.0;

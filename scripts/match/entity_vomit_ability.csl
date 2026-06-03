@@ -29,28 +29,15 @@ play_entity_vomit_sfx :: proc(player: Player) {
     SFX.play(get_asset(SFX_Asset, ENTITY_VOMIT_SFX_PATH), desc);
 }
 
-find_round_entity_for_mold_vomit :: proc(owner_user_id: string) -> Player {
+find_round_entity_for_mold_vomit :: proc() -> Player {
     gm := get_game_manager();
-
-    if owner_user_id.count > 0 {
-        if #alive(gm) && owner_user_id == gm.entity_user_id {
-            owner := gm.get_entity_player();
-            if #alive(owner) && owner.is_round_entity() {
-                return owner;
-            }
-        }
-
-        owner, found := find_player_by_user_id(owner_user_id);
-        if found && owner.is_round_entity() {
-            return owner;
-        }
+    if !#alive(gm) || gm.entity_user_id.count == 0 {
+        return null;
     }
 
-    if #alive(gm) && gm.entity_user_id.count > 0 {
-        owner := gm.get_entity_player();
-        if #alive(owner) && owner.is_round_entity() {
-            return owner;
-        }
+    owner := gm.get_entity_player();
+    if #alive(owner) && owner.is_round_entity() {
+        return owner;
     }
 
     return null;
@@ -62,21 +49,7 @@ ping_survivor_from_mold_vomit :: proc(entity_player: Player, survivor: Player) {
 
 Mold_Vomit_Tripmine :: class : Component {
     DontDelete: bool @ao_serialize;
-    owner_user_id: string;
     trip_records: [..]Mold_Vomit_Trip_Record;
-
-    set_owner_user_id :: method(next_owner_user_id: string) {
-        if owner_user_id != next_owner_user_id {
-            owner_user_id = next_owner_user_id;
-            trip_records.clear();
-        }
-    }
-
-    setup :: method(owner: Player) {
-        if owner != null {
-            set_owner_user_id(owner.get_user_id());
-        }
-    }
 
     get_next_ping_at :: method(user_id: string) -> float {
         for record: trip_records {
@@ -115,7 +88,7 @@ Mold_Vomit_Tripmine :: class : Component {
 
         now := get_time();
         origin := entity.world_position;
-        owner := find_round_entity_for_mold_vomit(owner_user_id);
+        owner := find_round_entity_for_mold_vomit();
 
         for survivor: component_iterator(Player) {
             if !survivor.is_round_survivor() || survivor.is_round_dead() || !#alive(survivor.entity) {
@@ -138,7 +111,7 @@ Mold_Vomit_Tripmine :: class : Component {
     }
 }
 
-spawn_mold_vomit_at_position :: proc(position: v2, owner: Player) {
+spawn_mold_vomit_at_position :: proc(position: v2) {
     prefab := get_asset(Prefab_Asset, ENTITY_VOMIT_PREFAB_PATH);
     if prefab == null {
         return;
@@ -150,8 +123,7 @@ spawn_mold_vomit_at_position :: proc(position: v2, owner: Player) {
     }
 
     mold_entity.mark_teleported();
-    tripmine := mold_entity.add_component(Mold_Vomit_Tripmine);
-    tripmine.setup(owner);
+    mold_entity.add_component(Mold_Vomit_Tripmine);
 }
 
 spawn_mold_vomit_tripmine :: proc(player: Player) {
@@ -164,7 +136,7 @@ spawn_mold_vomit_tripmine :: proc(player: Player) {
         forward_x = ENTITY_VOMIT_SPAWN_X_OFFSET;
     }
 
-    spawn_mold_vomit_at_position(player.entity.world_position + v2{forward_x, ENTITY_VOMIT_SPAWN_Y_OFFSET}, player);
+    spawn_mold_vomit_at_position(player.entity.world_position + v2{forward_x, ENTITY_VOMIT_SPAWN_Y_OFFSET});
 }
 
 Entity_Vomit_Effect :: class : Effect_Base {
