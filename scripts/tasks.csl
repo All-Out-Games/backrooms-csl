@@ -1462,7 +1462,6 @@ Task_Repair_Laptop :: class : Task_Base {
 					if is_point_in_rect(part_pos[i], target) {
 						part_pos[i] = target.center();
 						part_placed[i] = true;
-						rr_task_sfx(player, RR_TASK_SFX_TILE_CLICK, 0.6);
 					}
 					dragging_idx = -1;
 				}
