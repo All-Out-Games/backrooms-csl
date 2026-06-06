@@ -601,7 +601,7 @@ draw_broken_camera_workbench_arrow_ui :: proc(player: Player) {
     if player.is_round_dead() || player.is_round_downed() {
         return;
     }
-    if !player_inventory_has_item_id(player, BROKEN_CAMERA_ITEM_ID) {
+    if !player_inventory_has_item_id_ui_cached(player, BROKEN_CAMERA_ITEM_ID) {
         return;
     }
 
@@ -1224,6 +1224,13 @@ Game_Manager :: class : Component {
     match_rng: u64;
     hearing_radius_sprite: Sprite_Renderer;
     navmesh_lock_refresh_elapsed: float;
+    viewfinder_only_visibility_initialized: bool;
+    viewfinder_only_last_visible: bool;
+    viewfinder_only_children_enabled: bool;
+    dimensional_rift_visibility_initialized: bool;
+    dimensional_rift_last_enabled: bool;
+    round_entity_lookup_failed_frame: u64;
+    round_entity_lookup_failed_user_id: string;
     // Includes every world-owned round pickup, including Broken Cameras and VHS tapes.
     spawned_round_items: [..]Dropped_Item;
     spawned_async_deads: [..]Entity;
@@ -1278,6 +1285,13 @@ Game_Manager :: class : Component {
         ended_at = 0.0;
         end_game_cutscene_ends_at = 0.0;
         lobby_countdown_ends_at = 0.0;
+        viewfinder_only_visibility_initialized = false;
+        viewfinder_only_last_visible = false;
+        viewfinder_only_children_enabled = false;
+        dimensional_rift_visibility_initialized = false;
+        dimensional_rift_last_enabled = false;
+        round_entity_lookup_failed_frame = 0;
+        round_entity_lookup_failed_user_id = "";
         round_entity_spawn = null;
         round_start_positions_applied = false;
         round_start_transition_finished = false;
@@ -1415,16 +1429,22 @@ Game_Manager :: class : Component {
         if player == null {
             entity_user_id = "";
             round_entity_player = null;
+            round_entity_lookup_failed_frame = 0;
+            round_entity_lookup_failed_user_id = "";
             return;
         }
 
         entity_user_id = player.get_user_id();
         round_entity_player = player;
+        round_entity_lookup_failed_frame = 0;
+        round_entity_lookup_failed_user_id = "";
     }
 
     clear_round_entity_player :: method() {
         entity_user_id = "";
         round_entity_player = null;
+        round_entity_lookup_failed_frame = 0;
+        round_entity_lookup_failed_user_id = "";
     }
 
     is_entity_player :: method(player: Player) -> bool {
@@ -1434,10 +1454,21 @@ Game_Manager :: class : Component {
         if entity_user_id.count == 0 {
             return false;
         }
-        if #alive(round_entity_player) && player == round_entity_player {
+        if #alive(round_entity_player) {
+            if round_entity_player.get_user_id() == entity_user_id {
+                return player == round_entity_player;
+            }
+            round_entity_player = null;
+        }
+
+        player_user_id := player.get_user_id();
+        if player_user_id == entity_user_id {
+            round_entity_player = player;
+            round_entity_lookup_failed_frame = 0;
+            round_entity_lookup_failed_user_id = "";
             return true;
         }
-        return player.get_user_id() == entity_user_id;
+        return false;
     }
 
     get_entity_player :: method() -> Player {
@@ -1449,6 +1480,11 @@ Game_Manager :: class : Component {
             return round_entity_player;
         }
 
+        frame := get_frame_number();
+        if round_entity_lookup_failed_frame == frame && round_entity_lookup_failed_user_id == entity_user_id {
+            return null;
+        }
+
         found_player, found := find_player_by_user_id(entity_user_id);
         if found {
             round_entity_player = found_player;
@@ -1456,14 +1492,33 @@ Game_Manager :: class : Component {
         }
 
         round_entity_player = null;
+        round_entity_lookup_failed_frame = frame;
+        round_entity_lookup_failed_user_id = entity_user_id;
         return null;
     }
 
     is_survivor_player :: method(player: Player) -> bool {
+        if player == null {
+            return false;
+        }
         if entity_user_id.count == 0 {
             return false;
         }
-        return player.get_user_id() != entity_user_id;
+        if #alive(round_entity_player) {
+            if round_entity_player.get_user_id() == entity_user_id {
+                return player != round_entity_player;
+            }
+            round_entity_player = null;
+        }
+
+        player_user_id := player.get_user_id();
+        if player_user_id == entity_user_id {
+            round_entity_player = player;
+            round_entity_lookup_failed_frame = 0;
+            round_entity_lookup_failed_user_id = "";
+            return false;
+        }
+        return true;
     }
 
     is_round_in_progress :: method() -> bool {
@@ -1473,30 +1528,48 @@ Game_Manager :: class : Component {
     sync_viewfinder_only_group_visibility :: method() {
         if !#alive(VO) {
             VO = Scene.get_entity_by_name("ViewfinderOnly");
+            viewfinder_only_visibility_initialized = false;
+            viewfinder_only_children_enabled = false;
         }
         if !#alive(VO) {
             return;
         }
 
         should_show := is_local_viewfinder_active();
-        child := VO.get_first_child();
-        while #alive(child) {
-            child.set_local_enabled(true);
-            child = child.get_next_sibling();
+        if viewfinder_only_visibility_initialized && viewfinder_only_last_visible == should_show {
+            return;
         }
+
+        if !viewfinder_only_children_enabled {
+            child := VO.get_first_child();
+            while #alive(child) {
+                child.set_local_enabled(true);
+                child = child.get_next_sibling();
+            }
+            viewfinder_only_children_enabled = true;
+        }
+
         VO.set_local_enabled(should_show);
+        viewfinder_only_visibility_initialized = true;
+        viewfinder_only_last_visible = should_show;
     }
 
     sync_dimensional_rift_enabled :: method() {
         if !#alive(dimensionalRift) {
             dimensionalRift = Scene.get_entity_by_name("dimensionalRift");
+            dimensional_rift_visibility_initialized = false;
         }
         if !#alive(dimensionalRift) {
             return;
         }
 
         should_enable := is_round_in_progress() && get_round_tapes_found_count(this) >= TASK_TAPE_COUNT;
+        if dimensional_rift_visibility_initialized && dimensional_rift_last_enabled == should_enable {
+            return;
+        }
         dimensionalRift.set_local_enabled(should_enable);
+        dimensional_rift_visibility_initialized = true;
+        dimensional_rift_last_enabled = should_enable;
     }
 
     set_round_timer_paused :: method(paused: bool) -> bool {

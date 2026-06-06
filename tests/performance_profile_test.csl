@@ -1,0 +1,25 @@
+test_perf_lobby_idle_profile :: proc() {
+    Test.wait_frames(30);
+    Test.profile_start("perf_lobby_idle");
+    Test.wait_frames(240);
+    Test.profile_stop();
+    Test.assert_entity_exists("generator exists", "Generator");
+}
+
+test_perf_lobby_monster_queue_ui_profile :: proc() {
+    Test.wait_frames(30);
+    Test.profile_start("perf_lobby_monster_queue_ui");
+    Test.click_button("monster_queue_open_btn");
+    Test.wait_frames(180);
+    Test.profile_stop();
+    Test.assert_entity_exists("generator exists", "Generator");
+}
+
+test_perf_full_load_active_profile :: proc() {
+    Test.run_admin_command("perf_spawn_full_load");
+    Test.wait_frames(10);
+    Test.profile_start("perf_full_load_active");
+    Test.wait_frames(240);
+    Test.profile_stop();
+    Test.assert_entity_count_gt("perf spawned mold", "Mold_Vomit_Tripmine", 10);
+}

@@ -12,6 +12,9 @@ ENTITY_VOMIT_PREFAB_PATH :: "MoldVomit.prefab";
 ENTITY_VOMIT_ICON_PATH :: "AbilityIcons/Vomit.png";
 ENTITY_VOMIT_SFX_PATH :: "SFX/vomit.wav";
 
+mold_vomit_owner_cache_frame: u64;
+mold_vomit_owner_cache_player: Player;
+
 Mold_Vomit_Trip_Record :: struct {
     user_id: string;
     next_ping_at: float;
@@ -30,16 +33,27 @@ play_entity_vomit_sfx :: proc(player: Player) {
 }
 
 find_round_entity_for_mold_vomit :: proc() -> Player {
+    frame := get_frame_number();
+    if mold_vomit_owner_cache_frame == frame {
+        return mold_vomit_owner_cache_player;
+    }
+
     gm := get_game_manager();
     if !#alive(gm) || gm.entity_user_id.count == 0 {
+        mold_vomit_owner_cache_frame = frame;
+        mold_vomit_owner_cache_player = null;
         return null;
     }
 
     owner := gm.get_entity_player();
     if #alive(owner) && owner.is_round_entity() {
+        mold_vomit_owner_cache_frame = frame;
+        mold_vomit_owner_cache_player = owner;
         return owner;
     }
 
+    mold_vomit_owner_cache_frame = frame;
+    mold_vomit_owner_cache_player = null;
     return null;
 }
 
@@ -91,7 +105,10 @@ Mold_Vomit_Tripmine :: class : Component {
         owner := find_round_entity_for_mold_vomit();
 
         for survivor: component_iterator(Player) {
-            if !survivor.is_round_survivor() || survivor.is_round_dead() || !#alive(survivor.entity) {
+            if !#alive(survivor.entity) || survivor.is_round_dead() || survivor.is_round_minion() {
+                continue;
+            }
+            if #alive(owner) && survivor == owner {
                 continue;
             }
 

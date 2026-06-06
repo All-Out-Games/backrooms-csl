@@ -253,6 +253,27 @@ draw_vitals_hud :: proc(player: Player, dt: float) {
         return;
     }
 
+    row_players: [VITALS_MAX_ROWS]Player;
+    row_count: s64 = 0;
+
+    for other: component_iterator(Player) {
+        if !#alive(other) {
+            continue;
+        }
+        if !gm.is_survivor_player(other) {
+            continue;
+        }
+        if row_count >= VITALS_MAX_ROWS {
+            break;
+        }
+        row_players[row_count] = other;
+        row_count += 1;
+    }
+
+    if row_count == 0 {
+        return;
+    }
+
     screen := UI.get_safe_screen_rect();
     scale := UI.get_current_scale_factor();
     hud_width_px := HUD_VITALS_WIDTH * scale;
@@ -292,30 +313,13 @@ draw_vitals_hud :: proc(player: Player, dt: float) {
     UIK.panel_begin(column);
 
     row_handles: [VITALS_MAX_ROWS]Vitals_Row_Handles;
-    row_players: [VITALS_MAX_ROWS]Player;
-    row_count: s64 = 0;
 
-    for other: component_iterator(Player) {
-        if !#alive(other) {
-            continue;
-        }
-        if !gm.is_survivor_player(other) {
-            continue;
-        }
-        if row_count >= VITALS_MAX_ROWS {
-            break;
-        }
-        row_handles[row_count] = draw_vitals_hud_row_uik(other, row_count);
-        row_players[row_count] = other;
-        row_count += 1;
+    for i: 0..row_count - 1 {
+        row_handles[i] = draw_vitals_hud_row_uik(row_players[i], i);
     }
 
     UIK.panel_end();
     UIK.end();
-
-    if row_count == 0 {
-        return;
-    }
 
     UI.push_screen_draw_context();
     UI.push_layer(HUD_VITALS_LAYER);
@@ -351,4 +355,3 @@ draw_vitals_hud :: proc(player: Player, dt: float) {
     UI.pop_layer();
     UI.pop_draw_context();
 }
-

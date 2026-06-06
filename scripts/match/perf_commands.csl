@@ -1,0 +1,119 @@
+PERF_LOAD_ENTITY_USER_ID :: "__perf_missing_entity__";
+
+perf_clear_full_load :: proc(player: Player) {
+    clear_all_footstep_echoes();
+
+    noisemakers: [..]Entity;
+    for noisemaker: component_iterator(Noisemaker_Target) {
+        if #alive(noisemaker.entity) {
+            noisemakers.append(noisemaker.entity);
+        }
+    }
+    for e: noisemakers {
+        if #alive(e) {
+            e.destroy();
+        }
+    }
+    noisemakers.clear();
+
+    molds: [..]Entity;
+    for mold: component_iterator(Mold_Vomit_Tripmine) {
+        if #alive(mold.entity) && !mold.DontDelete {
+            molds.append(mold.entity);
+        }
+    }
+    for e: molds {
+        if #alive(e) {
+            e.destroy();
+        }
+    }
+    molds.clear();
+} @chat_command @youtuber
+
+perf_spawn_grid_items :: proc(gm: Game_Manager, center: v2) {
+    init_weapon_items();
+
+    x: s64 = 0;
+    while x < 8 {
+        y: s64 = 0;
+        while y < 5 {
+            idx := (x + y) % 8;
+            item_id := "flashbang";
+            switch idx {
+                case 0: item_id = "flashbang";
+                case 1: item_id = "noisemaker";
+                case 2: item_id = "stim";
+                case 3: item_id = "camera";
+                case 4: item_id = "barricade";
+                case 5: item_id = "assault_rifle";
+                case 6: item_id = "smg";
+                default: item_id = "ray_gun";
+            }
+
+            item_def := get_registered_item_def_by_id(item_id);
+            if item_def != null {
+                pos := center + v2{x.(float) * 1.4 - 5.0, y.(float) * 1.4 - 3.0};
+                dropped_item := gm.spawn_round_item_def_at_position(item_def, pos);
+                if #alive(dropped_item) {
+                    gm.spawned_round_items.append(dropped_item);
+                }
+            }
+            y += 1;
+        }
+        x += 1;
+    }
+}
+
+perf_spawn_full_load :: proc(player: Player) {
+    if player == null || !#alive(player.entity) {
+        return;
+    }
+
+    gm := get_game_manager();
+    if !#alive(gm) {
+        return;
+    }
+
+    perf_clear_full_load(player);
+
+    center := player.entity.world_position;
+    gm.entity_user_id = PERF_LOAD_ENTITY_USER_ID;
+    gm.round_entity_player = null;
+    gm.phase = .ACTIVE;
+    gm.survivors_alive = 1;
+    gm.match_ends_at = get_time() + MATCH_MAX_SECONDS;
+    gm.head_start_ends_at = 0.0;
+    gm.role_selection_ends_at = 0.0;
+    gm.hunt_started_at = get_time();
+    player.current_zone = .Zone1;
+    player.round_dead = false;
+    player.round_downed = false;
+    player.round_minion = false;
+
+    perf_spawn_grid_items(gm, center);
+
+    x: s64 = 0;
+    while x < 6 {
+        y: s64 = 0;
+        while y < 4 {
+            pos := center + v2{x.(float) * 1.15 - 3.0, y.(float) * 1.15 - 2.0};
+            spawn_mold_vomit_at_position(pos);
+            y += 1;
+        }
+        x += 1;
+    }
+
+    i: s64 = 0;
+    while i < 5 {
+        pos := center + v2{i.(float) * 3.0 - 6.0, 6.0};
+        spawn_noisemaker_target(pos);
+        i += 1;
+    }
+
+    e: s64 = 0;
+    while e < 24 {
+        pos := center + v2{e.(float) * 0.45 - 5.4, -5.0};
+        spawn_footstep_echo(pos, "Echo.prefab", player);
+        e += 1;
+    }
+} @chat_command @youtuber

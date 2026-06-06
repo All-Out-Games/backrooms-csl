@@ -113,7 +113,8 @@ draw_monster_queue_modal_ui :: proc(player: Player) {
 
     body := UIK.text_body();
     UIK.text_set_halign(&body, .CENTER);
-    UIK.text("You are guaranteed to be the Backrooms Monster in the next game! Nobody else can take this spot once you grab it.", body);
+    UIK.text_set_word_wrap(&body, false);
+    UIK.text("Guaranteed Monster next game.", body);
 
     UIK.spacer(UIK.pixels(1), UIK.flex(0.5));
 

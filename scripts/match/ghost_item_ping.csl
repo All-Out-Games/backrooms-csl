@@ -14,19 +14,59 @@ player_inventory_has_item_id :: proc(player: Player, item_id: string) -> bool {
     if player == null || item_id.count == 0 {
         return false;
     }
+    if player.default_inventory == null {
+        return false;
+    }
 
     i: s64 = 0;
     while i < player.default_inventory.capacity {
         item := player.default_inventory.get_item(i);
         if #alive(item) {
             defn := item.get_definition();
-            if defn != null && defn.get_id() == item_id {
+            if defn != null && defn.id == item_id {
                 return true;
             }
         }
         i += 1;
     }
     return false;
+}
+
+player_inventory_has_item_id_ui_cached :: proc(player: Player, item_id: string) -> bool {
+    if player == null || item_id.count == 0 || player.default_inventory == null {
+        return false;
+    }
+    if item_id != BROKEN_CAMERA_ITEM_ID && item_id != CAMERA_ITEM_ID {
+        return player_inventory_has_item_id(player, item_id);
+    }
+
+    frame := get_frame_number();
+    if player.inventory_item_cache_frame != frame {
+        player.cached_has_broken_camera = false;
+        player.cached_has_camera = false;
+
+        i_scan: s64 = 0;
+        while i_scan < player.default_inventory.capacity {
+            scan_item := player.default_inventory.get_item(i_scan);
+            if #alive(scan_item) {
+                scan_defn := scan_item.get_definition();
+                if scan_defn != null {
+                    if scan_defn.id == BROKEN_CAMERA_ITEM_ID {
+                        player.cached_has_broken_camera = true;
+                    } else if scan_defn.id == CAMERA_ITEM_ID {
+                        player.cached_has_camera = true;
+                    }
+                }
+            }
+            i_scan += 1;
+        }
+        player.inventory_item_cache_frame = frame;
+    }
+
+    if item_id == BROKEN_CAMERA_ITEM_ID {
+        return player.cached_has_broken_camera;
+    }
+    return player.cached_has_camera;
 }
 
 is_blocked_broken_camera_pickup :: proc(player: Player, dropped_item: Dropped_Item) -> bool {
