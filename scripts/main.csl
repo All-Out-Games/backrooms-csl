@@ -437,7 +437,10 @@ Player :: class : Player_Base {
     ensure_entity_override_rig :: method() -> bool {
         if entity_override_state_machine != null {
             //entity_override_state_machine.debug_enabled = true;
-            return #alive(override_rig) && override_rig.instance != null;
+            if #alive(override_rig) && override_rig.instance != null && #alive(entity_override_state_machine) && override_rig.instance.state_machine == entity_override_state_machine {
+                return true;
+            }
+            entity_override_state_machine = null;
         }
 
         if entity_override_rig_asset == null {
@@ -456,6 +459,7 @@ Player :: class : Player_Base {
         sm := State_Machine.create();
         //sm.debug_enabled = true;
         entity_override_state_machine = sm;
+        minion_override_state_machine = null;
 
         layer := sm.create_layer("main", 0);
         idle_state := layer.create_state("idle", true);
@@ -525,7 +529,10 @@ Player :: class : Player_Base {
 
     ensure_minion_override_rig :: method() -> bool {
         if minion_override_state_machine != null {
-            return #alive(override_rig) && override_rig.instance != null;
+            if #alive(override_rig) && override_rig.instance != null && #alive(minion_override_state_machine) && override_rig.instance.state_machine == minion_override_state_machine {
+                return true;
+            }
+            minion_override_state_machine = null;
         }
 
         if minion_override_rig_asset == null {
@@ -543,6 +550,7 @@ Player :: class : Player_Base {
 
         sm := State_Machine.create();
         minion_override_state_machine = sm;
+        entity_override_state_machine = null;
 
         layer := sm.create_layer("main", 0);
         idle_state := layer.create_state("beast/idle", true);
@@ -1646,11 +1654,11 @@ Player :: class : Player_Base {
                 is_moving = true;
             }
         }
-        if should_use_entity_override && entity_override_state_machine != null {
+        if should_use_entity_override && entity_override_state_machine != null && #alive(entity_override_state_machine) {
             entity_override_state_machine.set_bool("is_moving", is_moving);
             entity_override_state_machine.set_bool("is_lurching", entity_lurch_remaining > 0.0);
         }
-        if should_use_entity_override && minion_override_state_machine != null {
+        if should_use_entity_override && minion_override_state_machine != null && #alive(minion_override_state_machine) {
             minion_override_state_machine.set_bool("is_moving", is_moving);
             if round_minion_hatch_request_id > round_minion_hatch_seen_request_id {
                 round_minion_hatch_seen_request_id = round_minion_hatch_request_id;
