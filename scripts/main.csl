@@ -218,10 +218,9 @@ ROUND_MINION_NORMAL_MOVEMENT_MULTIPLIER :: ROUND_SURVIVOR_NORMAL_MOVEMENT_MULTIP
 ENTITY_AFK_TIMEOUT_SECONDS :: 120.0;
 ENTITY_AFK_MOVED_DISTANCE :: 0.25;
 ENTITY_AFK_MOVED_DISTANCE_SQ :: ENTITY_AFK_MOVED_DISTANCE * ENTITY_AFK_MOVED_DISTANCE;
-HELD_ITEM_BONE_NAME :: "Finger_R2";
+HELD_ITEM_SLOT_NAME :: "finger_R2"; // player-rig slot on the Finger_R2 bone
 HELD_ITEM_SCALE := v2.{0.35, 0.35};
 HELD_STIM_ITEM_SCALE := v2.{0.70, 0.70};
-HELD_ITEM_RENDER_LAYER :: 1;
 
 ENTITY_OVERRIDE_RIG_PATH :: "Animations/Bacteria/Backrooms_Monster.spine";
 MINION_OVERRIDE_RIG_PATH :: "Animations/beast_minion/beast_minion.spine";
@@ -351,8 +350,8 @@ Player :: class : Player_Base {
     equipped_weapon_type: Weapon_Type;
     equipped_item_def: Item_Definition;
     last_selected_index: s64;
-    held_item_entity: Entity;
-    held_item_sprite: Sprite_Renderer;
+    held_item_attachment_id: u64;
+    held_item_instance: Spine_Instance;
     held_item_weapon_type: Weapon_Type;
     viewfinder_active: bool;
     dropped_item_visibility_initialized: bool;
@@ -605,11 +604,13 @@ Player :: class : Player_Base {
     }
 
     destroy_held_item_visual :: method() {
-        if held_item_entity != null && #alive(held_item_entity) {
-            held_item_entity.destroy();
+        // Only clear through a still-current instance — if the animator's instance
+        // was recreated, the old attachment died with it.
+        if held_item_attachment_id != 0 && held_item_instance != null && animator != null && animator.instance == held_item_instance {
+            held_item_instance.clear_attachment_sprite(held_item_attachment_id);
         }
-        held_item_entity = null;
-        held_item_sprite = null;
+        held_item_attachment_id = 0;
+        held_item_instance = null;
         held_item_weapon_type = .NONE;
     }
 
@@ -689,7 +690,10 @@ Player :: class : Player_Base {
     }
 
     ensure_held_item_visual :: method(wt: Weapon_Type) {
-        if wt == held_item_weapon_type && held_item_entity != null && #alive(held_item_entity) && held_item_sprite != null {
+        // The caller guards animator/instance for null.
+        instance := animator.instance;
+
+        if wt == held_item_weapon_type && held_item_attachment_id != 0 && instance == held_item_instance {
             return;
         }
 
@@ -709,24 +713,26 @@ Player :: class : Player_Base {
             return;
         }
 
-        new_held_item := Scene.create_entity();
-        new_held_item.set_parent(entity, false);
-        new_held_item.set_local_enabled(true);
-        new_held_item.set_local_position(v2.{0.0, 0.0});
-        new_held_item.set_local_rotation(0.0);
         held_scale := HELD_ITEM_SCALE;
         if wt == .STIM {
             held_scale = HELD_STIM_ITEM_SCALE;
         }
-        new_held_item.set_local_scale(held_scale);
 
-        sprite := new_held_item.add_component(Sprite_Renderer);
-        sprite.set_texture(held_texture);
-        sprite.layer = HELD_ITEM_RENDER_LAYER;
-        sprite.mask_in_shadow = true;
+        // The attachment is sized in skeleton space, so divide out the skeleton
+        // scale to keep the on-screen size the old entity-space sprite had. abs
+        // because the x sign flips with facing — the bone transform already
+        // mirrors the attachment, so the desc never needs updating.
+        skeleton_scale := animator.scale;
+        desc := Attachment_Desc.default();
+        if abs(skeleton_scale.x) > 0.0001 {
+            desc.scale.x = held_scale.x / abs(skeleton_scale.x);
+        }
+        if abs(skeleton_scale.y) > 0.0001 {
+            desc.scale.y = held_scale.y / abs(skeleton_scale.y);
+        }
 
-        held_item_entity = new_held_item;
-        held_item_sprite = sprite;
+        held_item_attachment_id = instance.add_attachment_sprite(HELD_ITEM_SLOT_NAME, held_texture, desc);
+        held_item_instance = instance;
         held_item_weapon_type = wt;
     }
 
@@ -747,31 +753,6 @@ Player :: class : Player_Base {
         }
 
         this.ensure_held_item_visual(equipped_weapon_type);
-        if held_item_entity == null || !#alive(held_item_entity) {
-            return;
-        }
-
-        if held_item_sprite != null && animator != null {
-            tint := held_item_sprite.color;
-            tint.w = animator.color_multiplier.w;
-            held_item_sprite.color = tint;
-        }
-
-        hand_local := animator.get_bone_local_position(HELD_ITEM_BONE_NAME);
-        hand_scale := animator.scale;
-
-        held_item_entity.set_local_position(v2{hand_local.x * hand_scale.x, hand_local.y * hand_scale.y});
-
-        held_scale := HELD_ITEM_SCALE;
-        if equipped_weapon_type == .STIM {
-            held_scale = HELD_STIM_ITEM_SCALE;
-        }
-
-        held_scale_x := held_scale.x;
-        if hand_scale.x < 0.0 {
-            held_scale_x = -held_scale.x;
-        }
-        held_item_entity.set_local_scale(v2{held_scale_x, held_scale.y});
     }
 
     sync_local_camera_size :: proc(using this: Player) {
@@ -1120,7 +1101,7 @@ Player :: class : Player_Base {
         entity_cached_facing_right = true;
         playerWins = Save.get_int(this, PLAYER_WINS_SAVE_KEY, 0);
         this.sync_player_wins_leaderboard();
-        held_item_weapon_type = .NONE;
+        this.destroy_held_item_visual();
         viewfinder_active = false;
         dropped_item_visibility_initialized = false;
         dropped_item_visibility_hidden_for_entity = false;
@@ -2471,12 +2452,7 @@ Player :: class : Player_Base {
         tint := animator.color_multiplier;
         tint.w = alpha;
         animator.color_multiplier = tint;
-
-        if held_item_sprite != null {
-            held_tint := held_item_sprite.color;
-            held_tint.w = alpha;
-            held_item_sprite.color = held_tint;
-        }
+        // The held-item attachment inherits color_multiplier through the skeleton tint.
     }
 
     reveal_for_entity_local_view :: proc(using this: Player) {

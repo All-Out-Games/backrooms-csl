@@ -1,5 +1,5 @@
 14
-17179869186
+17179869185
 2942759052
 {
   "name": "Generator",
@@ -12,9 +12,7 @@
   "local_scale": {
     "X": 1,
     "Y": 1
-  },
-  "previous_sibling": 1804982722,
-  "linked_prefab": "Generator.prefab"
+  }
 },
 {
   "cid": 1,
