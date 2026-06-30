@@ -1,0 +1,14 @@
+[
+  {
+    "id": "sprites/Zone1/marker_doorway_wall.png",
+    "should_mip": true
+  },
+  {
+    "id": "sprites/Zone1/Zone0_floor_occlusion_test.png",
+    "should_mip": true
+  },
+  {
+    "id": "sprites/Zone1/Zone0_occlusion - Copy.png",
+    "should_mip": true
+  }
+]

@@ -155,9 +155,14 @@
   },
   {
     "id": "Tiles/Zone1/wall_furniture_store.png",
+    "should_mip": true,
     "texture": {
       "wrap_repeat": true
     }
+  },
+  {
+    "id": "Tiles/Zone1/furniture_base.png",
+    "should_mip": true
   },
   {
     "id": "Tiles/Wallv3.png",
