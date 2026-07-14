@@ -93,34 +93,43 @@ InteractableGlow :: class : Component {
         }
     }
 
-    ao_update :: method(dt: float) {
-        if !#alive(sprite) {
-            sprite = get_attached_sprite_renderer(entity);
-            if !#alive(sprite) {
-                return;
-            }
-            base_color = sprite.color;
-        }
-
-        elapsed += dt;
-        pulse := (sin(elapsed * pulse_speed) + 1.0) * 0.5;
-        strength := lerp(min_strength, max_strength, pulse);
-
-        tint := v4{
-            lerp(base_color.x, glow_color.x, strength),
-            lerp(base_color.y, glow_color.y, strength),
-            lerp(base_color.z, glow_color.z, strength),
-            base_color.w,
-        };
-        if affect_alpha {
-            tint.w = lerp(base_color.w, glow_color.w, strength);
-        }
-        sprite.color = tint;
-    }
-
     ao_end :: method() {
         if #alive(sprite) {
             sprite.color = base_color;
         }
+    }
+}
+
+// Driven manually from the global ao_update in main.csl rather than via a
+// per-component ao_update method, to avoid the engine's per-instance VM call
+// overhead. ao_start/ao_end stay as lifecycle hooks (they run once, not per frame).
+update_interactable_glow :: proc(using this: InteractableGlow, dt: float) {
+    if !#alive(sprite) {
+        sprite = get_attached_sprite_renderer(entity);
+        if !#alive(sprite) {
+            return;
+        }
+        base_color = sprite.color;
+    }
+
+    elapsed += dt;
+    pulse := (sin(elapsed * pulse_speed) + 1.0) * 0.5;
+    strength := lerp(min_strength, max_strength, pulse);
+
+    tint := v4{
+        lerp(base_color.x, glow_color.x, strength),
+        lerp(base_color.y, glow_color.y, strength),
+        lerp(base_color.z, glow_color.z, strength),
+        base_color.w,
+    };
+    if affect_alpha {
+        tint.w = lerp(base_color.w, glow_color.w, strength);
+    }
+    sprite.color = tint;
+}
+
+update_interactable_glows :: proc(dt: float) {
+    for glow: component_iterator(InteractableGlow) {
+        update_interactable_glow(glow, dt);
     }
 }

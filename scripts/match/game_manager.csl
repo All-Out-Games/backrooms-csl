@@ -1185,6 +1185,7 @@ Game_Manager :: class : Component {
     EndOfGameWarp: Entity @ao_serialize;
     VO: Entity @ao_serialize;
     Shadows: Entity @ao_serialize;
+    ViewfinderEntity: Entity @ao_serialize;
     dimensionalRift: Entity @ao_serialize;
     RoundItemIds: [..]string @ao_serialize;
     RoundItemWeights: [..]s64 @ao_serialize;

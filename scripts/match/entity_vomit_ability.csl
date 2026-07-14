@@ -6,7 +6,6 @@ ENTITY_VOMIT_SPAWN_DELAY_SECONDS :: 0.667;
 ENTITY_VOMIT_SPAWN_X_OFFSET :: 1.5;
 ENTITY_VOMIT_SPAWN_Y_OFFSET :: -0.5;
 ENTITY_VOMIT_TRIP_RADIUS :: 1.0;
-ENTITY_VOMIT_TRIP_RADIUS_SQ :: ENTITY_VOMIT_TRIP_RADIUS * ENTITY_VOMIT_TRIP_RADIUS;
 ENTITY_VOMIT_TRIP_PING_INTERVAL_SECONDS :: 0.5;
 ENTITY_VOMIT_PREFAB_PATH :: "MoldVomit.prefab";
 ENTITY_VOMIT_ICON_PATH :: "AbilityIcons/Vomit.png";
@@ -89,40 +88,53 @@ Mold_Vomit_Tripmine :: class : Component {
         record.next_ping_at = next_ping_at;
         trip_records.append(record);
     }
+}
 
-    ao_update :: method(dt: float) {
-        gm := get_game_manager();
-        if !#alive(gm) || (gm.phase != .SURVIVOR_HEAD_START && gm.phase != .ACTIVE) {
-            if DontDelete {
-                return;
+// Driven manually from the global ao_update in main.csl rather than via a
+// per-component ao_update method. The engine invokes component ao_updates with
+// a separate VM call per component per frame; doing the whole sweep inside one
+// proc avoids that per-instance dispatch overhead. gm/now/owner are hoisted out
+// of the loop since they're constant (or frame-cached) within a frame.
+update_mold_vomit_tripmines :: proc() {
+    gm := get_game_manager();
+    active := #alive(gm) && (gm.phase == .SURVIVOR_HEAD_START || gm.phase == .ACTIVE);
+
+    if !active {
+        // Round isn't running: sweep the puddles once to clean them up.
+        for tripmine: component_iterator(Mold_Vomit_Tripmine) {
+            if !tripmine.DontDelete {
+                tripmine.entity.destroy();
             }
-            entity.destroy();
-            return;
+        }
+        return;
+    }
+
+    now := get_time();
+    owner := find_round_entity_for_mold_vomit();
+
+    // Iterate survivors and query the puddles near each, rather than iterating
+    // every puddle and querying players. Survivors are few, and the dead/minion/
+    // entity checks skip the range query entirely, so this does fewer engine
+    // calls (and allocations) than the puddle-driven version.
+    for survivor: component_iterator(Player) {
+        if !#alive(survivor.entity) || survivor.is_round_dead() || survivor.is_round_minion() {
+            continue;
+        }
+        if #alive(owner) && survivor == owner {
+            continue;
         }
 
-        now := get_time();
-        origin := entity.world_position;
-        owner := find_round_entity_for_mold_vomit();
+        user_id := survivor.get_user_id();
 
-        for survivor: component_iterator(Player) {
-            if !#alive(survivor.entity) || survivor.is_round_dead() || survivor.is_round_minion() {
-                continue;
-            }
-            if #alive(owner) && survivor == owner {
-                continue;
-            }
+        tripmines: [..]Mold_Vomit_Tripmine;
+        Scene.get_all_components_in_range(survivor.entity.world_position, ENTITY_VOMIT_TRIP_RADIUS, ref tripmines);
 
-            delta := survivor.entity.world_position - origin;
-            if length_squared(delta) > ENTITY_VOMIT_TRIP_RADIUS_SQ {
+        for tripmine: tripmines {
+            if now < tripmine.get_next_ping_at(user_id) {
                 continue;
             }
 
-            user_id := survivor.get_user_id();
-            if now < this.get_next_ping_at(user_id) {
-                continue;
-            }
-
-            this.set_next_ping_at(user_id, now + ENTITY_VOMIT_TRIP_PING_INTERVAL_SECONDS);
+            tripmine.set_next_ping_at(user_id, now + ENTITY_VOMIT_TRIP_PING_INTERVAL_SECONDS);
             ping_survivor_from_mold_vomit(owner, survivor);
         }
     }

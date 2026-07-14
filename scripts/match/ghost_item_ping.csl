@@ -17,19 +17,7 @@ player_inventory_has_item_id :: proc(player: Player, item_id: string) -> bool {
     if player.default_inventory == null {
         return false;
     }
-
-    i: s64 = 0;
-    while i < player.default_inventory.capacity {
-        item := player.default_inventory.get_item(i);
-        if #alive(item) {
-            defn := item.get_definition();
-            if defn != null && defn.id == item_id {
-                return true;
-            }
-        }
-        i += 1;
-    }
-    return false;
+    return player.default_inventory.has_item_id(item_id);
 }
 
 player_inventory_has_item_id_ui_cached :: proc(player: Player, item_id: string) -> bool {

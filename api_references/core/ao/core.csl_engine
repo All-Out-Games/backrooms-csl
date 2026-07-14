@@ -1207,6 +1207,7 @@ UI :: struct {
     wire_circle :: proc(center: v2, radius: float, thickness: float, color: v4 = {0, 1, 0, 1}, resolution := 32) #foreign "ui_wire_circle";
     line :: proc(start: v2, end: v2, thickness: float, texture: Texture_Asset, color: v4 = {1, 1, 1, 1}, repeat_texture := false) #foreign "ui_line";
     quad :: proc(rect: Rect, texture: Texture_Asset, color: v4 = {1, 1, 1, 1}, params: Quad_Params = {}) #foreign "ui_quad";
+    player_avatar :: proc(rect: Rect, player: Player, color: v4 = {1, 1, 1, 1}) #foreign "ui_player_avatar";
     text :: proc(rect: Rect, settings: Text_Settings, str: string, args: [^]any = {}) #foreign "ui_text";
     text_sync :: proc(rect: Rect, settings: Text_Settings, str: string, args: [^]any = {}) -> Rect #foreign "ui_text_sync";
     measure_text :: proc(rect: Rect, settings: Text_Settings, str: string, args: [^]any = {}) -> Rect #foreign "ui_measure_text";
@@ -1918,6 +1919,7 @@ Item_Transaction_Entry :: struct {
 
 Inventory :: class {
     get_item :: proc(inventory: Inventory, index: s64) -> Item_Instance #foreign "inventory_get_item";
+    has_item_id :: proc(inventory: Inventory, item_id: string) -> bool #foreign "inventory_has_item_id";
 
     capacity: s64   #read_only #foreign;
 } #gc_root #foreign_struct "Inventory"
