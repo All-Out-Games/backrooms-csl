@@ -3,7 +3,7 @@
 2947653957
 {
   "name": "WarpToZone3",
-  "local_enabled": true,
+  "local_enabled": false,
   "local_position": {
     "X": 234.4299926757812500,
     "Y": 183.7442016601562500

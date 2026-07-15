@@ -3,7 +3,7 @@
 2938296857
 {
   "name": "RadioPuzzleEntity",
-  "local_enabled": true,
+  "local_enabled": false,
   "local_position": {
     "X": -52.4779891967773438,
     "Y": 49.8360481262207031

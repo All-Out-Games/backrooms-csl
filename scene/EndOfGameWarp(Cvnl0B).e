@@ -3,7 +3,7 @@
 2946391297
 {
   "name": "EndOfGameWarp",
-  "local_enabled": true,
+  "local_enabled": false,
   "local_position": {
     "X": 220.3175811767578125,
     "Y": -83.6496124267578125

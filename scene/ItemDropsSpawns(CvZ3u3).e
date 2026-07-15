@@ -3,7 +3,7 @@
 2942794679
 {
   "name": "ItemDropsSpawns",
-  "local_enabled": true,
+  "local_enabled": false,
   "local_position": {
     "X": 220.1187896728515625,
     "Y": -14.1039018630981445

@@ -3,7 +3,7 @@
 2950787963
 {
   "name": "ReconnectWiresSpawn",
-  "local_enabled": true,
+  "local_enabled": false,
   "local_position": {
     "X": 184.0839538574218750,
     "Y": 38.8311386108398438

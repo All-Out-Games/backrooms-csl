@@ -3,7 +3,7 @@
 2940883308
 {
   "name": "AsyncSpawns",
-  "local_enabled": true,
+  "local_enabled": false,
   "local_position": {
 
   },

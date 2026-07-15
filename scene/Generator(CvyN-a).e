@@ -3,7 +3,7 @@
 2949177306
 {
   "name": "Generator",
-  "local_enabled": true,
+  "local_enabled": false,
   "local_position": {
     "X": 161.3697814941406250,
     "Y": 123.7201843261718750

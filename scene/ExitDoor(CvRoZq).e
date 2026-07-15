@@ -3,7 +3,7 @@
 2940634730
 {
   "name": "ExitDoor",
-  "local_enabled": true,
+  "local_enabled": false,
   "local_position": {
     "Y": 20.3096961975097656
   },

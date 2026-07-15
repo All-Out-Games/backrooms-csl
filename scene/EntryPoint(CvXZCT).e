@@ -3,7 +3,7 @@
 2942144659
 {
   "name": "EntryPoint",
-  "local_enabled": true,
+  "local_enabled": false,
   "local_position": {
     "X": 237.3476715087890625,
     "Y": -61.9544715881347656

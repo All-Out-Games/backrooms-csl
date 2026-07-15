@@ -3,7 +3,7 @@
 2936247284
 {
   "name": "HearingRadius",
-  "local_enabled": true,
+  "local_enabled": false,
   "local_position": {
 
   },

@@ -5,7 +5,7 @@
   "name": "pool_float_orange.png",
   "local_enabled": true,
   "local_position": {
-    "X": -64.1444549560546875,
+    "X": -64.1001968383789062,
     "Y": 12.6532287597656250
   },
   "local_rotation": 0,

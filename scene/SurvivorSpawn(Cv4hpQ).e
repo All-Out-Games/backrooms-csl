@@ -3,7 +3,7 @@
 2950830672
 {
   "name": "SurvivorSpawn",
-  "local_enabled": true,
+  "local_enabled": false,
   "local_position": {
     "X": 220.1728363037109375,
     "Y": -83.6679763793945312

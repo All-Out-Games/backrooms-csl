@@ -3,7 +3,7 @@
 2938623902
 {
   "name": "EntitySpawns",
-  "local_enabled": true,
+  "local_enabled": false,
   "local_position": {
     "X": 220.0342864990234375,
     "Y": -14.1229400634765625

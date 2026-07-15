@@ -3,7 +3,7 @@
 2951500453
 {
   "name": "RadioSpawns",
-  "local_enabled": true,
+  "local_enabled": false,
   "local_position": {
 
   },

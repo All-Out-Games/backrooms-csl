@@ -3,7 +3,7 @@
 2938661806
 {
   "name": "BrokenCameraSpawns",
-  "local_enabled": true,
+  "local_enabled": false,
   "local_position": {
     "X": 220.5989837646484375,
     "Y": -4.9220886230468750

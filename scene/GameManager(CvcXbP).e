@@ -3,7 +3,7 @@
 2943448783
 {
   "name": "GameManager",
-  "local_enabled": true,
+  "local_enabled": false,
   "local_position": {
 
   },
@@ -24,7 +24,6 @@
     "hearing_radius_entity": 2936247284,
     "GeneratorEntity": 2938733315,
     "ReconnectWiresEntity": 2937949974,
-    "BlastDoor": 1809170480,
     "RadioPuzzle": 2938296857,
     "LobbySpawn": 2948362439,
     "SurvivorSpawn": 2950830672,
