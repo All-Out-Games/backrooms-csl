@@ -5,8 +5,8 @@
   "name": "floodlight_yellow_down.png",
   "local_enabled": true,
   "local_position": {
-    "X": 44.8799896240234375,
-    "Y": -6.9908370971679688
+    "X": 14.2687377929687500,
+    "Y": -19.2179641723632812
   },
   "local_rotation": 0,
   "local_scale": {

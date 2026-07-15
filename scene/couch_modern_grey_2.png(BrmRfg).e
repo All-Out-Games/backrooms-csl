@@ -5,8 +5,8 @@
   "name": "couch_modern_grey_2.png",
   "local_enabled": true,
   "local_position": {
-    "X": 18.1108856201171875,
-    "Y": -23.2708377838134766
+    "X": 11.0119323730468750,
+    "Y": -13.8600940704345703
   },
   "local_rotation": 0,
   "local_scale": {
@@ -25,6 +25,11 @@
   "data": {
     "texture": "sprites/Clipping_Furniture/couch_modern_grey_2.png",
     "depth_offset": -0.8568029403686523,
+    "tint": {
+      "X": 0.9844155907630920,
+      "Y": 0.9051200151443481,
+      "Z": 0.2324743270874023
+    },
     "scale": {
       "X": 2,
       "Y": 2

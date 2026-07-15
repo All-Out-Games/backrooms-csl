@@ -5,8 +5,8 @@
   "name": "Spotlight.png",
   "local_enabled": true,
   "local_position": {
-    "X": 48.1443939208984375,
-    "Y": -6.9889841079711914
+    "X": 17.5331420898437500,
+    "Y": -19.2161121368408203
   },
   "local_rotation": 0,
   "local_scale": {

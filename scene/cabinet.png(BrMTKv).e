@@ -1,47 +1,47 @@
 14
-5918464933889
-1808614302
+7434588389377
+1798386351
 {
-  "name": "chair (1).png",
+  "name": "cabinet.png",
   "local_enabled": true,
   "local_position": {
-    "X": -16.3332214355468750,
-    "Y": -21.9777450561523438
+    "X": -2.2312774658203125,
+    "Y": -4.4348526000976562
   },
   "local_rotation": 0,
   "local_scale": {
     "X": 1,
     "Y": 1
   },
-  "previous_sibling": 1808382023,
-  "next_sibling": 1810767953,
+  "previous_sibling": 1805197097,
+  "next_sibling": 1801479319,
   "parent": 1809603361
 },
 {
   "cid": 1,
-  "aoid": 1795870678,
+  "aoid": 1799611173,
   "component_type": "Internal_Component",
   "internal_component_type": "Sprite_Renderer",
   "data": {
-    "texture": "sprites/Zone1b/chair (1).png",
-    "depth_offset": -0.1764402389526367
+    "texture": "sprites/Zone1b/cabinet.png",
+    "depth_offset": -0.8218450546264648
   }
 },
 {
   "cid": 2,
-  "aoid": 1795835693,
+  "aoid": 1810444935,
   "component_type": "Internal_Component",
   "internal_component_type": "Box_Collider",
   "data": {
     "make_navmesh_loop": true,
     "flip_navmesh_loop": true,
     "size": {
-      "X": 0.5852508544921875,
-      "Y": 0.4095287322998047
+      "X": 0.7789001464843750,
+      "Y": 0.5824460983276367
     },
     "offset": {
-      "X": 0.0000076293945312,
-      "Y": -0.4235925674438477
+      "X": -0.0122833251953125,
+      "Y": -0.6312451362609863
     }
   }
 }

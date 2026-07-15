@@ -5,8 +5,8 @@
   "name": "chair (1).png",
   "local_enabled": true,
   "local_position": {
-    "X": 46.4561920166015625,
-    "Y": 15.3304300308227539
+    "X": 26.4553222656250000,
+    "Y": -7.6331729888916016
   },
   "local_rotation": 326.7087097167968750,
   "local_scale": {
@@ -14,7 +14,7 @@
     "Y": 1
   },
   "previous_sibling": 1801918650,
-  "next_sibling": 1800114643,
+  "next_sibling": 1795272222,
   "parent": 1809603361
 },
 {

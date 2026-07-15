@@ -5,8 +5,8 @@
   "name": "popcorn_machine.png",
   "local_enabled": true,
   "local_position": {
-    "X": 9.2157592773437500,
-    "Y": -47.1416168212890625
+    "X": -4.9022521972656250,
+    "Y": -3.0948972702026367
   },
   "local_rotation": 0,
   "local_scale": {

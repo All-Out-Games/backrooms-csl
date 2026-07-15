@@ -1,25 +1,25 @@
 14
-8022998908929
-1797480156
+601295421442
+1806316364
 {
   "name": "floor_corruption_1.png",
   "local_enabled": true,
   "local_position": {
-    "X": -2.8309936523437500,
-    "Y": -29.6167640686035156
+    "X": 17.7021789550781250,
+    "Y": -9.3810548782348633
   },
   "local_rotation": 0,
   "local_scale": {
     "X": 1.6907358169555664,
     "Y": 1.6907358169555664
   },
-  "previous_sibling": 1810767953,
-  "next_sibling": 1801804238,
+  "previous_sibling": 1800517237,
+  "next_sibling": 1801141875,
   "parent": 1809603361
 },
 {
   "cid": 1,
-  "aoid": 1805667621,
+  "aoid": 1805175394,
   "component_type": "Internal_Component",
   "internal_component_type": "Sprite_Renderer",
   "data": {

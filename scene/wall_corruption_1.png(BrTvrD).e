@@ -5,8 +5,8 @@
   "name": "wall_corruption_1.png",
   "local_enabled": true,
   "local_position": {
-    "X": 18.3794708251953125,
-    "Y": 12.9843196868896484
+    "X": 11.3931274414062500,
+    "Y": 1.9096665382385254
   },
   "local_rotation": 0,
   "local_scale": {

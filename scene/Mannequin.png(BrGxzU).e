@@ -5,8 +5,8 @@
   "name": "Mannequin.png",
   "local_enabled": true,
   "local_position": {
-    "X": 45.1678314208984375,
-    "Y": 40.6774673461914062
+    "X": 23.7028656005859375,
+    "Y": -11.8822565078735352
   },
   "local_rotation": 0,
   "local_scale": {

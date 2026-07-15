@@ -5,8 +5,8 @@
   "name": "radial_gradient.png",
   "local_enabled": true,
   "local_position": {
-    "X": 47.5734558105468750,
-    "Y": -8.3854789733886719
+    "X": 16.9622039794921875,
+    "Y": -20.6126060485839844
   },
   "local_rotation": 294.6577453613281250,
   "local_scale": {

@@ -1,47 +1,50 @@
 14
-5909874999297
-1807980493
+7468948127745
+1811559718
 {
-  "name": "chair (1).png",
+  "name": "decorative_lamp_fancy.png",
   "local_enabled": true,
   "local_position": {
-    "X": -14.5259246826171875,
-    "Y": -21.9777450561523438
+    "X": 16.5345001220703125,
+    "Y": -17.4340839385986328
   },
   "local_rotation": 0,
   "local_scale": {
     "X": 1,
     "Y": 1
   },
-  "previous_sibling": 1806556072,
-  "next_sibling": 1808382023,
+  "previous_sibling": 1808567967,
   "parent": 1809603361
 },
 {
   "cid": 1,
-  "aoid": 1804834009,
+  "aoid": 1809280032,
   "component_type": "Internal_Component",
   "internal_component_type": "Sprite_Renderer",
   "data": {
-    "texture": "sprites/Zone1b/chair (1).png",
-    "depth_offset": -0.1943826675415039
+    "texture": "sprites/Zone1/decorative_lamp_fancy.png",
+    "depth_offset": -0.5296745300292969,
+    "scale": {
+      "X": 2,
+      "Y": 2
+    }
   }
 },
 {
   "cid": 2,
-  "aoid": 1811086789,
+  "aoid": 1808455925,
   "component_type": "Internal_Component",
   "internal_component_type": "Box_Collider",
   "data": {
     "make_navmesh_loop": true,
     "flip_navmesh_loop": true,
     "size": {
-      "X": 0.5852508544921875,
-      "Y": 0.4007225036621094
+      "X": 0.4951629638671875,
+      "Y": 0.3650093078613281
     },
     "offset": {
-      "X": 0.0000076293945312,
-      "Y": -0.4279956817626953
+      "X": 0.0081405639648438,
+      "Y": -0.5820751190185547
     }
   }
 }

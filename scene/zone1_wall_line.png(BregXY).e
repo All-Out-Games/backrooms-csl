@@ -5,12 +5,12 @@
   "name": "zone1_wall_line.png",
   "local_enabled": true,
   "local_position": {
-    "X": -14.6795501708984375,
+    "X": -16.4370117187500000,
     "Y": -28.1818332672119141
   },
   "local_rotation": 0,
   "local_scale": {
-    "X": 26.1200122833251953,
+    "X": 17.9400119781494141,
     "Y": 1.2949995994567871
   },
   "previous_sibling": 1811058997,

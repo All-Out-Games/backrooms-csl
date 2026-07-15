@@ -5,8 +5,8 @@
   "name": "Box group 2.png",
   "local_enabled": true,
   "local_position": {
-    "X": -37.9629516601562500,
-    "Y": -41.5164833068847656
+    "X": -0.3471984863281250,
+    "Y": -22.5312232971191406
   },
   "local_rotation": 0,
   "local_scale": {

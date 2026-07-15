@@ -5,8 +5,8 @@
   "name": "wooden_chair_2.png",
   "local_enabled": true,
   "local_position": {
-    "X": 28.9776000976562500,
-    "Y": -9.2177410125732422
+    "X": 21.3676452636718750,
+    "Y": -6.4036350250244141
   },
   "local_rotation": 0,
   "local_scale": {

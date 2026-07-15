@@ -5,8 +5,8 @@
   "name": "lamp.png",
   "local_enabled": true,
   "local_position": {
-    "X": 28.2067108154296875,
-    "Y": -26.1966819763183594
+    "X": 22.4359283447265625,
+    "Y": 1.9568586349487305
   },
   "local_rotation": 0,
   "local_scale": {

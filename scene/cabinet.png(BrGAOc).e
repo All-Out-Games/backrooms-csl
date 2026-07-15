@@ -5,8 +5,8 @@
   "name": "cabinet.png",
   "local_enabled": true,
   "local_position": {
-    "X": -49.5981292724609375,
-    "Y": -8.3735361099243164
+    "X": -4.3938751220703125,
+    "Y": -9.1756706237792969
   },
   "local_rotation": 0,
   "local_scale": {

@@ -5,8 +5,8 @@
   "name": "Where.png",
   "local_enabled": true,
   "local_position": {
-    "X": 15.9845733642578125,
-    "Y": -11.8686370849609375
+    "X": 14.4898834228515625,
+    "Y": -4.3819379806518555
   },
   "local_rotation": 0,
   "local_scale": {

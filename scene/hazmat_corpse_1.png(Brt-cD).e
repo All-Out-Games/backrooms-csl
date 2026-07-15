@@ -5,8 +5,8 @@
   "name": "hazmat_corpse_1.png",
   "local_enabled": true,
   "local_position": {
-    "X": 18.3865966796875000,
-    "Y": 12.4115762710571289
+    "X": 11.4002532958984375,
+    "Y": 1.3369240760803223
   },
   "local_rotation": 0,
   "local_scale": {

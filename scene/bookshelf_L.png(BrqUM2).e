@@ -5,8 +5,8 @@
   "name": "bookshelf_L.png",
   "local_enabled": true,
   "local_position": {
-    "X": -4.3365631103515625,
-    "Y": -28.2985439300537109
+    "X": -3.9240417480468750,
+    "Y": -18.7755355834960938
   },
   "local_rotation": 0,
   "local_scale": {

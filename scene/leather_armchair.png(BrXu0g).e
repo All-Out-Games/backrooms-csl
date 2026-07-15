@@ -5,8 +5,8 @@
   "name": "leather_armchair.png",
   "local_enabled": true,
   "local_position": {
-    "X": 17.3094024658203125,
-    "Y": -30.9054183959960938
+    "X": 7.4558715820312500,
+    "Y": -15.8914012908935547
   },
   "local_rotation": 28.3451652526855469,
   "local_scale": {

@@ -5,7 +5,8 @@
   "name": "shadow",
   "local_enabled": true,
   "local_position": {
-    "Y": -0.5067481994628906
+    "X": -3.6025085449218750,
+    "Y": -0.1432905197143555
   },
   "local_rotation": 0,
   "local_scale": {

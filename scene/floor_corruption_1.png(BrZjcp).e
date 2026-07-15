@@ -5,8 +5,8 @@
   "name": "floor_corruption_1.png",
   "local_enabled": true,
   "local_position": {
-    "X": -50.9780426025390625,
-    "Y": -9.1145782470703125
+    "X": -5.7737884521484375,
+    "Y": -9.9167127609252930
   },
   "local_rotation": 0,
   "local_scale": {

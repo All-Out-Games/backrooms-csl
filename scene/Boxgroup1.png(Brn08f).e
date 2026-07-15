@@ -5,8 +5,8 @@
   "name": "Box group 1.png",
   "local_enabled": true,
   "local_position": {
-    "X": -36.6282043457031250,
-    "Y": -40.0507850646972656
+    "X": 1.5592193603515625,
+    "Y": -23.1353530883789062
   },
   "local_rotation": 0,
   "local_scale": {

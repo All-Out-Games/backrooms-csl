@@ -5,8 +5,8 @@
   "name": "electrical_panels_R.png",
   "local_enabled": true,
   "local_position": {
-    "X": 19.3283843994140625,
-    "Y": -7.2566957473754883
+    "X": 12.2852783203125000,
+    "Y": -6.8278017044067383
   },
   "local_rotation": 0,
   "local_scale": {

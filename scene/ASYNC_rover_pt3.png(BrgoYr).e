@@ -5,8 +5,8 @@
   "name": "ASYNC_rover_pt3.png",
   "local_enabled": true,
   "local_position": {
-    "X": 47.0565185546875000,
-    "Y": -9.3597850799560547
+    "X": 16.4452667236328125,
+    "Y": -21.5869121551513672
   },
   "local_rotation": 0,
   "local_scale": {

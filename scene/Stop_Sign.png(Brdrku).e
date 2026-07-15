@@ -5,8 +5,8 @@
   "name": "Stop_Sign.png",
   "local_enabled": true,
   "local_position": {
-    "X": -14.3459320068359375,
-    "Y": -6.7916660308837891
+    "X": -16.7215576171875000,
+    "Y": -7.8262100219726562
   },
   "local_rotation": 0,
   "local_scale": {

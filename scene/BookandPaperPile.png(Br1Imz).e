@@ -5,8 +5,8 @@
   "name": "Book and Paper Pile.png",
   "local_enabled": true,
   "local_position": {
-    "X": -43.6547698974609375,
-    "Y": -14.0567626953125000
+    "X": -16.2268829345703125,
+    "Y": -21.8969917297363281
   },
   "local_rotation": 0,
   "local_scale": {

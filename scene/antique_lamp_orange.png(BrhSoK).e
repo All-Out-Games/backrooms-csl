@@ -5,8 +5,8 @@
   "name": "antique_lamp_orange.png",
   "local_enabled": true,
   "local_position": {
-    "X": 19.4878845214843750,
-    "Y": -28.3106498718261719
+    "X": 13.7468719482421875,
+    "Y": -14.3329811096191406
   },
   "local_rotation": 346.6705322265625000,
   "local_scale": {

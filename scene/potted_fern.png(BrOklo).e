@@ -5,8 +5,8 @@
   "name": "potted_fern.png",
   "local_enabled": true,
   "local_position": {
-    "X": -20.7231445312500000,
-    "Y": 4.8875527381896973
+    "X": 7.7720642089843750,
+    "Y": 2.2977614402770996
   },
   "local_rotation": 0,
   "local_scale": {

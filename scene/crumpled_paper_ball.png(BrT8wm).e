@@ -5,8 +5,8 @@
   "name": "crumpled_paper_ball.png",
   "local_enabled": true,
   "local_position": {
-    "X": -40.4384002685546875,
-    "Y": -13.6618556976318359
+    "X": -13.0105133056640625,
+    "Y": -21.5020847320556641
   },
   "local_rotation": 0,
   "local_scale": {

@@ -5,8 +5,8 @@
   "name": "Boxes_stack.png",
   "local_enabled": true,
   "local_position": {
-    "X": -41.4075622558593750,
-    "Y": -12.5584030151367188
+    "X": -13.9796752929687500,
+    "Y": -20.3986320495605469
   },
   "local_rotation": 0,
   "local_scale": {

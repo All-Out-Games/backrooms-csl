@@ -5,8 +5,8 @@
   "name": "TeleportGankPool.png",
   "local_enabled": true,
   "local_position": {
-    "X": 13.3895874023437500,
-    "Y": 8.0878953933715820
+    "X": 17.2189331054687500,
+    "Y": 2.5376734733581543
   },
   "local_rotation": 0,
   "local_scale": {
