@@ -1692,7 +1692,7 @@ draw_task_checkbox :: proc(rect: Rect, completed: bool) {
     UI.quad(rect, core_globals.white_sprite, v4.{0.12, 0.12, 0.12, 0.95});
 }
 
-draw_task_overlay_close_button :: proc(panel_rect: Rect, id: string) -> bool {
+draw_task_overlay_close_button_interact :: proc(panel_rect: Rect, id: string) -> Interact_Result {
     UI.push_id(id);
     defer UI.pop_id();
 
@@ -1719,7 +1719,11 @@ draw_task_overlay_close_button :: proc(panel_rect: Rect, id: string) -> bool {
         TASK_CLOSE_BUTTON_HALF_HEIGHT,
         TASK_CLOSE_BUTTON_HALF_WIDTH
     );
-    return UI.button(close_rect, close_bs, close_ts, "Close").clicked;
+    return UI.button(close_rect, close_bs, close_ts, "Close");
+}
+
+draw_task_overlay_close_button :: proc(panel_rect: Rect, id: string) -> bool {
+    return draw_task_overlay_close_button_interact(panel_rect, id).clicked;
 }
 
 draw_task_help_entry_row :: proc(entry: Task_Help_Entry) {

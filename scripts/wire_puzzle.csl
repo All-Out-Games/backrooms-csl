@@ -18,6 +18,7 @@ WIRE_TILE_GAP_FRACTION          :: 0.0;
 WIRE_INSET_FRACTION             :: 0.02;
 WIRE_DRAG_PIECE_SCALE           :: 0.90;
 WIRE_OPEN_INPUT_GRACE_SECONDS   :: 0.15;
+WIRE_INTERACT_HOLD_SECONDS      :: 0.5;
 WIRE_PRESET_COUNT               :: 5;
 
 WIRE_TILE_EMPTY    :: 0;
@@ -127,6 +128,8 @@ Wire_Puzzle_Effect :: class : Effect_Base {
 
     success_time: float;
     opened_at: float;
+    input_armed: bool;
+    close_button_pressed: bool;
 
     init_textures :: method() {
         if bg_texture != null {
@@ -190,6 +193,8 @@ Wire_Puzzle_Effect :: class : Effect_Base {
         drag_pos = v2{0.0, 0.0};
         success_time = 0.0;
         opened_at = get_time();
+        input_armed = false;
+        close_button_pressed = false;
     }
 
     effect_start :: method() {
@@ -204,24 +209,31 @@ Wire_Puzzle_Effect :: class : Effect_Base {
             return;
         }
         wire.in_use = true;
+        wire.using_player = player;
     }
 
     effect_end :: method(interrupt: bool) {
         if !#alive(wire) {
             return;
         }
+        if wire.using_player != player {
+            return;
+        }
         wire.in_use = false;
+        wire.using_player = null;
     }
 }
 
 Wire_Puzzle :: class : Interactable {
     solved: bool;
     in_use: bool;
+    using_player: Player;
     last_round_seed_key: u64;
 
     reset_for_round :: method(round_seed_key: u64) {
         solved = false;
         in_use = false;
+        using_player = null;
         this.set_text(WIRE_RESET_PROMPT);
         last_round_seed_key = round_seed_key;
         refresh_emergency_systems_online_state();
@@ -230,13 +242,14 @@ Wire_Puzzle :: class : Interactable {
     ao_start :: method() {
         this.set_listener(this);
         this.set_text(WIRE_RESET_PROMPT);
-        required_hold_time = 0.0;
+        required_hold_time = WIRE_INTERACT_HOLD_SECONDS;
         radius = 1.25;
         prompt_offset = v2{0.0, 0.8};
         priority = 10;
 
         solved = false;
         in_use = false;
+        using_player = null;
         last_round_seed_key = 0;
     }
 
@@ -244,7 +257,7 @@ Wire_Puzzle :: class : Interactable {
         if player == null || !#alive(player.entity) {
             return false;
         }
-        if solved || in_use {
+        if solved || (in_use && using_player != null && using_player != player) {
             return false;
         }
         if player.entity.get_active_effect() != null {
@@ -281,6 +294,7 @@ Wire_Puzzle :: class : Interactable {
 
         solved = true;
         in_use = false;
+        using_player = null;
         this.set_text(WIRE_COMPLETE_PROMPT);
 
         complete_task_for_survivors(TASK_ID_RECONNECT_WIRE);
@@ -594,8 +608,17 @@ wire_draw_piece :: proc(effect: Wire_Puzzle_Effect, rect: Rect, kind: s64, rot: 
     }
 }
 
-draw_wire_close_button :: proc(panel_rect: Rect) -> bool {
-    return draw_task_overlay_close_button(panel_rect, "wire_close_btn");
+draw_wire_close_button :: proc(panel_rect: Rect, effect: Wire_Puzzle_Effect) -> bool {
+    interact := draw_task_overlay_close_button_interact(panel_rect, "wire_close_btn");
+    if interact.just_pressed {
+        effect.close_button_pressed = true;
+    }
+    if interact.released {
+        should_close := effect.close_button_pressed && interact.clicked;
+        effect.close_button_pressed = false;
+        return should_close;
+    }
+    return false;
 }
 
 draw_wire_puzzle_panel :: proc(player: Player, effect: Wire_Puzzle_Effect, success_state: bool) -> bool {
@@ -611,9 +634,27 @@ draw_wire_puzzle_panel :: proc(player: Player, effect: Wire_Puzzle_Effect, succe
         UI.quad(panel_rect, core_globals.white_sprite, v4{0.1, 0.1, 0.1, 0.98});
     }
 
-    input_ready := get_time() - effect.opened_at >= WIRE_OPEN_INPUT_GRACE_SECONDS;
+    input_ready := effect.input_armed;
+    if !effect.input_armed {
+        UI.push_id("wire_open_input_release_guard");
+        defer UI.pop_id();
 
-    if input_ready && draw_wire_close_button(panel_rect) {
+        guard_bs := UI.default_button_settings();
+        guard_bs.sprite = core_globals.white_sprite;
+        guard_bs.press_scaling = 0.0;
+        guard_bs.color = v4{0.0, 0.0, 0.0, 0.0};
+        guard_bs.hovered_color = v4{0.0, 0.0, 0.0, 0.0};
+        guard_bs.pressed_color = v4{0.0, 0.0, 0.0, 0.0};
+        guard_bs.disabled_color = v4{0.0, 0.0, 0.0, 0.0};
+        guard_bs.background_color_multiplier = v4{0.0, 0.0, 0.0, 0.0};
+
+        guard := UI.button(full_screen, guard_bs, UI.default_text_settings(), "");
+        if get_time() - effect.opened_at >= WIRE_OPEN_INPUT_GRACE_SECONDS && !guard.active {
+            effect.input_armed = true;
+        }
+    }
+
+    if input_ready && draw_wire_close_button(panel_rect, effect) {
         return true;
     }
 
