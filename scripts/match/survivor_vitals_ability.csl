@@ -315,6 +315,11 @@ draw_vitals_hud :: proc(player: Player, dt: float) {
     row_handles: [VITALS_MAX_ROWS]Vitals_Row_Handles;
 
     for i: 0..row_count - 1 {
+        // Never throw inside a UIK begin/end scope: an exception here leaks the
+        // open scope and every later UIK.begin panics with UIK_MULTIPLE_BEGINS.
+        if !#alive(row_players[i]) {
+            continue;
+        }
         row_handles[i] = draw_vitals_hud_row_uik(row_players[i], i);
     }
 

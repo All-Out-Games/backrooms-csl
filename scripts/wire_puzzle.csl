@@ -467,12 +467,24 @@ wire_apply_preset :: proc(effect: Wire_Puzzle_Effect, which: s64) {
     }
 }
 
+wire_grid_buffers_ready :: proc(effect: Wire_Puzzle_Effect) -> bool {
+    return effect != null &&
+        effect.revealed.count == WIRE_GRID_CELLS &&
+        effect.tile_kind.count == WIRE_GRID_CELLS &&
+        effect.tile_rot.count == WIRE_GRID_CELLS &&
+        effect.connected_cache.count == WIRE_GRID_CELLS &&
+        effect.bfs_queue.count == WIRE_GRID_CELLS;
+}
+
 wire_generate_puzzle :: proc(effect: Wire_Puzzle_Effect) {
-    if effect.generated || effect.wire == null {
+    // Always size the buffers first. `generated` is synced state, so a client that
+    // picks the effect up from the server never ran effect_start and would keep
+    // zero-length grid arrays while every reader indexes them.
+    effect.ensure_grid_buffers();
+
+    if effect.generated || !#alive(effect.wire) || !#alive(effect.wire.entity) {
         return;
     }
-
-    effect.ensure_grid_buffers();
 
     seed := effect.wire.entity.id * 1664525 + effect.wire.last_round_seed_key * 1013904223;
     effect.preset_idx = rng_range_int(ref seed, 0, WIRE_PRESET_COUNT - 1);
@@ -481,12 +493,19 @@ wire_generate_puzzle :: proc(effect: Wire_Puzzle_Effect) {
 }
 
 wire_compute_connected_from_left :: proc(effect: Wire_Puzzle_Effect) -> bool {
+    if !wire_grid_buffers_ready(effect) {
+        return false;
+    }
+
     for i: 0..WIRE_GRID_CELLS - 1 {
         effect.connected_cache[i] = false;
     }
 
     start_idx := wire_tile_index(0, effect.start_row);
     end_idx := wire_tile_index(WIRE_GRID_W - 1, effect.end_row);
+    if start_idx < 0 || start_idx >= WIRE_GRID_CELLS || end_idx < 0 || end_idx >= WIRE_GRID_CELLS {
+        return false;
+    }
 
     if !wire_is_piece_kind(effect.tile_kind[start_idx]) {
         return false;
@@ -632,7 +651,10 @@ draw_wire_puzzle_panel :: proc(player: Player, effect: Wire_Puzzle_Effect, succe
 
     solved := wire_compute_connected_from_left(effect);
     start_idx := wire_tile_index(0, effect.start_row);
-    left_on := effect.connected_cache[start_idx];
+    left_on := false;
+    if wire_grid_buffers_ready(effect) && start_idx >= 0 && start_idx < WIRE_GRID_CELLS {
+        left_on = effect.connected_cache[start_idx];
+    }
     right_on := solved;
 
     conn_h := cell_h * 0.9;
@@ -870,6 +892,9 @@ draw_wire_puzzle_ui :: proc(player: Player, dt: float) {
     }
 
     wire_generate_puzzle(effect);
+    if !wire_grid_buffers_ready(effect) {
+        return;
+    }
 
     UI.push_screen_draw_context();
     defer UI.pop_draw_context();
