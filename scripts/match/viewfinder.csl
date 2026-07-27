@@ -11,19 +11,16 @@ is_viewfinder_only_group_child :: proc(target: Entity) -> bool {
         return false;
     }
 
-    group := Scene.get_entity_by_name("ViewfinderOnly");
+    gm := get_game_manager();
+    if !#alive(gm) {
+        return false;
+    }
+    group := gm.ViewfinderEntity;
     if !#alive(group) {
         return false;
     }
 
-    child := group.get_first_child();
-    while #alive(child) {
-        if child == target {
-            return true;
-        }
-        child = child.get_next_sibling();
-    }
-    return false;
+    return target.get_parent() == group;
 }
 
 sync_viewfinder_only_entity_visibility :: proc(target: Entity) {

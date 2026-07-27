@@ -3,15 +3,8 @@ LOBBED_AIM_SEGMENT_THICKNESS :: 6.0;
 LOBBED_RETICLE_SIZE :: 20.0;
 
 draw_lobbed_arc_segment :: proc(start_screen: v2, end_screen: v2, thickness: float, color: v4) {
-    offset := end_screen - start_screen;
-    if length_squared(offset) <= 0.01 return;
-
-    line_rect := Rect{start_screen, start_screen}.grow(thickness * 0.5, length(offset), thickness * 0.5, 0);
-
-    UI.push_matrix(Matrix4.rotate_about_point(line_rect.left_center(), to_degrees(atan2(offset.y, offset.x))));
-    defer UI.pop_matrix();
-
-    UI.quad(line_rect, core_globals.white_sprite, color);
+    if length_squared(end_screen - start_screen) <= 0.01 return;
+    UI.line(start_screen, end_screen, thickness, core_globals.white_sprite, color);
 }
 
 draw_lobbed_target_reticle :: proc(target_screen: v2) {

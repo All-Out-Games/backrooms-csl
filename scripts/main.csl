@@ -123,6 +123,9 @@ ao_start :: proc() {
 }
 
 ao_update :: proc(dt: float) {
+    update_mold_vomit_tripmines();
+    update_interactable_glows(dt);
+
     rr_backup_maybe_auto();
     round_audio_active := is_round_audio_active();
 
