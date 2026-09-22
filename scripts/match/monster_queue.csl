@@ -74,8 +74,8 @@ draw_monster_queue_button_ui :: proc(player: Player) {
     btn_desc := UIK.widget_desc_button_default(.BUTTON_BASIC_PURPLE);
     btn_desc.panel.width = UIK.pixels(280);
     btn_desc.panel.height = UIK.pixels(90);
-    UIK.text_set_size_mult(&btn_desc.label_text, 0.8);
-    UIK.text_set_word_wrap(&btn_desc.label_text, false);
+    #unsafe UIK.text_set_size_mult(&btn_desc.label_text, 0.8);
+    #unsafe UIK.text_set_word_wrap(&btn_desc.label_text, false);
     open_handle := UIK.button("monster_queue_open_btn", "Play as Monster", btn_desc);
 
     UIK.panel_end();
@@ -112,8 +112,8 @@ draw_monster_queue_modal_ui :: proc(player: Player) {
     UIK.spacer(UIK.pixels(1), UIK.flex(0.4));
 
     body := UIK.text_body();
-    UIK.text_set_halign(&body, .CENTER);
-    UIK.text_set_word_wrap(&body, false);
+    #unsafe UIK.text_set_halign(&body, .CENTER);
+    #unsafe UIK.text_set_word_wrap(&body, false);
     UIK.text("Guaranteed Monster next game.", body);
 
     UIK.spacer(UIK.pixels(1), UIK.flex(0.5));
@@ -174,8 +174,8 @@ draw_monster_queue_banner_ui :: proc(player: Player) {
     UIK.panel_begin(shell);
 
     banner_text := UIK.text_title();
-    UIK.text_set_halign(&banner_text, .CENTER);
-    UIK.text_set_word_wrap(&banner_text, false);
+    #unsafe UIK.text_set_halign(&banner_text, .CENTER);
+    #unsafe UIK.text_set_word_wrap(&banner_text, false);
     UIK.text("You will be the Monster next game!", banner_text);
 
     UIK.panel_end();

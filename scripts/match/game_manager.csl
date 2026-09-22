@@ -940,15 +940,15 @@ draw_match_timer_ui :: proc(player: Player) {
         if tape_goal_count > 0 {
             tapes_found := get_round_tapes_found_count_for_zone(gm, player.current_zone);
             tapes_text := UIK.text_title();
-            UIK.text_set_word_wrap(&tapes_text, false);
-            UIK.text_set_size_mult(&tapes_text, 0.6);
+            #unsafe UIK.text_set_word_wrap(&tapes_text, false);
+            #unsafe UIK.text_set_size_mult(&tapes_text, 0.6);
             UIK.text(format_string("Tapes Found %/%", {tapes_found, tape_goal_count}), tapes_text);
         }
     }
 
     time_remaining_text := UIK.text_title();
-    UIK.text_set_word_wrap(&time_remaining_text, false);
-    UIK.text_set_color(&time_remaining_text, v4{1.0, 0.95, 0.60, 1.0});
+    #unsafe UIK.text_set_word_wrap(&time_remaining_text, false);
+    #unsafe UIK.text_set_color(&time_remaining_text, v4{1.0, 0.95, 0.60, 1.0});
     UIK.text("Time Left", time_remaining_text);
     UIK.text(format_countdown_mm_ss(countdown), UIK.text_title());
     if gm.round_timer_paused {
@@ -1075,7 +1075,7 @@ draw_hunt_begin_banner_ui :: proc(player: Player) {
     }
 
     text_desc := UIK.text_title();
-    UIK.text_set_word_wrap(&text_desc, false);
+    #unsafe UIK.text_set_word_wrap(&text_desc, false);
     UIK.text(text, text_desc);
 
     UIK.panel_end();

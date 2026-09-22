@@ -1754,12 +1754,12 @@ draw_task_help_entry_row :: proc(entry: Task_Help_Entry) {
     UIK.panel_begin(text_panel);
 
     name_text := UIK.text_button();
-    UIK.text_set_word_wrap(&name_text, false);
+    #unsafe UIK.text_set_word_wrap(&name_text, false);
     UIK.text(entry.entry_name, name_text);
 
     desc_text := UIK.text_body();
-    UIK.text_set_color(&desc_text, v4{0.78, 0.8, 0.88, 0.95});
-    UIK.text_set_word_wrap(&desc_text, true);
+    #unsafe UIK.text_set_color(&desc_text, v4{0.78, 0.8, 0.88, 0.95});
+    #unsafe UIK.text_set_word_wrap(&desc_text, true);
     UIK.text(entry.description, desc_text);
 
     UIK.panel_end();

@@ -160,8 +160,8 @@ draw_vitals_hud_row_uik :: proc(target_player: Player, row_index: s64) -> Vitals
     UIK.panel_begin(name_panel);
 
     name_text := UIK.text_body();
-    UIK.text_set_word_wrap(&name_text, false);
-    UIK.text_set_size_mult(&name_text, 0.85);
+    #unsafe UIK.text_set_word_wrap(&name_text, false);
+    #unsafe UIK.text_set_size_mult(&name_text, 0.85);
     UIK.text(target_player.get_username(), name_text);
 
     status_label := "ALIVE";
@@ -177,9 +177,9 @@ draw_vitals_hud_row_uik :: proc(target_player: Player, row_index: s64) -> Vitals
         status_color = VITALS_STATUS_DOWNED_COLOR;
     }
     status_text := UIK.text_body();
-    UIK.text_set_word_wrap(&status_text, false);
-    UIK.text_set_size_mult(&status_text, 0.65);
-    UIK.text_set_color(&status_text, status_color);
+    #unsafe UIK.text_set_word_wrap(&status_text, false);
+    #unsafe UIK.text_set_size_mult(&status_text, 0.65);
+    #unsafe UIK.text_set_color(&status_text, status_color);
     UIK.text(status_label, status_text);
 
     UIK.panel_end();

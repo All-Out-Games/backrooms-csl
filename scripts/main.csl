@@ -1952,7 +1952,7 @@ Player :: class : Player_Base {
 
                 if has_inventory_item || equipped_weapon_type != .NONE || equipped_item_def != null {
                     // Draw hotbar and handle equip/unequip
-                    options := Inventory_Draw_Options.default();
+                    options := Inventory_Draw_Options.hotbar_default();
                     hotbar := Items.draw_hotbar(this, default_inventory, options);
                     handle_equipped_item_changing(hotbar.selected_item_index);
                 }
@@ -2452,9 +2452,9 @@ Player :: class : Player_Base {
     set_animator_alpha :: proc(using this: Player, alpha: float) {
         if animator == null return;
 
-        tint := animator.color_multiplier;
+        tint := animator.color;
         tint.w = alpha;
-        animator.color_multiplier = tint;
+        animator.color = tint;
         // The held-item attachment inherits color_multiplier through the skeleton tint.
     }
 

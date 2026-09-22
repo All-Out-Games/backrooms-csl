@@ -449,8 +449,8 @@ draw_entity_sabotage_option_button :: proc(id: string, label: string, icon_path:
     label_slot := UIK.layout_centered(UIK.flex(1), UIK.flex(1));
     UIK.panel_begin(label_slot);
     label_text := UIK.text_button();
-    UIK.text_set_halign(&label_text, .CENTER);
-    UIK.text_set_word_wrap(&label_text, false);
+    #unsafe UIK.text_set_halign(&label_text, .CENTER);
+    #unsafe UIK.text_set_word_wrap(&label_text, false);
     UIK.text(label, label_text);
     UIK.panel_end();
 
@@ -458,7 +458,7 @@ draw_entity_sabotage_option_button :: proc(id: string, label: string, icon_path:
     UIK.panel_begin(spacer);
     if cooldown_label.count > 0 {
         cooldown_text := UIK.text_body();
-        UIK.text_set_halign(&cooldown_text, .CENTER);
+        #unsafe UIK.text_set_halign(&cooldown_text, .CENTER);
         UIK.text(cooldown_label, cooldown_text);
     }
     UIK.panel_end();
@@ -609,7 +609,7 @@ draw_entity_jumpscare_target_modal_ui :: proc(player: Player) {
 
     if target_count == 0 {
         empty_text := UIK.text_body();
-        UIK.text_set_halign(&empty_text, .CENTER);
+        #unsafe UIK.text_set_halign(&empty_text, .CENTER);
         UIK.text("No alive Survivors", empty_text);
     }
 
