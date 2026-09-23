@@ -14,8 +14,14 @@ Inputs, in order:
 3. `reusable_weapons/anims/reusable-weapons/weapons/013RED_weapons.spine`
 4. `Animations/lplayer/playercharacter.spine`
 
-The three project input JSON files match the cooked assets in published primary
-version `6ab20436236e3076fa1ad9c8`. Engine source is based on
+This branch preserves the scripts in published staging version
+`6ab1f7514c1aefa488cac9f4`, separately from primary. All 43 rig manifest entries,
+the complete merge recipe payload, and all 2,105 scene files match published
+primary version `6ab20436236e3076fa1ad9c8`; the same validated ordinary rig and
+scene serialization migration therefore apply to staging. `ao.project` selects
+only staging game `69fd03b58bbb5b10c523dfc4` to keep publication explicit.
+
+The three project input JSON files match those published cooked inputs. Engine source is based on
 `88fde025ebf3022d7800c4d8f3e1cb76151a416d`, plus the `rig_merge_bake` authoring
 tool. Keep these source rigs and their images: the composed atlas references
 their existing texture assets, including derived skin pages.
