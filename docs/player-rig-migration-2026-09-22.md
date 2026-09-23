@@ -69,3 +69,30 @@ archive entries remain byte-identical. SHA-256:
 Normal compilation, hosted-package validation and measurements must pass before
 activating it. The engine repository's migration ledger records version IDs and
 release status. Do not treat this audit commit as production activation.
+
+The source was uploaded once as inactive `6ab33b55236e3076fa1bf207` on
+2026-09-23 at 02:37:23.099 UTC. Normal P48 compilation succeeded, build hash
+`e817b8553238da9c`, 8,470,536 bytes. Independent download verified the exact source
+hash. The compiled manifest, scripts, serialized entities, terrain, scene config
+and retained bundled assets match the preceding baked candidate byte for byte.
+Only ordinary rig bundle records are removed and the normal packed-scene cache
+is regenerated (7,088 bytes larger); no source scene change occurred.
+
+Two canonical full-dev Chrome cold runs per package, CPU6 and slow4g, measured
+74.970 s with bundled rigs versus 75.959 s with separate rig assets. Encoded
+through-spawn transfer was approximately 41.05 MB on both. This is a small
+measured cold-load cost, not a cold speedup. Game-data transfer fell from about
+10.67 to 2.85 MB; the external rig files transfer once and can then be reused.
+The actual hosted candidate passed Chrome restart with HTTP cleared and OPFS
+retained: 43 rig requests / 7.81 MB cold, zero rig requests on restart, rendering
+and movement on both runs, no page exceptions or runtime compositions.
+
+A fresh five-client local round passed on the exact hosted candidate. Both roles
+rendered and moved; monster Q input triggered bite sound, pose and cooldown, and
+survivor R input produced danger pings. Scream remained locked, so that ability
+and the full twenty-minute round were not verified. This supplements the full
+native rig equivalence checks; it is not a production retention result.
+
+This candidate is ready for activation under the authorized game migration.
+Keep prior active `6ab20436236e3076fa1ad9c8` for rollback. The staging branch
+retains its own five differing scripts and is a separate unfinished publication.
