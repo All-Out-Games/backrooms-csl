@@ -39,3 +39,8 @@ is an added asset, not a claimed download saving. Local startup, payload and
 gameplay measurements, plus published version IDs, will be recorded in the
 engine repository's game-rig migration ledger. No production release is claimed
 by this source commit alone.
+
+The current editor also normalizes scene filenames and serializes the sprite
+color field as `color` instead of `tint`. A separate audit matched all 2,098
+entity IDs and headers, checked the 408 exact field renames, and confirmed all
+other scene JSON was unchanged. This serialization update is committed separately.

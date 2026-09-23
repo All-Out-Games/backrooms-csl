@@ -1,0 +1,34 @@
+14
+4625679777793
+3752930872
+{
+  "name": "footprint_scaled_3_5a163d.png",
+  "local_enabled": true,
+  "local_position": {
+    "X": -42.5951995849609375,
+    "Y": 40.9816284179687500
+  },
+  "local_rotation": 105.3963546752929688,
+  "local_scale": {
+    "X": 3.5039992332458496,
+    "Y": 3.5039992332458496
+  },
+  "previous_sibling": 3755100375,
+  "next_sibling": 3757425750,
+  "parent": 3744912986
+},
+{
+  "cid": 1,
+  "aoid": 3757455819,
+  "component_type": "Internal_Component",
+  "internal_component_type": "Sprite_Renderer",
+  "data": {
+    "texture": "footprint_scaled_3_5a163d.png",
+    "color": {
+      "X": 0.3199496865272522,
+      "Y": 0.3309091627597809,
+      "Z": 0.1134151369333267,
+      "W": 0.3921568691730499
+    }
+  }
+}
