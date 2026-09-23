@@ -94,3 +94,14 @@ capture). Scream was locked, and no full round or damage outcome is claimed.
 These checks supplement native rig equivalence; they are not latency, retention
 or Poki measurements. The existing candidate is ready for staging activation;
 retain previous `6ab1f7514c1aefa488cac9f4` for rollback.
+
+## Released
+
+The coordinator activated this existing candidate at
+2026-09-23T03:37:03.661Z, with a fresh check of the expected old active version.
+Independent production readback confirms active `6ab3460f236e3076fa1c0150`,
+successful P48 compilation and the expected build hash/size. The previous version
+is retained; the target remains private/nightly. No further upload, engine
+deployment or configuration change occurred. Gameplay/cache validation above
+used the actual hosted package in full local dev; the final production check
+verifies activation, not a new production gameplay session.
