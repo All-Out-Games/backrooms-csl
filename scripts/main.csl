@@ -1740,16 +1740,16 @@ Player :: class : Player_Base {
                 movement_speed_multiplier = ROUND_SURVIVOR_NORMAL_MOVEMENT_MULTIPLIER;
             }
             if this.is_round_minion() && is_entity_flashbanged(this) {
-                movement_speed_multiplier *= MINION_FLASHBANG_MOVEMENT_MULTIPLIER;
+                movement_speed_multiplier = movement_speed_multiplier * ( MINION_FLASHBANG_MOVEMENT_MULTIPLIER);
                 agent.velocity = v2{0.0, 0.0};
             } else if this.is_round_entity() && is_entity_flashbanged(this) {
-                movement_speed_multiplier *= ENTITY_FLASHBANG_MOVEMENT_MULTIPLIER;
+                movement_speed_multiplier = movement_speed_multiplier * ( ENTITY_FLASHBANG_MOVEMENT_MULTIPLIER);
             }
             if has_effect(entity, Stim_Speed_Effect) {
-                movement_speed_multiplier *= STIM_SPEED_BUFF_MULTIPLIER;
+                movement_speed_multiplier = movement_speed_multiplier * ( STIM_SPEED_BUFF_MULTIPLIER);
             }
             if has_effect(entity, Minion_Bite_Slow_Effect) {
-                movement_speed_multiplier *= MINION_BITE_SLOW_MOVEMENT_MULTIPLIER;
+                movement_speed_multiplier = movement_speed_multiplier * ( MINION_BITE_SLOW_MOVEMENT_MULTIPLIER);
             }
 
             current_speed := agent.movement_speed;

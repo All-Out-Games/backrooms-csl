@@ -824,7 +824,7 @@ draw_entity_scream_nav_paths_ui :: proc(player: Player) {
         alpha := ENTITY_SCREAM_PATH_LINE_ALPHA;
         remaining := probe.expires_at - now;
         if remaining < 0.45 {
-            alpha *= clamp(remaining / 0.45, 0.0, 1.0);
+            alpha = alpha * ( clamp(remaining / 0.45, 0.0, 1.0));
         }
 
         i: s64 = 0;

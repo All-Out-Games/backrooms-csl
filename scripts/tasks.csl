@@ -86,8 +86,8 @@ Task_Base :: class {
             sfx.volume_perturb = 0.05;
             sfx.speed_perturb = 0.08;
             // Global SFX mix: everything at 25% volume.
-            sfx.volume *= 0.25;
-            sfx.volume_perturb *= 0.25;
+            sfx.volume = sfx.volume * ( 0.25);
+            sfx.volume_perturb = sfx.volume_perturb * ( 0.25);
             rr_play_sfx(RR_UI_BUTTON_CLICK_SOUND_PATH, sfx);
         }
     }
@@ -108,8 +108,8 @@ Task_Base :: class {
                 sfx.volume_perturb = 0.1;
                 sfx.speed_perturb = 0.05;
                 // Global SFX mix: everything at 25% volume.
-                sfx.volume *= 0.25;
-                sfx.volume_perturb *= 0.25;
+                sfx.volume = sfx.volume * ( 0.25);
+                sfx.volume_perturb = sfx.volume_perturb * ( 0.25);
                 rr_play_sfx(RR_TASK_SFX_SUCCESS, sfx);
             }
         } else {
@@ -845,8 +845,8 @@ rr_task_sfx :: proc(player: Player, path: string, volume: float) {
     sfx.volume_perturb = 0.05;
     sfx.speed_perturb = 0.08;
     // Global SFX mix: everything at 25% volume.
-    sfx.volume *= 0.25;
-    sfx.volume_perturb *= 0.25;
+    sfx.volume = sfx.volume * ( 0.25);
+    sfx.volume_perturb = sfx.volume_perturb * ( 0.25);
     rr_play_sfx(path, sfx);
 }
 

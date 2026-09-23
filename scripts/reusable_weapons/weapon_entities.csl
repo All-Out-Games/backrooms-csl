@@ -57,7 +57,7 @@ spawn_poison_cloud :: proc(pos: v2, owner_id: u64) {
     spine := cloud_entity.add_component(Spine_Animator);
     spine.awaken();
     spine.set_skeleton(get_asset(Spine_Asset, "reusable_weapons/anims/reusable-weapons/Virus_Cloud/004RAND_virus_cloud.spine"));
-    spine.color_multiplier = {1, 1, 1, 0.5};
+    spine.color = {1, 1, 1, 0.5};
 
     sm := State_Machine.create();
     disappear_var := sm.create_variable("disappear", .TRIGGER);

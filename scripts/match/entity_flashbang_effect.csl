@@ -47,10 +47,10 @@ get_entity_flashbang_alpha :: proc(player: Player) -> float {
     alpha := clamp(effect.intensity, 0.0, 1.0);
 
     if ENTITY_FLASHBANG_FADE_IN_SECONDS > 0.0 && elapsed < ENTITY_FLASHBANG_FADE_IN_SECONDS {
-        alpha *= clamp(elapsed / ENTITY_FLASHBANG_FADE_IN_SECONDS, 0.0, 1.0);
+        alpha = alpha * ( clamp(elapsed / ENTITY_FLASHBANG_FADE_IN_SECONDS, 0.0, 1.0));
     }
     if ENTITY_FLASHBANG_FADE_OUT_SECONDS > 0.0 && remaining < ENTITY_FLASHBANG_FADE_OUT_SECONDS {
-        alpha *= clamp(remaining / ENTITY_FLASHBANG_FADE_OUT_SECONDS, 0.0, 1.0);
+        alpha = alpha * ( clamp(remaining / ENTITY_FLASHBANG_FADE_OUT_SECONDS, 0.0, 1.0));
     }
 
     return clamp(alpha, 0.0, 1.0);

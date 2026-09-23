@@ -27,9 +27,9 @@ Vent :: class : Interactable {
             destination_entity != entity &&
             local_player.is_round_survivor() &&
             this.get_remaining_cooldown(local_player) > 0.0 {
-            target_tint.x *= VENT_COOLDOWN_TINT_MULTIPLIER;
-            target_tint.y *= VENT_COOLDOWN_TINT_MULTIPLIER;
-            target_tint.z *= VENT_COOLDOWN_TINT_MULTIPLIER;
+            target_tint.x = target_tint.x * ( VENT_COOLDOWN_TINT_MULTIPLIER);
+            target_tint.y = target_tint.y * ( VENT_COOLDOWN_TINT_MULTIPLIER);
+            target_tint.z = target_tint.z * ( VENT_COOLDOWN_TINT_MULTIPLIER);
         }
 
         vent_sprite.color = target_tint;

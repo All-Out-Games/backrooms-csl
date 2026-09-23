@@ -146,9 +146,9 @@ apply_warning_ping_visual_alpha :: proc(target: Entity, alpha: float) {
             sprite.color = c;
         } else if component.#type == Spine_Animator {
             spine := component.(Spine_Animator);
-            c := spine.color_multiplier;
+            c := spine.color;
             c.w = alpha;
-            spine.color_multiplier = c;
+            spine.color = c;
         } else if component.#type == Light {
             light := component.(Light);
             c := light.color;
@@ -486,7 +486,7 @@ draw_danger_ping_nav_paths_ui :: proc(player: Player) {
         alpha := ENTITY_SCREAM_PATH_LINE_ALPHA;
         remaining := probe.expires_at - now;
         if remaining < 0.45 {
-            alpha *= clamp(remaining / 0.45, 0.0, 1.0);
+            alpha = alpha * ( clamp(remaining / 0.45, 0.0, 1.0));
         }
 
         i: s64 = 0;
