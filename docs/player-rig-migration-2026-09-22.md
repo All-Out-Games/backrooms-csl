@@ -50,3 +50,24 @@ The current editor also normalizes scene filenames and serializes the sprite
 color field as `color` instead of `tint`. A separate audit matched all 2,098
 entity IDs and headers, checked the 408 exact field renames, and confirmed all
 other scene JSON was unchanged. This serialization update is committed separately.
+
+## Staging publication preparation
+
+The rebuilt native editor compiled this staging project successfully and prepared
+the source archive through its normal publishing code. All 73 gameplay scripts
+are byte-identical to staging's own published source; all 2,105 scene entries
+match this migrated checkout. The 86 rig JSON/atlas source files match the
+validated primary migration. No runtime merge recipe or bundled ordinary rig
+remains; the runtime manifest references 43 external Spine assets.
+
+Prepared archive SHA-256:
+`70aecb428a3bd1e7b7722600724d3d3e6b56604800e63f3880ff4d98abec9fe8`.
+Only staging game `69fd03b58bbb5b10c523dfc4` is selected in `ao.project`. The
+normal compile/publication and actual hosted-package gameplay validation remain
+pending. Do not activate until those checks pass. Source warnings about four
+missing generator sound/icon references and soft-deprecated APIs are unchanged.
+
+Rebuilding the same rig sources in this checkout changed all 43 runtime content
+IDs. The cache reuses the exact published IDs across restarts, but cross-rebuild
+reuse is not established. The observed packed-file differences are recorded in
+the engine migration ledger; do not confuse them with the fixed OPFS read bug.
