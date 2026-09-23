@@ -93,6 +93,14 @@ survivor R input produced danger pings. Scream remained locked, so that ability
 and the full twenty-minute round were not verified. This supplements the full
 native rig equivalence checks; it is not a production retention result.
 
-This candidate is ready for activation under the authorized game migration.
-Keep prior active `6ab20436236e3076fa1ad9c8` for rollback. The staging branch
-retains its own five differing scripts and is a separate unfinished publication.
+The existing candidate was activated at approximately 2026-09-23 03:00:32 UTC.
+Independent production readback confirms `6ab33b55236e3076fa1bf207` active.
+Actual public production Chrome sessions, using unchanged Client-Web #635 and
+no client/game-data overrides, both spawned, rendered and moved with no page
+exceptions or runtime merges. Cold entry fetched all 43 rigs (7,813,376 encoded
+bytes); browser restart with HTTP cleared and OPFS retained fetched zero rigs
+and zero game assets. These are functional/cache checks, not production timing
+or retention measurements. Keep prior active `6ab20436236e3076fa1ad9c8` and the
+first inactive bake for rollback. The staging branch retains its own scripts
+and is a separate unfinished publication. Engine audits contain the raw evidence
+locations and explicit cold-load tradeoff.
