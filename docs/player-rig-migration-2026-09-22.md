@@ -71,3 +71,26 @@ Rebuilding the same rig sources in this checkout changed all 43 runtime content
 IDs. The cache reuses the exact published IDs across restarts, but cross-rebuild
 reuse is not established. The observed packed-file differences are recorded in
 the engine migration ledger; do not confuse them with the fixed OPFS read bug.
+
+## Inactive hosted candidate verified
+
+Version `6ab3460f236e3076fa1c0150` was uploaded once on 2026-09-23 at
+03:23:03.655 UTC. Normal P48 compilation succeeded, hash `7c1fa4daf9688105`,
+8,464,800 bytes. Hosted source matches the reviewed SHA-256. The compiled runtime
+manifest, retained asset records and scene config match that source package;
+no merge recipe or bundled ordinary rig remains. Its script section is
+byte-identical to the previous staging build. The normal publisher regenerated
+entity, terrain and packed-scene sections, so the entire binary is not identical.
+
+The actual hosted package passed isolated full-dev Chrome entry, rendering and
+trusted movement. All 43 rigs downloaded cold (7,813,592 encoded bytes). After
+Chrome restart with HTTP cleared and OPFS retained, zero game assets downloaded.
+Both runs had zero page exceptions and zero runtime merges.
+
+Five fresh clients then entered a local match. All spawned, rendered and moved
+without errors or merges. Survivor danger pings appeared. Player 4 was the
+monster; Q triggered its bite pose, sound and cooldown (3.7 seconds in the later
+capture). Scream was locked, and no full round or damage outcome is claimed.
+These checks supplement native rig equivalence; they are not latency, retention
+or Poki measurements. The existing candidate is ready for staging activation;
+retain previous `6ab1f7514c1aefa488cac9f4` for rollback.
