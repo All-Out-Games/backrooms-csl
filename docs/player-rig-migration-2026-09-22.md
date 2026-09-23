@@ -44,3 +44,28 @@ The current editor also normalizes scene filenames and serializes the sprite
 color field as `color` instead of `tint`. A separate audit matched all 2,098
 entity IDs and headers, checked the 408 exact field renames, and confirmed all
 other scene JSON was unchanged. This serialization update is committed separately.
+
+## Publication and payload validation
+
+The first inactive compiled candidate is `6ab323a8236e3076fa1bc807`; it has not
+replaced active primary `6ab20436236e3076fa1ad9c8`. Its 43 ordinary rigs retain
+their atlas and packed skeleton bytes while omitting source JSON from runtime
+files. Full native equivalence, local Chrome movement and five-player match
+startup checks passed. Its larger game-data download cancels much of the compute
+saving on a slow network, so activation is held while packaging is improved.
+
+Engine publisher commit `cd134d3dbb22ca2bf05167201d25f1ed3f0ff4d0` on
+`codex/game-rig-migrations` leaves ordinary rigs out of `bundled_assets` for
+merge-free games. The same manifest IDs fetch the same asset files through the
+existing cache. A local diagnostic passed cold rendering/movement and, after
+restarting Chrome with HTTP cache cleared, reused all 43 rigs with zero rig
+downloads. Normal editor package generation also passed. These checks do not
+establish the candidate's final cold speed or production gameplay.
+
+The next prepared source applies only that bundle rule to the exact previous
+published source; scripts, scenes, authoring resources, manifests and all other
+archive entries remain byte-identical. SHA-256:
+`b38b5afa9e7311a1fa5d67fd356f415423c9c307ec84ad628978b857a13ad6d5`.
+Normal compilation, hosted-package validation and measurements must pass before
+activating it. The engine repository's migration ledger records version IDs and
+release status. Do not treat this audit commit as production activation.
