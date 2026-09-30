@@ -47,6 +47,7 @@ Backup_Player_Entry :: class {
 	user_id: string @ao_serialize;
 	entity_opt_in: bool @ao_serialize;
 	current_zone_i: int @ao_serialize;
+	in_round_lobby: bool @ao_serialize;
 
 	world_pos: v2 @ao_serialize;
 
@@ -316,6 +317,7 @@ rr_backup_fill_player_entry :: proc(e: Backup_Player_Entry, p: Player) {
 	e.user_id = p.get_user_id();
 	e.entity_opt_in = p.entity_opt_in;
 	e.current_zone_i = p.current_zone.(int);
+	e.in_round_lobby = p.in_round_lobby;
 	if #alive(p.entity) e.world_pos = p.entity.world_position;
 
 	e.round_downed = p.round_downed;
@@ -568,6 +570,7 @@ rr_backup_state_changed :: proc() -> bool {
 			if e.round_downed != p.round_downed return true;
 			if e.entity_opt_in != p.entity_opt_in return true;
 			if e.current_zone_i != p.current_zone.(int) return true;
+			if e.in_round_lobby != p.in_round_lobby return true;
 			if e.inventory.count != rr_backup_count_inventory(p) return true;
 			if e.completed_task_ids.count != rr_backup_count_completed_tasks(p) return true;
 			// Position drift: recapture when any player has moved > ~0.5 units
@@ -719,6 +722,7 @@ rr_backup_restore_inventory :: proc(p: Player, items: [..]Backup_Inventory_Item)
 rr_backup_restore_player :: proc(p: Player, e: Backup_Player_Entry, time_delta: float) {
 	p.entity_opt_in = e.entity_opt_in;
 	p.current_zone = e.current_zone_i.(CurrentZone);
+	p.in_round_lobby = e.in_round_lobby;
 
 	if #alive(p.entity) {
 		p.entity.set_local_position(e.world_pos);

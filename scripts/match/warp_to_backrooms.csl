@@ -66,6 +66,7 @@ WarpToBackrooms :: class : Interactable {
         player.entity.set_local_position(destination_entity.world_position);
         player.entity.mark_teleported();
         player.current_zone = current_zone;
+        player.in_round_lobby = false;
         if #alive(player.agent) {
             player.agent.velocity = v2{0.0, 0.0};
         }

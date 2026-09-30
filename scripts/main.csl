@@ -321,6 +321,8 @@ Player :: class : Player_Base {
     entity_opt_in: bool;
     monster_queue_modal_open: bool;
     current_zone: CurrentZone;
+    // Zone1 is assigned during role reveal, before survivors leave the lobby.
+    in_round_lobby: bool;
     active_tasks: List(Task_Base);
     task_list_inited: bool;
     task_list_open: bool;

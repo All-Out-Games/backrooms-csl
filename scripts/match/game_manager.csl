@@ -34,6 +34,7 @@ MATCHMAKING_PRIORITY_BETWEEN_ROUNDS :: 0;
 MATCHMAKING_PRIORITY_IN_ROUND :: 1;
 
 LOBBY_COUNTDOWN_SECONDS :: 10.0;
+ROUND_LOBBY_FORCE_ENTRY_SECONDS :: 15.0;
 ENTITY_SCREAM_ARROW_MIN_DISTANCE :: 20.0;
 ENTITY_SCREAM_PATH_LINE_THICKNESS :: 5.0;
 ENTITY_SCREAM_PATH_LINE_ALPHA :: 0.86;
@@ -1399,6 +1400,8 @@ Game_Manager :: class : Component {
             return;
         }
 
+        force_round_lobby_players_into_backrooms();
+
         if phase == .SURVIVOR_HEAD_START {
             if !round_start_positions_applied && role_selection_ends_at > 0.0 && get_time() >= get_intro_spawn_teleport_at() {
                 teleport_players_to_round_start_positions();
@@ -1778,6 +1781,7 @@ Game_Manager :: class : Component {
 
         player.entity.set_local_position(spawn.world_position);
         player.entity.mark_teleported();
+        player.in_round_lobby = true;
         if #alive(player.agent) {
             player.agent.velocity = v2{0.0, 0.0};
         }
@@ -1973,6 +1977,29 @@ Game_Manager :: class : Component {
             player.entity.set_local_position(spawn_origin + offset);
             player.entity.mark_teleported();
             player.current_zone = .Zone1;
+            player.in_round_lobby = true;
+        }
+    }
+
+    force_round_lobby_players_into_backrooms :: method() {
+        if !is_round_in_progress() || !round_start_positions_applied || role_selection_ends_at <= 0.0 ||
+            get_time() < role_selection_started_at + ROUND_LOBBY_FORCE_ENTRY_SECONDS {
+            return;
+        }
+
+        for warp: component_iterator(WarpToBackrooms) {
+            if warp.current_zone != .Zone1 || warp.RequireReconnectWires || warp.RequireLevers ||
+                !#alive(warp.destination_entity) {
+                continue;
+            }
+
+            for player: component_iterator(Player) {
+                if !player.in_round_lobby || player.is_round_dead() || !warp.can_use(player) {
+                    continue;
+                }
+                warp.warp_player(player, true);
+            }
+            return;
         }
     }
 
@@ -2722,6 +2749,7 @@ Game_Manager :: class : Component {
         if #alive(entity_player) && #alive(entity_player.entity) && #alive(round_entity_spawn) {
             entity_player.entity.set_local_position(round_entity_spawn.world_position);
             entity_player.entity.mark_teleported();
+            entity_player.in_round_lobby = false;
         }
 
         players: [..]Player;
@@ -3135,6 +3163,7 @@ Game_Manager :: class : Component {
         clear_all_footstep_echoes();
         for player: component_iterator(Player) {
             player.current_zone = .None;
+            player.in_round_lobby = true;
             player.stop_toxic_rain_targeting();
             player.clear_round_minion_state();
             player.clear_round_death_state(false);
@@ -3550,7 +3579,7 @@ resume :: proc(player: Player) {
     }
 } @chat_command @youtuber
 
-teleport_player_to_cheat_destination :: proc(player: Player, position: v2, zone: CurrentZone) {
+teleport_player_to_cheat_destination :: proc(player: Player, position: v2, zone: CurrentZone, in_lobby: bool = false) {
     if player == null || !#alive(player.entity) {
         return;
     }
@@ -3562,6 +3591,7 @@ teleport_player_to_cheat_destination :: proc(player: Player, position: v2, zone:
     player.entity.set_local_position(position);
     player.entity.mark_teleported();
     player.current_zone = zone;
+    player.in_round_lobby = in_lobby;
     if #alive(player.agent) {
         player.agent.velocity = v2{0.0, 0.0};
     }
@@ -3586,6 +3616,7 @@ tp :: proc(player: Player, destination: string = "zone1") {
 
     target: Entity;
     zone := player.current_zone;
+    in_lobby := false;
 
     if destination == "zone1" || destination == "Zone1" || destination == "1" {
         target = find_warp_destination_for_zone(.Zone1);
@@ -3605,9 +3636,11 @@ tp :: proc(player: Player, destination: string = "zone1") {
     } else if destination == "lobby" || destination == "Lobby" {
         target = gm.LobbySpawn;
         zone = .None;
+        in_lobby = true;
     } else if destination == "survivor" || destination == "Survivor" || destination == "spawn" || destination == "Spawn" {
         target = gm.SurvivorSpawn;
         zone = .Zone1;
+        in_lobby = true;
     } else if destination == "entity" || destination == "Entity" || destination == "entityspawn" || destination == "EntitySpawn" {
         if #alive(gm.round_entity_spawn) {
             target = gm.round_entity_spawn;
@@ -3622,7 +3655,10 @@ tp :: proc(player: Player, destination: string = "zone1") {
         return;
     }
 
-    teleport_player_to_cheat_destination(player, target.world_position, zone);
+        if target == gm.SurvivorSpawn || target == gm.LobbySpawn {
+            in_lobby = true;
+        }
+    teleport_player_to_cheat_destination(player, target.world_position, zone, in_lobby);
     Notifier.notify(player, "Teleported to %.", {destination});
 } @chat_command @youtuber
 

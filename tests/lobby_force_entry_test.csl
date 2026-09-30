@@ -1,0 +1,31 @@
+test_lobby_force_entry_after_round_start :: proc() {
+    Test.spawn_dummy_players(1);
+    Test.wait_seconds(4.0);
+    Test.run_admin_command("start");
+    Test.assert_var("round started", "game_manager_singleton.phase", "SURVIVOR_HEAD_START");
+    Test.wait_seconds(5.0);
+    // The survivor spawn is in the lobby. This also makes the test independent of role selection.
+    Test.run_admin_command("tp survivor");
+    Test.wait_seconds(8.0);
+    Test.assert_player_near("still in lobby before 15 seconds", {220.17284, -83.66798}, 1.5);
+    Test.wait_seconds(3.0);
+    Test.assert_player_near("forced through the main entrance after 15 seconds", {237.34767, -61.95447}, 1.5);
+    Test.run_admin_command("tp zone2");
+    Test.wait_seconds(2.0);
+    Test.assert_player_near("forced entry does not repeat in a later zone", {191.85136, 97.91118}, 1.5);
+}
+
+test_lobby_force_entry_preserves_players_already_inside :: proc() {
+    Test.spawn_dummy_players(1);
+    Test.wait_seconds(4.0);
+    Test.run_admin_command("start");
+    Test.assert_var("round started", "game_manager_singleton.phase", "SURVIVOR_HEAD_START");
+    Test.wait_seconds(5.0);
+    Test.run_admin_command("tp survivor");
+    // /zone uses the same portal warp as an interaction.
+    Test.run_admin_command("zone 1");
+    Test.run_admin_command("tp zone2");
+    Test.wait_seconds(11.0);
+    Test.assert_player_near("player who entered stays in their current zone", {191.85136, 97.91118}, 1.5);
+    Test.assert_var_bool("round remains in progress", "game_manager_singleton.round_start_positions_applied", true);
+}

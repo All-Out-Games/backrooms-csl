@@ -62,8 +62,8 @@ Global_Leaderboard :: class : Component {
         init_texture();
     }
 
-    // Data refresh only — drawing is done from Player.ao_late_update
-    // so the scroll view has the current camera and player interaction context.
+    // Data refresh only. core_player_late_update already draws every leaderboard with the player's
+    // camera and input context; calling draw() from game code draws the board twice.
     ao_late_update :: method(dt: float) {
         now := get_time();
         if now - last_refresh_time > REFRESH_INTERVAL {

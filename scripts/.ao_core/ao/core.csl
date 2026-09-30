@@ -2729,6 +2729,9 @@ Player_Base :: class : AO_Player {
     aimed_ability_drag_hint: Ability_Base;
     aimed_ability_drag_hint_started_at: float;
     aimed_ability_drag_hint_position_interp: Position_Interpolation_Helper;
+
+    // Script-owned so prediction and resimulation share the cooldown without changing native Player layout.
+    next_emote_time: float;
 }
 
 //
@@ -3227,8 +3230,14 @@ player_try_trigger_emote :: proc(player: Player_Base, animation_name: string) ->
         return false;
     }
 
+    now := get_time();
+    if now < player.next_emote_time {
+        return false;
+    }
+
     effect := new(Emote_Effect);
     effect.trigger_name = animation_name;
+    player.next_emote_time = now + 1.0;
     player.entity.set_active_effect(effect);
     return true;
 }
@@ -3377,10 +3386,10 @@ draw_aiming_arrows_interpolated :: proc(rect: Rect, previous_rect: Rect, previou
 }
 
 // Use an existing foreign API so newly published games still compile on older clients.
-observe_ability_button :: proc(player: Player, index: int, can_use: bool, aiming_blocked: bool, is_aimed: bool, cooldown: float) {
+observe_ability_button :: proc(player: Player, index: int, can_use: bool, ability_can_use: bool, aiming_blocked: bool, is_aimed: bool, cooldown: float) {
     if Game.is_launched_from_editor() && player.is_local() {
-        log_debug("[automation ability] player=% slot=% can_use=% aiming_blocked=% is_aimed=% cooldown=%",
-            {player, index, can_use, aiming_blocked, is_aimed, cooldown});
+        log_debug("[automation ability] player=% slot=% can_use=% ability_can_use=% aiming_blocked=% is_aimed=% cooldown=%",
+            {player, index, can_use, ability_can_use, aiming_blocked, is_aimed, cooldown});
     }
 }
 
@@ -3411,6 +3420,7 @@ draw_ability_button :: proc(player: Player, $T: typeid, index: int) {
             can_use = true;
         }
     }
+    ability_can_use := can_use;
     if can_use {
         #if #exists(Player.ao_can_use_ability) {
             can_use = Player.ao_can_use_ability(player, ability);
@@ -3466,7 +3476,7 @@ draw_ability_button :: proc(player: Player, $T: typeid, index: int) {
         defer UI.pop_id();
 
         was_aiming := player.was_aiming_ability_frame_number == get_frame_number() || player.was_aiming_ability_frame_number == get_frame_number() - 1;
-        observe_ability_button(player, index, can_use, was_aiming && index != player.was_aiming_ability_index, ability.is_aimed_ability, ability.current_cooldown);
+        observe_ability_button(player, index, can_use, ability_can_use, was_aiming && index != player.was_aiming_ability_index, ability.is_aimed_ability, ability.current_cooldown);
         if Game.is_launched_from_editor() && player.is_local() {
             log_debug("[automation ability identity] player=% slot=% ability=%", {player, index, ability});
         }
