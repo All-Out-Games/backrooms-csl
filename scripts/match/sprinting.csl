@@ -114,7 +114,7 @@ draw_stamina_bar :: proc(player: Player) {
     UI.push_world_draw_context();
     defer UI.pop_draw_context();
 
-    pos := player.entity.world_position;
+    pos := player.entity.world_position.xy;
     UI.push_z(pos.y - 0.0001);
     defer UI.pop_z();
 

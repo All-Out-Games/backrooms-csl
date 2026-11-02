@@ -318,7 +318,7 @@ rr_backup_fill_player_entry :: proc(e: Backup_Player_Entry, p: Player) {
 	e.entity_opt_in = p.entity_opt_in;
 	e.current_zone_i = p.current_zone.(int);
 	e.in_round_lobby = p.in_round_lobby;
-	if #alive(p.entity) e.world_pos = p.entity.world_position;
+	if #alive(p.entity) e.world_pos = p.entity.world_position.xy;
 
 	e.round_downed = p.round_downed;
 	e.round_dead = p.round_dead;
@@ -441,7 +441,7 @@ rr_backup_capture :: proc() {
 		if !#alive(c.entity) continue;
 		ce := new(Backup_Corpse_Entry);
 		ce.owner_user_id = c.owner_user_id;
-		ce.world_pos = c.entity.world_position;
+		ce.world_pos = c.entity.world_position.xy;
 		ce.spawned_at = c.spawned_at;
 		append(ref snap.corpses, ce);
 	}
@@ -456,7 +456,7 @@ rr_backup_capture :: proc() {
 		def := d.item.get_definition();
 		if def == null continue;
 		de := new(Backup_Dropped_Item_Entry);
-		de.world_pos = d.entity.world_position;
+		de.world_pos = d.entity.world_position.xy;
 		de.item_id = def.get_id();
 		de.quantity = d.item.quantity.(int);
 		de.despawn_time_start = d.despawn_time_start;
@@ -469,7 +469,7 @@ rr_backup_capture :: proc() {
 		if a == null continue;
 		if !#alive(a.entity) continue;
 		ae := new(Backup_Async_Dead_Entry);
-		ae.world_pos = a.entity.world_position;
+		ae.world_pos = a.entity.world_position.xy;
 		ae.looted = a.looted;
 		append(ref snap.async_deads, ae);
 	}
@@ -480,7 +480,7 @@ rr_backup_capture :: proc() {
 		if m == null continue;
 		if !#alive(m.entity) continue;
 		me := new(Backup_Mold_Tripmine_Entry);
-		me.world_pos = m.entity.world_position;
+		me.world_pos = m.entity.world_position.xy;
 		me.dont_delete = m.DontDelete;
 		append(ref snap.mold_tripmines, me);
 	}
@@ -491,7 +491,7 @@ rr_backup_capture :: proc() {
 		if g == null || !#alive(g.entity) continue;
 		pe := new(Backup_Puzzle_Entry);
 		pe.type_i = 0;
-		pe.world_pos = g.entity.world_position;
+		pe.world_pos = g.entity.world_position.xy;
 		pe.solved = g.solved;
 		append(ref snap.puzzles, pe);
 	}
@@ -499,7 +499,7 @@ rr_backup_capture :: proc() {
 		if k == null || !#alive(k.entity) continue;
 		pe := new(Backup_Puzzle_Entry);
 		pe.type_i = 1;
-		pe.world_pos = k.entity.world_position;
+		pe.world_pos = k.entity.world_position.xy;
 		pe.solved = k.solved;
 		append(ref snap.puzzles, pe);
 	}
@@ -507,7 +507,7 @@ rr_backup_capture :: proc() {
 		if w == null || !#alive(w.entity) continue;
 		pe := new(Backup_Puzzle_Entry);
 		pe.type_i = 2;
-		pe.world_pos = w.entity.world_position;
+		pe.world_pos = w.entity.world_position.xy;
 		pe.solved = w.solved;
 		append(ref snap.puzzles, pe);
 	}
@@ -515,7 +515,7 @@ rr_backup_capture :: proc() {
 		if r == null || !#alive(r.entity) continue;
 		pe := new(Backup_Puzzle_Entry);
 		pe.type_i = 3;
-		pe.world_pos = r.entity.world_position;
+		pe.world_pos = r.entity.world_position.xy;
 		pe.solved = r.solved;
 		append(ref snap.puzzles, pe);
 	}
@@ -577,7 +577,7 @@ rr_backup_state_changed :: proc() -> bool {
 			// so /restore doesn't snap players back to wherever they happened
 			// to be at the last non-positional state change.
 			if #alive(p.entity) {
-				dp := p.entity.world_position - e.world_pos;
+				dp := p.entity.world_position.xy - e.world_pos;
 				if dp.x*dp.x + dp.y*dp.y > 0.25 return true;
 			}
 			break;
@@ -905,7 +905,7 @@ rr_backup_apply_puzzle_solved :: proc(pe: Backup_Puzzle_Entry) {
 		first := true;
 		for g: component_iterator(Generator) {
 			if g == null || !#alive(g.entity) continue;
-			d := g.entity.world_position - pe.world_pos;
+			d := g.entity.world_position.xy - pe.world_pos;
 			d_sq := d.x*d.x + d.y*d.y;
 			if first || d_sq < best_d_sq { first = false; best_d_sq = d_sq; best = g; }
 		}
@@ -918,7 +918,7 @@ rr_backup_apply_puzzle_solved :: proc(pe: Backup_Puzzle_Entry) {
 		first := true;
 		for k: component_iterator(Keypad_Puzzle) {
 			if k == null || !#alive(k.entity) continue;
-			d := k.entity.world_position - pe.world_pos;
+			d := k.entity.world_position.xy - pe.world_pos;
 			d_sq := d.x*d.x + d.y*d.y;
 			if first || d_sq < best_d_sq { first = false; best_d_sq = d_sq; best = k; }
 		}
@@ -931,7 +931,7 @@ rr_backup_apply_puzzle_solved :: proc(pe: Backup_Puzzle_Entry) {
 		first := true;
 		for w: component_iterator(Wire_Puzzle) {
 			if w == null || !#alive(w.entity) continue;
-			d := w.entity.world_position - pe.world_pos;
+			d := w.entity.world_position.xy - pe.world_pos;
 			d_sq := d.x*d.x + d.y*d.y;
 			if first || d_sq < best_d_sq { first = false; best_d_sq = d_sq; best = w; }
 		}
@@ -944,7 +944,7 @@ rr_backup_apply_puzzle_solved :: proc(pe: Backup_Puzzle_Entry) {
 		first := true;
 		for r: component_iterator(Radio_Puzzle) {
 			if r == null || !#alive(r.entity) continue;
-			d := r.entity.world_position - pe.world_pos;
+			d := r.entity.world_position.xy - pe.world_pos;
 			d_sq := d.x*d.x + d.y*d.y;
 			if first || d_sq < best_d_sq { first = false; best_d_sq = d_sq; best = r; }
 		}

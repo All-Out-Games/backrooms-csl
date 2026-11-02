@@ -33,7 +33,7 @@ FootstepEcho :: class : Component {
             start_scale = sprite.scale;
             start_alpha = sprite.color.w;
         } else {
-            start_scale = entity.local_scale;
+            start_scale = entity.local_scale.xy;
             start_alpha = 1.0;
         }
     }
@@ -174,7 +174,7 @@ spine_bone_to_world :: proc(player: Player, bone_name: string) -> v2 {
     spine := get_visible_player_spine(player);
     if !#alive(spine) || spine.instance == null || !#alive(spine.entity) {
         if #alive(player.entity) {
-            return player.entity.world_position;
+            return player.entity.world_position.xy;
         }
         return v2{0.0, 0.0};
     }
@@ -186,7 +186,7 @@ spine_bone_to_world :: proc(player: Player, bone_name: string) -> v2 {
     c := cos(th);
     s := sin(th);
     rot := v2{scaled.x * c - scaled.y * s, scaled.x * s + scaled.y * c};
-    return spine.entity.world_position + rot;
+    return spine.entity.world_position.xy + rot;
 }
 
 ping_player_with_footstep_echo :: proc(player: Player, fade_out_seconds: float) {
@@ -224,13 +224,13 @@ is_player_within_entity_hearing_radius :: proc(player: Player) -> bool {
     }
 
     radius_sq := ENTITY_HEARING_RADIUS * ENTITY_HEARING_RADIUS;
-    origin := player.entity.world_position;
+    origin := player.entity.world_position.xy;
     for other: component_iterator(Player) {
         if other == player continue;
         if !other.is_round_entity() continue;
         if !#alive(other.entity) continue;
 
-        delta := other.entity.world_position - origin;
+        delta := other.entity.world_position.xy - origin;
         distance_sq := delta.x * delta.x + delta.y * delta.y;
         if distance_sq <= radius_sq {
             return true;

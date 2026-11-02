@@ -500,14 +500,14 @@ draw_entity_scream_arrow_ui :: proc(player: Player) {
         if !#alive(other.entity) continue;
         if player.entity_scream_arrow_zone != .None && other.current_zone != player.entity_scream_arrow_zone continue;
 
-        to_survivor := other.entity.world_position - player.entity.world_position;
+        to_survivor := other.entity.world_position.xy - player.entity.world_position.xy;
         distance := length(to_survivor);
         if distance <= ENTITY_SCREAM_ARROW_MIN_DISTANCE {
             continue;
         }
 
         distance_units := (distance + 0.5).(s64);
-        player.DrawArrowToPosition(other.entity.world_position, "UI/schleem_hologram.png", format_string("%m", {distance_units}), true);
+        player.DrawArrowToPosition(other.entity.world_position.xy, "UI/schleem_hologram.png", format_string("%m", {distance_units}), true);
     }
 }
 
@@ -530,14 +530,14 @@ draw_entity_target_ping_arrow_ui :: proc(player: Player) {
         }
     }
 
-    to_survivor := target.entity.world_position - player.entity.world_position;
+    to_survivor := target.entity.world_position.xy - player.entity.world_position.xy;
     distance := length(to_survivor);
     if distance <= ENTITY_SCREAM_ARROW_MIN_DISTANCE {
         return;
     }
 
     distance_units := (distance + 0.5).(s64);
-    player.DrawArrowToPosition(target.entity.world_position, "UI/schleem_hologram.png", format_string("%m", {distance_units}), true);
+    player.DrawArrowToPosition(target.entity.world_position.xy, "UI/schleem_hologram.png", format_string("%m", {distance_units}), true);
 }
 
 find_workbench_entity :: proc() -> Entity {
@@ -616,7 +616,7 @@ draw_broken_camera_workbench_arrow_ui :: proc(player: Player) {
         return;
     }
 
-    player.DrawArrowToPosition(workbench.world_position, WORKBENCH_ARROW_ICON_PATH);
+    player.DrawArrowToPosition(workbench.world_position.xy, WORKBENCH_ARROW_ICON_PATH);
 }
 
 draw_reconnect_wires_task_arrow_ui :: proc(player: Player) {
@@ -645,7 +645,7 @@ draw_reconnect_wires_task_arrow_ui :: proc(player: Player) {
         return;
     }
 
-    player.DrawArrowToPosition(wires_entity.world_position, RECONNECT_WIRES_ARROW_ICON_PATH);
+    player.DrawArrowToPosition(wires_entity.world_position.xy, RECONNECT_WIRES_ARROW_ICON_PATH);
 }
 
 draw_zone2_warp_arrow_ui :: proc(player: Player) {
@@ -672,7 +672,7 @@ draw_zone2_warp_arrow_ui :: proc(player: Player) {
         return;
     }
 
-    player.DrawArrowToPosition(warp_entity.world_position);
+    player.DrawArrowToPosition(warp_entity.world_position.xy);
 }
 
 draw_entity_zone2_warp_arrow_ui :: proc(player: Player) {
@@ -696,7 +696,7 @@ draw_entity_zone2_warp_arrow_ui :: proc(player: Player) {
         return;
     }
 
-    player.DrawArrowToPosition(warp_entity.world_position);
+    player.DrawArrowToPosition(warp_entity.world_position.xy);
 }
 
 draw_entity_team_zone3_warp_arrow_ui :: proc(player: Player) {
@@ -723,7 +723,7 @@ draw_entity_team_zone3_warp_arrow_ui :: proc(player: Player) {
         return;
     }
 
-    player.DrawArrowToPosition(warp_entity.world_position);
+    player.DrawArrowToPosition(warp_entity.world_position.xy);
 }
 
 draw_scan_keycards_task_arrow_ui :: proc(player: Player) {
@@ -749,7 +749,7 @@ draw_scan_keycards_task_arrow_ui :: proc(player: Player) {
         return;
     }
 
-    player.DrawArrowToPosition(scanner_entity.world_position);
+    player.DrawArrowToPosition(scanner_entity.world_position.xy);
 }
 
 draw_zone3_warp_task_arrow_ui :: proc(player: Player) {
@@ -778,7 +778,7 @@ draw_zone3_warp_task_arrow_ui :: proc(player: Player) {
         return;
     }
 
-    player.DrawArrowToPosition(warp_entity.world_position);
+    player.DrawArrowToPosition(warp_entity.world_position.xy);
 }
 
 draw_entity_scream_nav_path_segment :: proc(a: v2, b: v2, alpha: float) {
@@ -941,15 +941,15 @@ draw_match_timer_ui :: proc(player: Player) {
         if tape_goal_count > 0 {
             tapes_found := get_round_tapes_found_count_for_zone(gm, player.current_zone);
             tapes_text := UIK.text_title();
-            #unsafe UIK.text_set_word_wrap(&tapes_text, false);
-            #unsafe UIK.text_set_size_mult(&tapes_text, 0.6);
+            tapes_text.set_word_wrap(false);
+            tapes_text.set_size_mult(0.6);
             UIK.text(format_string("Tapes Found %/%", {tapes_found, tape_goal_count}), tapes_text);
         }
     }
 
     time_remaining_text := UIK.text_title();
-    #unsafe UIK.text_set_word_wrap(&time_remaining_text, false);
-    #unsafe UIK.text_set_color(&time_remaining_text, v4{1.0, 0.95, 0.60, 1.0});
+    time_remaining_text.set_word_wrap(false);
+    time_remaining_text.set_color(v4{1.0, 0.95, 0.60, 1.0});
     UIK.text("Time Left", time_remaining_text);
     UIK.text(format_countdown_mm_ss(countdown), UIK.text_title());
     if gm.round_timer_paused {
@@ -1076,7 +1076,7 @@ draw_hunt_begin_banner_ui :: proc(player: Player) {
     }
 
     text_desc := UIK.text_title();
-    #unsafe UIK.text_set_word_wrap(&text_desc, false);
+    text_desc.set_word_wrap(false);
     UIK.text(text, text_desc);
 
     UIK.panel_end();
@@ -1779,7 +1779,7 @@ Game_Manager :: class : Component {
             return;
         }
 
-        player.entity.set_local_position(spawn.world_position);
+        player.entity.set_local_position(spawn.world_position.xy);
         player.entity.mark_teleported();
         player.in_round_lobby = true;
         if #alive(player.agent) {
@@ -1814,7 +1814,7 @@ Game_Manager :: class : Component {
         radius_t := rng_range_float(ref match_rng, 0.0, 1.0);
         radius := TASK_ZONE_RANDOM_RADIUS * sqrt(radius_t);
         offset := v2{cos(angle) * radius, sin(angle) * radius};
-        return station.world_position + offset;
+        return station.world_position.xy + offset;
     }
 
     place_task_zone_near :: method(task_id: string, station: Entity) -> bool {
@@ -1890,7 +1890,7 @@ Game_Manager :: class : Component {
         if in_round {
             entity_player := get_entity_player();
             if #alive(entity_player) && #alive(entity_player.entity) {
-                hearing_radius_entity.set_local_position(entity_player.entity.world_position);
+                hearing_radius_entity.set_local_position(entity_player.entity.world_position.xy);
 
                 local_player := get_local_player();
                 if #alive(local_player) &&
@@ -1898,7 +1898,7 @@ Game_Manager :: class : Component {
                     !local_player.is_round_dead() &&
                     !is_entity_player(local_player) &&
                     #alive(local_player.entity) {
-                    delta := local_player.entity.world_position - entity_player.entity.world_position;
+                    delta := local_player.entity.world_position.xy - entity_player.entity.world_position.xy;
                     if length_squared(delta) <= visual_radius * visual_radius {
                         target_alpha = ENTITY_HEARING_VISUAL_MAX_ALPHA;
                     }
@@ -1957,7 +1957,7 @@ Game_Manager :: class : Component {
             return;
         }
 
-        spawn_origin := SurvivorSpawn.world_position;
+        spawn_origin := SurvivorSpawn.world_position.xy;
         for i: 0..players.count - 1 {
             player := players[i];
             if player.get_user_id() == entity_user_id {
@@ -2271,7 +2271,7 @@ Game_Manager :: class : Component {
             return null;
         }
 
-        return spawn_weighted_round_item_at_position(spawn_ref.world_position);
+        return spawn_weighted_round_item_at_position(spawn_ref.world_position.xy);
     }
 
     spawn_broken_camera_item_at_reference :: method(spawn_ref: Entity) -> Dropped_Item {
@@ -2286,7 +2286,7 @@ Game_Manager :: class : Component {
         }
 
         item := Items.create_item_instance(broken_camera_def, 1);
-        dropped_item := Dropped_Item.spawn(spawn_ref.world_position, item);
+        dropped_item := Dropped_Item.spawn(spawn_ref.world_position.xy, item);
         if !#alive(dropped_item) {
             if #alive(item) {
                 Items.destroy_item_instance(item);
@@ -2415,7 +2415,7 @@ Game_Manager :: class : Component {
         }
 
         item := Items.create_item_instance(tape_def, 1);
-        dropped_item := Dropped_Item.spawn(spawn_ref.world_position, item);
+        dropped_item := Dropped_Item.spawn(spawn_ref.world_position.xy, item);
         if !#alive(dropped_item) {
             if #alive(item) {
                 Items.destroy_item_instance(item);
@@ -2599,7 +2599,7 @@ Game_Manager :: class : Component {
 
         dead_prefab := get_asset(Prefab_Asset, "AsyncDead.prefab");
         if dead_prefab != null {
-            dead_entity := Scene.instantiate(dead_prefab, spawn_ref.world_position);
+            dead_entity := Scene.instantiate(dead_prefab, spawn_ref.world_position.xy);
             if #alive(dead_entity) {
                 dead_entity.mark_teleported();
                 if dead_entity.get_component(DeadAsync) == null {
@@ -2611,7 +2611,7 @@ Game_Manager :: class : Component {
 
         mold_prefab := get_asset(Prefab_Asset, ENTITY_VOMIT_PREFAB_PATH);
         if mold_prefab != null {
-            mold_entity := Scene.instantiate(mold_prefab, spawn_ref.world_position);
+            mold_entity := Scene.instantiate(mold_prefab, spawn_ref.world_position.xy);
             if #alive(mold_entity) {
                 mold_entity.mark_teleported();
                 tripmine := mold_entity.get_component(Mold_Vomit_Tripmine);
@@ -2690,7 +2690,7 @@ Game_Manager :: class : Component {
             return null;
         }
 
-        entity_player.entity.set_local_position(spawn.world_position);
+        entity_player.entity.set_local_position(spawn.world_position.xy);
         entity_player.entity.mark_teleported();
         return spawn;
     }
@@ -2723,7 +2723,7 @@ Game_Manager :: class : Component {
             return false;
         }
 
-        wire_entity.set_local_position(spawn.world_position);
+        wire_entity.set_local_position(spawn.world_position.xy);
         wire_entity.mark_teleported();
         return true;
     }
@@ -2738,7 +2738,7 @@ Game_Manager :: class : Component {
             return;
         }
 
-        RadioPuzzle.set_local_position(spawn.world_position);
+        RadioPuzzle.set_local_position(spawn.world_position.xy);
         RadioPuzzle.mark_teleported();
     }
 
@@ -2747,7 +2747,7 @@ Game_Manager :: class : Component {
 
         entity_player := get_entity_player();
         if #alive(entity_player) && #alive(entity_player.entity) && #alive(round_entity_spawn) {
-            entity_player.entity.set_local_position(round_entity_spawn.world_position);
+            entity_player.entity.set_local_position(round_entity_spawn.world_position.xy);
             entity_player.entity.mark_teleported();
             entity_player.in_round_lobby = false;
         }
@@ -2818,7 +2818,7 @@ Game_Manager :: class : Component {
         if lights_out_had_previous_task_zone {
             previous_zone := get_task_zone_entity();
             if #alive(previous_zone) {
-                lights_out_previous_task_zone_position = previous_zone.world_position;
+                lights_out_previous_task_zone_position = previous_zone.world_position.xy;
             } else {
                 lights_out_had_previous_task_zone = false;
             }
@@ -3227,13 +3227,13 @@ Game_Manager :: class : Component {
 
     get_end_game_cutscene_position :: method() -> v2 {
         if #alive(EndOfGameWarp) {
-            return EndOfGameWarp.world_position;
+            return EndOfGameWarp.world_position.xy;
         }
 
         fallback := Scene.get_entity_by_name("EndOfGameWarp");
         if #alive(fallback) {
             EndOfGameWarp = fallback;
-            return fallback.world_position;
+            return fallback.world_position.xy;
         }
 
         return v2{0.0, 0.0};
@@ -3486,7 +3486,7 @@ find_zone_cheat_warp :: proc(target_zone: CurrentZone, target_position: v2) -> W
             continue;
         }
 
-        dist_sq := length_squared(warp.entity.world_position - target_position);
+        dist_sq := length_squared(warp.entity.world_position.xy - target_position);
         if dist_sq < best_dist_sq {
             best_dist_sq = dist_sq;
             best_warp = warp;
@@ -3658,7 +3658,7 @@ tp :: proc(player: Player, destination: string = "zone1") {
         if target == gm.SurvivorSpawn || target == gm.LobbySpawn {
             in_lobby = true;
         }
-    teleport_player_to_cheat_destination(player, target.world_position, zone, in_lobby);
+    teleport_player_to_cheat_destination(player, target.world_position.xy, zone, in_lobby);
     Notifier.notify(player, "Teleported to %.", {destination});
 } @chat_command @youtuber
 
@@ -3785,7 +3785,7 @@ spawn :: proc(player: Player, item_id: string) {
         return;
     }
 
-    dropped_item := gm.spawn_round_item_def_at_position(item_def, player.entity.world_position);
+    dropped_item := gm.spawn_round_item_def_at_position(item_def, player.entity.world_position.xy);
     if !#alive(dropped_item) {
         Notifier.notify(player, "Could not spawn %.", {item_def.get_name()});
         return;

@@ -9,7 +9,7 @@ beam_line_damage :: proc(player: Player, origin: v2, direction: v2, range: float
         if target.entity.id == player.entity.id continue;
         if target.health <= 0 continue;
 
-        target_pos := target.entity.world_position;
+        target_pos := target.entity.world_position.xy;
         to_target := v2{target_pos.x - origin.x, target_pos.y - origin.y};
 
         // Project onto beam direction
@@ -39,7 +39,7 @@ beam_cone_damage :: proc(player: Player, origin: v2, direction: v2, range: float
         if target.entity.id == player.entity.id continue;
         if target.health <= 0 continue;
 
-        target_pos := target.entity.world_position;
+        target_pos := target.entity.world_position.xy;
         to_target := v2{target_pos.x - origin.x, target_pos.y - origin.y};
         dist := length(to_target);
         if dist < 0.1 || dist > range continue;
@@ -116,7 +116,7 @@ Beam_Visual :: class : Component {
                 entity.destroy();
                 return;
             }
-            end_pos = target.entity.world_position;
+            end_pos = target.entity.world_position.xy;
         } else {
             // Directional beam (Void Splitter) - aim in player's direction
             dir := source.last_aim_direction;

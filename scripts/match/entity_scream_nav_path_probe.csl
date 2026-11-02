@@ -35,8 +35,8 @@ Entity_Scream_Nav_Path_Probe :: class : Component {
         expires_at = get_time() + duration_seconds;
         path_complete = false;
 
-        start_position := owner.entity.world_position;
-        target_position = target.entity.world_position;
+        start_position := owner.entity.world_position.xy;
+        target_position = target.entity.world_position.xy;
         if #alive(navmesh) {
             start_hint: s64 = 0;
             target_hint: s64 = 0;
@@ -78,7 +78,7 @@ Entity_Scream_Nav_Path_Probe :: class : Component {
             return;
         }
         if points.count <= 0 {
-            points.append(entity.world_position);
+            points.append(entity.world_position.xy);
         }
         if points.count >= ENTITY_SCREAM_PATH_MAX_POINTS {
             path_complete = true;
@@ -95,7 +95,7 @@ Entity_Scream_Nav_Path_Probe :: class : Component {
             agent.set_navmesh_to_lock_to(navmesh);
         }
 
-        current := entity.world_position;
+        current := entity.world_position.xy;
         to_target := target_position - current;
         if length(to_target) <= ENTITY_SCREAM_PATH_REACHED_DISTANCE {
             points.append(target_position);
@@ -152,7 +152,7 @@ spawn_entity_scream_nav_path_probe :: proc(owner: Player, target: Player, navmes
     clear_entity_detected_path_for_survivor(target);
 
     e := Scene.create_entity();
-    e.set_local_position(owner.entity.world_position);
+    e.set_local_position(owner.entity.world_position.xy);
     e.mark_teleported();
 
     e.add_component(Movement_Agent);

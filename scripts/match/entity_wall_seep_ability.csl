@@ -16,7 +16,7 @@ get_wall_seep_navmesh :: proc() -> Navmesh {
 }
 
 get_wall_seep_selected_position :: proc(player: Player, params: ref Ability_Update_Params, aim_direction: v2) -> v2 {
-    start_position := player.entity.world_position;
+    start_position := player.entity.world_position.xy;
 
     if player.device_kind == .PC {
         offset := get_mouse_world_position() - start_position;
@@ -40,10 +40,10 @@ resolve_wall_seep_target :: proc(player: Player, params: ref Ability_Update_Para
 
     navmesh := get_wall_seep_navmesh();
     if !#alive(navmesh) {
-        return player.entity.world_position, false;
+        return player.entity.world_position.xy, false;
     }
 
-    start_position := player.entity.world_position;
+    start_position := player.entity.world_position.xy;
     selected_position := get_wall_seep_selected_position(player, ref params, aim_direction);
 
     snapped_position: v2;
@@ -167,7 +167,7 @@ Entity_Wall_Seep_Ability :: class : Ability_Base {
 
         if aiming.aim {
             player.last_aim_direction = aiming.aim_direction;
-            draw_aiming_line(player.entity.world_position, aiming.aim_direction, 1.0 / player.camera.size * 4);
+            draw_aiming_line(player.entity.world_position.xy, aiming.aim_direction, 1.0 / player.camera.size * 4);
         }
 
         if !aiming.activate {

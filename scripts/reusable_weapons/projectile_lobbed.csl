@@ -28,7 +28,7 @@ play_flashbang_impact_sfx :: proc(pos: v2) {
 }
 
 get_lobbed_projectile_start_pos :: proc(player: Player, direction: v2) -> v2 {
-    return player.entity.world_position;
+    return player.entity.world_position.xy;
 }
 
 get_lobbed_arc_height :: proc(travel_distance: float, max_distance: float) -> float {
@@ -56,7 +56,7 @@ get_lobbed_landing_position :: proc(start_pos: v2, direction: v2, max_distance: 
 }
 
 get_lobbed_target_origin_position :: proc(player: Player, direction: v2) -> v2 {
-    return player.entity.world_position;
+    return player.entity.world_position.xy;
 }
 
 get_lobbed_target_position_from_player :: proc(player: Player, direction: v2, aim_distance: float) -> v2 {
@@ -93,8 +93,8 @@ Lobbed_Projectile :: class : Component {
     ao_update :: method(dt: float) {
         if !started {
             started = true;
-            start_pos = entity.world_position;
-            base_scale = entity.local_scale;
+            start_pos = entity.world_position.xy;
+            base_scale = entity.local_scale.xy;
             if base_scale.x == 0.0 && base_scale.y == 0.0 {
                 base_scale = v2{2.0, 2.0};
             }

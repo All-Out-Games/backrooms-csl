@@ -60,7 +60,7 @@ apply_flashbang_effect_to_monster_player :: proc(player: Player, explosion_pos: 
     if !#alive(player) || !#alive(player.entity) {
         return;
     }
-    if length(player.entity.world_position - explosion_pos) > ENTITY_FLASHBANG_TRIGGER_RADIUS {
+    if length(player.entity.world_position.xy - explosion_pos) > ENTITY_FLASHBANG_TRIGGER_RADIUS {
         return;
     }
 

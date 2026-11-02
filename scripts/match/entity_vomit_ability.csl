@@ -127,7 +127,7 @@ update_mold_vomit_tripmines :: proc() {
         user_id := survivor.get_user_id();
 
         tripmines: [..]Mold_Vomit_Tripmine;
-        Scene.get_all_components_in_range(survivor.entity.world_position, ENTITY_VOMIT_TRIP_RADIUS, ref tripmines);
+        Scene.get_all_components_in_range(survivor.entity.world_position.xy, ENTITY_VOMIT_TRIP_RADIUS, ref tripmines);
 
         for tripmine: tripmines {
             if now < tripmine.get_next_ping_at(user_id) {
@@ -165,7 +165,7 @@ spawn_mold_vomit_tripmine :: proc(player: Player) {
         forward_x = ENTITY_VOMIT_SPAWN_X_OFFSET;
     }
 
-    spawn_mold_vomit_at_position(player.entity.world_position + v2{forward_x, ENTITY_VOMIT_SPAWN_Y_OFFSET});
+    spawn_mold_vomit_at_position(player.entity.world_position.xy + v2{forward_x, ENTITY_VOMIT_SPAWN_Y_OFFSET});
 }
 
 Entity_Vomit_Effect :: class : Effect_Base {

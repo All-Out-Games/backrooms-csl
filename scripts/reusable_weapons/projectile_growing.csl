@@ -30,7 +30,7 @@ Growing_Projectile :: class : Component {
             radius = 0.8;
         }
 
-        pos := entity.world_position + v2{0, -0.5};
+        pos := entity.world_position.xy + v2{0, -0.5};
         nearby: [..]Weapon_Target;
         Scene.get_all_components_in_range(pos, radius, ref nearby);
 
@@ -59,7 +59,7 @@ Growing_Projectile :: class : Component {
             // Grow on hit
             hit_count += 1;
             damage = damage * 1.25;
-            cur_scale := entity.local_scale;
+            cur_scale := entity.local_scale.xy;
             entity.set_local_scale({cur_scale.x * 1.5, cur_scale.y * 1.5});
 
             sfx := get_asset(SFX_Asset, "reusable_weapons/sounds/reusable-weapons/plasma_burst_hit.wav");

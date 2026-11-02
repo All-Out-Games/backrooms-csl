@@ -15,9 +15,9 @@ spawn_corpse_for_player :: proc(player: Player) -> Corpse {
     }
 
     corpse_entity := Scene.create_entity();
-    corpse_entity.set_local_position(player.entity.world_position);
+    corpse_entity.set_local_position(player.entity.world_position.xy);
     corpse_entity.set_local_rotation(player.entity.world_rotation);
-    corpse_entity.set_local_scale(player.entity.world_scale);
+    corpse_entity.set_local_scale(player.entity.world_scale.xy);
 
     corpse := corpse_entity.add_component(Corpse);
     corpse.owner_user_id = player.get_user_id();

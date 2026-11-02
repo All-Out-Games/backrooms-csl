@@ -12,14 +12,14 @@ find_stim_target :: proc(player: Player) -> Player {
     best_target: Player;
     best_distance_sq := STIM_REVIVE_RANGE * STIM_REVIVE_RANGE;
     found_target := false;
-    origin := player.entity.world_position;
+    origin := player.entity.world_position.xy;
 
     for other: component_iterator(Player) {
         if other == player continue;
         if !other.is_round_downed() continue;
         if !#alive(other.entity) continue;
 
-        delta := other.entity.world_position - origin;
+        delta := other.entity.world_position.xy - origin;
         distance_sq := delta.x * delta.x + delta.y * delta.y;
         if distance_sq > STIM_REVIVE_RANGE * STIM_REVIVE_RANGE continue;
 

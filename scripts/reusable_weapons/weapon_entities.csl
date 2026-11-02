@@ -37,7 +37,7 @@ Poison_Cloud :: class : Component {
         tick_timer += dt;
         if tick_timer >= tick_rate {
             tick_timer = 0;
-            apply_aoe_damage(entity.world_position, owner_id, radius, damage_per_tick);
+            apply_aoe_damage(entity.world_position.xy, owner_id, radius, damage_per_tick);
         }
     }
 
@@ -191,7 +191,7 @@ Tornado_Entity :: class : Component {
             // Play end sound
             end_sfx := get_asset(SFX_Asset, "reusable_weapons/sounds/reusable-weapons/fire_tornado_end.wav");
             end_desc := SFX.default_sfx_desc();
-            end_desc.set_position(entity.world_position);
+            end_desc.set_position(entity.world_position.xy);
             end_desc.range_multiplier = 2.0;
             SFX.play(end_sfx, end_desc);
             despawning = true;
@@ -203,7 +203,7 @@ Tornado_Entity :: class : Component {
         }
 
         // Homing toward nearest target
-        pos := entity.world_position;
+        pos := entity.world_position.xy;
         if homing_radius > 0 {
             target, found := Scene.get_closest_component_in_range(pos, homing_radius, Weapon_Target);
             if found && target != null && target.entity.id != owner_id {
@@ -224,7 +224,7 @@ Tornado_Entity :: class : Component {
         tick_timer += dt;
         if tick_timer >= tick_rate {
             tick_timer = 0;
-            apply_aoe_damage(entity.world_position, owner_id, aoe_radius, damage_per_tick);
+            apply_aoe_damage(entity.world_position.xy, owner_id, aoe_radius, damage_per_tick);
         }
     }
 
@@ -238,7 +238,7 @@ Tornado_Entity :: class : Component {
 spawn_tornado_entity :: proc(player: Player, direction: v2, wt: Weapon_Type) {
 
     config := get_weapon_config(wt);
-    spawn_pos := player.entity.world_position;
+    spawn_pos := player.entity.world_position.xy;
 
     tornado_entity := Scene.create_entity();
     tornado_entity.set_local_position(spawn_pos);
@@ -324,7 +324,7 @@ Storms_Eye_Tornado :: class : Component {
         tick_timer += dt;
         if tick_timer >= tick_rate {
             tick_timer = 0;
-            apply_aoe_damage(entity.world_position, owner_id, aoe_radius, damage_per_tick);
+            apply_aoe_damage(entity.world_position.xy, owner_id, aoe_radius, damage_per_tick);
         }
     }
 

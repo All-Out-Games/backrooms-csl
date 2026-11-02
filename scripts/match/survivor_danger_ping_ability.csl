@@ -50,7 +50,7 @@ get_danger_ping_navmesh :: proc() -> Navmesh {
 }
 
 get_danger_ping_selected_position :: proc(player: Player, params: ref Ability_Update_Params, aim_direction: v2) -> v2 {
-    start_position := player.entity.world_position;
+    start_position := player.entity.world_position.xy;
 
     if player.device_kind == .PC {
         offset := get_mouse_world_position() - start_position;
@@ -299,7 +299,7 @@ Danger_Ping_Nav_Path_Probe :: class : Component {
         expires_at = get_time() + duration_seconds;
         path_complete = false;
 
-        start_position := owner.entity.world_position;
+        start_position := owner.entity.world_position.xy;
         target_position = target;
         if #alive(navmesh) {
             start_hint: s64 = 0;
@@ -342,7 +342,7 @@ Danger_Ping_Nav_Path_Probe :: class : Component {
             return;
         }
         if points.count <= 0 {
-            points.append(entity.world_position);
+            points.append(entity.world_position.xy);
         }
         if points.count >= DANGER_PING_PATH_MAX_POINTS {
             path_complete = true;
@@ -359,7 +359,7 @@ Danger_Ping_Nav_Path_Probe :: class : Component {
             agent.set_navmesh_to_lock_to(navmesh);
         }
 
-        current := entity.world_position;
+        current := entity.world_position.xy;
         to_target := target_position - current;
         if length(to_target) <= DANGER_PING_PATH_REACHED_DISTANCE {
             points.append(target_position);
@@ -394,7 +394,7 @@ spawn_danger_ping_nav_path_probe :: proc(owner: Player, source: Player, target_p
     }
 
     e := Scene.create_entity();
-    e.set_local_position(owner.entity.world_position);
+    e.set_local_position(owner.entity.world_position.xy);
     e.mark_teleported();
 
     e.add_component(Movement_Agent);
@@ -515,11 +515,11 @@ draw_danger_ping_arrows_ui :: proc(player: Player) {
 
         label := "";
         if ping.owner_user_id != player_user_id {
-            distance := length(ping.entity.world_position - player.entity.world_position);
+            distance := length(ping.entity.world_position.xy - player.entity.world_position.xy);
             distance_units := (distance + 0.5).(s64);
             label = format_string("%m", {distance_units});
         }
-        player.DrawArrowToPosition(ping.entity.world_position, icon_path, label, true, 56.0);
+        player.DrawArrowToPosition(ping.entity.world_position.xy, icon_path, label, true, 56.0);
     }
 }
 

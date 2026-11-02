@@ -44,7 +44,7 @@ Noisemaker_Target :: class : Component {
         echo_timer += dt;
         while echo_timer >= NOISEMAKER_ECHO_INTERVAL_SECONDS {
             echo_timer -= NOISEMAKER_ECHO_INTERVAL_SECONDS;
-            spawn_noisemaker_echo(entity.world_position, ref rng);
+            spawn_noisemaker_echo(entity.world_position.xy, ref rng);
         }
     }
 
@@ -77,7 +77,7 @@ is_position_within_active_noisemaker :: proc(world_pos: v2) -> bool {
     for noisemaker: component_iterator(Noisemaker_Target) {
         if !#alive(noisemaker.entity) continue;
 
-        delta := noisemaker.entity.world_position - world_pos;
+        delta := noisemaker.entity.world_position.xy - world_pos;
         if length_squared(delta) <= radius_sq {
             return true;
         }
@@ -92,5 +92,5 @@ is_entity_sound_sight_interfered :: proc() -> bool {
         return false;
     }
 
-    return is_position_within_active_noisemaker(entity_player.entity.world_position);
+    return is_position_within_active_noisemaker(entity_player.entity.world_position.xy);
 }

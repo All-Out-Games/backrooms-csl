@@ -24,13 +24,13 @@ Melee_Ability :: class : Ability_Base {
 
             // Play katana sound
             sfx_desc := SFX.default_sfx_desc();
-            sfx_desc.set_position(p.entity.world_position);
+            sfx_desc.set_position(p.entity.world_position.xy);
             sfx_desc.range_multiplier = 2.0;
             SFX.play(get_asset(SFX_Asset, "reusable_weapons/sounds/reusable-weapons/katana_slash.wav"), sfx_desc);
 
             // Damage nearby targets
             nearby: [..]Weapon_Target;
-            pos := p.entity.world_position;
+            pos := p.entity.world_position.xy;
             Scene.get_all_components_in_range(pos, 1.5, ref nearby);
             for hit: nearby {
                 if hit != null {
@@ -80,8 +80,8 @@ Special_Ability :: class : Ability_Base {
         if aiming.aim {
             p.last_aim_direction = aiming.aim_direction;
             p.set_mouse_ik_enabled(true);
-            p.set_aim_target(p.entity.world_position + aiming.aim_direction * 5.0);
-            draw_thin_aiming_line(p.entity.world_position, aiming.aim_direction, 1.0);
+            p.set_aim_target(p.entity.world_position.xy + aiming.aim_direction * 5.0);
+            draw_thin_aiming_line(p.entity.world_position.xy, aiming.aim_direction, 1.0);
         } else {
             p.set_mouse_ik_enabled(false);
         }

@@ -178,7 +178,7 @@ Ghost_Item_Ping_Nav_Path_Probe :: class : Component {
         expires_at = get_time() + duration_seconds;
         path_complete = false;
 
-        start_position := owner.entity.world_position;
+        start_position := owner.entity.world_position.xy;
         target_position = target;
         if #alive(navmesh) {
             start_hint: s64 = 0;
@@ -221,7 +221,7 @@ Ghost_Item_Ping_Nav_Path_Probe :: class : Component {
             return;
         }
         if points.count <= 0 {
-            points.append(entity.world_position);
+            points.append(entity.world_position.xy);
         }
         if points.count >= GHOST_ITEM_PING_PATH_MAX_POINTS {
             path_complete = true;
@@ -238,7 +238,7 @@ Ghost_Item_Ping_Nav_Path_Probe :: class : Component {
             agent.set_navmesh_to_lock_to(navmesh);
         }
 
-        current := entity.world_position;
+        current := entity.world_position.xy;
         to_target := target_position - current;
         if length(to_target) <= GHOST_ITEM_PING_PATH_REACHED_DISTANCE {
             points.append(target_position);
@@ -273,7 +273,7 @@ spawn_ghost_item_ping_nav_path_probe :: proc(owner: Player, target_position: v2,
     }
 
     e := Scene.create_entity();
-    e.set_local_position(owner.entity.world_position);
+    e.set_local_position(owner.entity.world_position.xy);
     e.mark_teleported();
 
     e.add_component(Movement_Agent);
@@ -418,7 +418,7 @@ Ghost_Item_Ping_Interactable :: class : Component {
             }
 
             player.ghost_item_ping_cooldown_ends_at = get_time() + GHOST_ITEM_PING_COOLDOWN_SECONDS;
-            ping_item_for_alive_survivors(dropped_item.entity.world_position);
+            ping_item_for_alive_survivors(dropped_item.entity.world_position.xy);
             return;
         }
 

@@ -10,7 +10,7 @@ Boomwheel_Cannon :: class : Component {
     ao_update :: method(dt: float) {
         if !initialized return;
 
-        current_pos := entity.world_position;
+        current_pos := entity.world_position.xy;
         dx := current_pos.x - last_pos.x;
         dy := current_pos.y - last_pos.y;
         dist_sq := dx * dx + dy * dy;

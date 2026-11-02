@@ -196,7 +196,7 @@ Radio_Puzzle :: class : Interactable {
 
         if now >= next_static_play_at {
             static_volume := 0.16 * (1.0 - signal_strength);
-            play_radio_sfx(RADIO_STATIC_SFX_PATH, entity.world_position, static_volume, speed=0.8, range_multiplier=0.7);
+            play_radio_sfx(RADIO_STATIC_SFX_PATH, entity.world_position.xy, static_volume, speed=0.8, range_multiplier=0.7);
             next_static_play_at = now + RADIO_STATIC_REPLAY_SECONDS;
         }
 
@@ -204,7 +204,7 @@ Radio_Puzzle :: class : Interactable {
             digit := get_radio_broadcast_digit(next_digit_index);
             digit_volume := 0.75 * signal_strength;
             if digit_volume > 0.02 {
-                play_radio_sfx(get_radio_digit_sfx_path(digit), entity.world_position, digit_volume, speed=0.95, range_multiplier=0.55);
+                play_radio_sfx(get_radio_digit_sfx_path(digit), entity.world_position.xy, digit_volume, speed=0.95, range_multiplier=0.55);
             }
             next_digit_index += 1;
             next_digit_play_at = now + RADIO_DIGIT_REPLAY_SECONDS;
@@ -222,7 +222,7 @@ Radio_Puzzle :: class : Interactable {
         this.set_text("Code Found!");
 
         complete_task_for_survivors(TASK_ID_TUNE_RADIO);
-        play_radio_sfx(RADIO_SUCCESS_SFX_PATH, entity.world_position, 0.45, range_multiplier=0.5);
+        play_radio_sfx(RADIO_SUCCESS_SFX_PATH, entity.world_position.xy, 0.45, range_multiplier=0.5);
         notify_survivors("% found the code on the radio! Type it into the keypad.", {player.get_username()});
     }
 }
@@ -260,12 +260,12 @@ draw_task_zone_hint_arrow :: proc(player: Player, task_id: string, texture_path:
         return;
     }
 
-    offset := zone.world_position - player.entity.world_position;
+    offset := zone.world_position.xy - player.entity.world_position.xy;
     if length_squared(offset) <= TASK_ZONE_ARROW_HIDE_DISTANCE * TASK_ZONE_ARROW_HIDE_DISTANCE {
         return;
     }
 
-    player.DrawArrowToPosition(zone.world_position, texture_path, "", false, 56.0);
+    player.DrawArrowToPosition(zone.world_position.xy, texture_path, "", false, 56.0);
 }
 
 get_closest_generator_station :: proc(player: Player) -> Generator {
@@ -280,7 +280,7 @@ get_closest_generator_station :: proc(player: Player) -> Generator {
             continue;
         }
 
-        offset := generator.entity.world_position - player.entity.world_position;
+        offset := generator.entity.world_position.xy - player.entity.world_position.xy;
         distance_sq := length_squared(offset);
         if closest == null || distance_sq < closest_distance_sq {
             closest = generator;
@@ -301,8 +301,8 @@ draw_generator_hint_arrow :: proc(player: Player, hide_distance: float = TASK_ZO
         return;
     }
 
-    generator_pos := generator.entity.world_position;
-    offset := generator_pos - player.entity.world_position;
+    generator_pos := generator.entity.world_position.xy;
+    offset := generator_pos - player.entity.world_position.xy;
     if hide_distance > 0.0 && length_squared(offset) <= hide_distance * hide_distance {
         return;
     }
@@ -317,7 +317,7 @@ draw_escape_door_hint_arrow :: proc(player: Player) {
 
     for door: component_iterator(Exit_Door) {
         if #alive(door.entity) {
-            player.DrawArrowToPosition(door.entity.world_position, "UI/ExitArrow.png", "", true, 56.0);
+            player.DrawArrowToPosition(door.entity.world_position.xy, "UI/ExitArrow.png", "", true, 56.0);
             return;
         }
     }

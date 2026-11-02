@@ -81,7 +81,7 @@ Vent :: class : Interactable {
             return;
         }
 
-        player.entity.set_local_position(destination_entity.world_position);
+        player.entity.set_local_position(destination_entity.world_position.xy);
         player.entity.mark_teleported();
         player.vent_cooldown_ends_at = get_time() + VENT_USE_COOLDOWN_SECONDS;
     }

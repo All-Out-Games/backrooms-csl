@@ -133,7 +133,7 @@ reset_all_keypad_puzzles_for_round :: proc(round_seed_key: u64) {
 
 get_keypad_hint_position :: proc() -> v2 {
     for keypad: component_iterator(Keypad_Puzzle) {
-        return keypad.entity.world_position;
+        return keypad.entity.world_position.xy;
     }
     return v2{1.7, 19.9};
 }

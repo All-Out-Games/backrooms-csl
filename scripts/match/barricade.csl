@@ -36,7 +36,7 @@ player_has_selected_barricade :: proc(player: Player) -> bool {
 }
 
 get_barricade_selected_position :: proc(player: Player, params: ref Ability_Update_Params, aim_direction: v2) -> v2 {
-    start_position := player.entity.world_position;
+    start_position := player.entity.world_position.xy;
 
     if player.device_kind == .PC {
         offset := get_mouse_world_position() - start_position;
@@ -138,7 +138,7 @@ Barricade :: class : Component {
 
     break_permanently :: method() {
         play_barricade_sfx("reusable_weapons/sounds/reusable-weapons/ice_cube_break.wav", entity);
-        spawn_barricade_break_vfx(entity.world_position);
+        spawn_barricade_break_vfx(entity.world_position.xy);
         entity.destroy();
         mark_barricade_navmesh_for_rebuild();
     }

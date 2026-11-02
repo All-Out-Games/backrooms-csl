@@ -25,7 +25,7 @@ weapon_equip :: proc(player: Player, wt: Weapon_Type) {
         if length_squared(aim_dir) <= 0.0001 {
             aim_dir = v2{1.0, 0.0};
         }
-        player.set_aim_target(player.entity.world_position + aim_dir * 5.0);
+        player.set_aim_target(player.entity.world_position.xy + aim_dir * 5.0);
     }
 
     // Boomwheel: create cannon entity from scratch (not from prefab)
@@ -65,7 +65,7 @@ weapon_equip :: proc(player: Player, wt: Weapon_Type) {
         cannon.owner_id = player.entity.id;
         cannon.cannon_animator = spine;
         cannon.state_machine = sm;
-        cannon.last_pos = player.entity.world_position;
+        cannon.last_pos = player.entity.world_position.xy;
         cannon.initialized = true;
         player.boomwheel_cannon = cannon;
 
@@ -136,7 +136,7 @@ weapon_play_fire_sound :: proc(player: Player, wt: Weapon_Type) {
     }
 
     desc := SFX.default_sfx_desc();
-    desc.set_position(player.entity.world_position);
+    desc.set_position(player.entity.world_position.xy);
     desc.volume = 0.7;
     desc.volume_perturb = 0.1;
     desc.speed_perturb = 0.1;

@@ -76,7 +76,7 @@ perf_spawn_full_load :: proc(player: Player) {
 
     perf_clear_full_load(player);
 
-    center := player.entity.world_position;
+    center := player.entity.world_position.xy;
     gm.entity_user_id = PERF_LOAD_ENTITY_USER_ID;
     gm.round_entity_player = null;
     gm.phase = .ACTIVE;

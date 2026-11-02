@@ -39,7 +39,7 @@ Security_Camera :: class : Interactable {
     }
 
     get_view_position :: method() -> v2 {
-        return entity.world_position + view_offset;
+        return entity.world_position.xy + view_offset;
     }
 
     get_view_size :: method() -> float {

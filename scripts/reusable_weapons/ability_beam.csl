@@ -34,8 +34,8 @@ Beam_Ability :: class : Ability_Base {
         if aiming.aim {
             p.last_aim_direction = aiming.aim_direction;
             p.set_mouse_ik_enabled(true);
-            p.set_aim_target(p.entity.world_position + aiming.aim_direction * 5.0);
-            draw_thin_aiming_line(p.entity.world_position, aiming.aim_direction, 1.0);
+            p.set_aim_target(p.entity.world_position.xy + aiming.aim_direction * 5.0);
+            draw_thin_aiming_line(p.entity.world_position.xy, aiming.aim_direction, 1.0);
         } else {
             p.set_mouse_ik_enabled(false);
         }
@@ -89,7 +89,7 @@ Beam_Ability :: class : Ability_Base {
             }
 
             // Damage detection and beam entity management
-            origin := p.entity.world_position;
+            origin := p.entity.world_position.xy;
 
             if wt == .OCTO_SIPHONER {
                 // Radius-based damage, heal scales with targets hit
@@ -149,7 +149,7 @@ Beam_Ability :: class : Ability_Base {
             barrel_dist := length(bone_local);
             beam_start := v2{p.animator.entity.world_position.x + dir.x * barrel_dist, p.animator.entity.world_position.y + dir.y * barrel_dist};
             beam_end := v2{beam_start.x + dir.x * config.beam_range, beam_start.y + dir.y * config.beam_range};
-            anim_scale := p.animator.entity.local_scale;
+            anim_scale := p.animator.entity.local_scale.xy;
             beam_end_local := v2{(beam_end.x - p.animator.entity.world_position.x) / anim_scale.x, (beam_end.y - p.animator.entity.world_position.y) / anim_scale.x};
             p.animator.set_bone_local_position("BEAM_TARGET", beam_end_local);
         }

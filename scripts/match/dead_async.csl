@@ -70,7 +70,7 @@ DeadAsync :: class : Interactable {
             return;
         }
 
-        if gm.spawn_async_corpse_loot(entity.world_position) {
+        if gm.spawn_async_corpse_loot(entity.world_position.xy) {
             looted = true;
             this.set_text("Looted");
         }

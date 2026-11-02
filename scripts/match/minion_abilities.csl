@@ -24,7 +24,7 @@ find_downed_minion_conversion_target :: proc(entity_player: Player) -> Player {
     best_target: Player;
     best_distance_sq := ENTITY_CONVERT_MINION_RANGE * ENTITY_CONVERT_MINION_RANGE;
     found_target := false;
-    origin := entity_player.entity.world_position;
+    origin := entity_player.entity.world_position.xy;
 
     for other: component_iterator(Player) {
         if other == entity_player continue;
@@ -33,7 +33,7 @@ find_downed_minion_conversion_target :: proc(entity_player: Player) -> Player {
         if !#alive(other.entity) continue;
         if !is_entity_reveal_active(other) continue;
 
-        delta := other.entity.world_position - origin;
+        delta := other.entity.world_position.xy - origin;
         distance_sq := delta.x * delta.x + delta.y * delta.y;
         if distance_sq > ENTITY_CONVERT_MINION_RANGE * ENTITY_CONVERT_MINION_RANGE continue;
 
@@ -161,7 +161,7 @@ find_minion_bite_target :: proc(minion: Player) -> Player {
     best_target: Player;
     best_distance_sq := MINION_BITE_RANGE * MINION_BITE_RANGE;
     found_target := false;
-    origin := minion.entity.world_position;
+    origin := minion.entity.world_position.xy;
 
     for other: component_iterator(Player) {
         if other == minion continue;
@@ -170,7 +170,7 @@ find_minion_bite_target :: proc(minion: Player) -> Player {
         if !#alive(other.entity) continue;
         if other.entity_local_view_alpha <= 0.0 continue;
 
-        delta := other.entity.world_position - origin;
+        delta := other.entity.world_position.xy - origin;
         distance_sq := delta.x * delta.x + delta.y * delta.y;
         if distance_sq > MINION_BITE_RANGE * MINION_BITE_RANGE continue;
 

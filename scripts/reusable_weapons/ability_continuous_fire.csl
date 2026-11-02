@@ -30,8 +30,8 @@ Continuous_Fire_Ability :: class : Ability_Base {
         if aiming.aim {
             p.last_aim_direction = aiming.aim_direction;
             p.set_mouse_ik_enabled(true);
-            p.set_aim_target(p.entity.world_position + aiming.aim_direction * 5.0);
-            draw_thin_aiming_line(p.entity.world_position, aiming.aim_direction, 1.0);
+            p.set_aim_target(p.entity.world_position.xy + aiming.aim_direction * 5.0);
+            draw_thin_aiming_line(p.entity.world_position.xy, aiming.aim_direction, 1.0);
         } else {
             p.set_mouse_ik_enabled(false);
         }

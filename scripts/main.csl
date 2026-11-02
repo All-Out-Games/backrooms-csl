@@ -768,7 +768,7 @@ Player :: class : Player_Base {
         gm := get_game_manager();
         if #alive(gm) && gm.is_end_game_cutscene_active() {
             camera.follow_player = false;
-            camera.position = gm.get_end_game_cutscene_position();
+            camera.position.xy = gm.get_end_game_cutscene_position();
             camera.size = END_GAME_CUTSCENE_CAMERA_SIZE;
             return;
         }
@@ -778,7 +778,7 @@ Player :: class : Player_Base {
             if security_camera != null {
                 security_camera_index = wrap_security_camera_index(security_camera_index, get_live_security_camera_count());
                 camera.follow_player = false;
-                camera.position = security_camera.get_view_position();
+                camera.position.xy = security_camera.get_view_position();
                 camera.size = security_camera.get_view_size();
                 return;
             }
@@ -842,7 +842,7 @@ Player :: class : Player_Base {
         }
 
         camera.follow_player = true;
-        camera.position = entity.world_position;
+        camera.position.xy = entity.world_position.xy;
     }
 
     start_toxic_rain_targeting :: method() -> bool {
@@ -1022,7 +1022,7 @@ Player :: class : Player_Base {
         this.set_mouse_ik_enabled(true);
         aim_dir := last_aim_direction;
         if this.is_local() {
-            aim_offset := get_mouse_world_position() - entity.world_position;
+            aim_offset := get_mouse_world_position() - entity.world_position.xy;
             if length_squared(aim_offset) > 0.0001 {
                 aim_dir = normalize(aim_offset);
                 last_aim_direction = aim_dir;
@@ -1031,7 +1031,7 @@ Player :: class : Player_Base {
         if length_squared(aim_dir) <= 0.0001 {
             aim_dir = v2{1.0, 0.0};
         }
-        this.set_aim_target(entity.world_position + aim_dir * 5.0);
+        this.set_aim_target(entity.world_position.xy + aim_dir * 5.0);
     }
 
     ao_start :: method() {
@@ -1425,7 +1425,7 @@ Player :: class : Player_Base {
         }
 
         was_round_survivor := this.is_round_survivor();
-        death_position := entity.world_position;
+        death_position := entity.world_position.xy;
         clear_footstep_echoes_for_player(this);
 
         this.clear_round_downed_state();
@@ -2342,7 +2342,7 @@ Player :: class : Player_Base {
             return;
         }
 
-        screen_pos := world_to_screen(target.entity.world_position + ENTITY_DEBUFF_ICON_HEAD_OFFSET);
+        screen_pos := world_to_screen(target.entity.world_position.xy + ENTITY_DEBUFF_ICON_HEAD_OFFSET);
         total_width := ENTITY_DEBUFF_ICON_SIZE + (icon_count.(float) - 1.0) * ENTITY_DEBUFF_ICON_SPACING;
         start_x := screen_pos.x - total_width * 0.5 + ENTITY_DEBUFF_ICON_SIZE * 0.5;
         half_size := ENTITY_DEBUFF_ICON_SIZE * 0.5;
@@ -2436,7 +2436,7 @@ Player :: class : Player_Base {
         screen_pos := nameplate_rect.top_center_rect().center();
         
 
-        screen_pos = world_to_screen(survivor.entity.world_position + v2{0.0, 2.0});
+        screen_pos = world_to_screen(survivor.entity.world_position.xy + v2{0.0, 2.0});
 
         alpha := clamp(survivor.entity_local_view_alpha, 0.0, 1.0);
         if is_revealed_by_jumpscare_effect(survivor) {
@@ -2965,9 +2965,9 @@ Player :: class : Player_Base {
 
         entity_player := get_round_entity_player();
         if #alive(entity_player) && entity_player != this && #alive(entity_player.entity) {
-            offset := entity_player.entity.world_position - entity.world_position;
+            offset := entity_player.entity.world_position.xy - entity.world_position.xy;
             if length_squared(offset) > ROUND_DEAD_ENTITY_POINTER_DISTANCE * ROUND_DEAD_ENTITY_POINTER_DISTANCE {
-                this.DrawArrowToPosition(entity_player.entity.world_position, "AbilityIcons/Bite.png");
+                this.DrawArrowToPosition(entity_player.entity.world_position.xy, "AbilityIcons/Bite.png");
             }
         }
 
@@ -2979,12 +2979,12 @@ Player :: class : Player_Base {
                 continue;
             }
 
-            offset := other.entity.world_position - entity.world_position;
+            offset := other.entity.world_position.xy - entity.world_position.xy;
             if length_squared(offset) <= ROUND_DEAD_ENTITY_POINTER_DISTANCE * ROUND_DEAD_ENTITY_POINTER_DISTANCE {
                 continue;
             }
 
-            this.DrawArrowToPosition(other.entity.world_position, "UI/schleem_hologram.png");
+            this.DrawArrowToPosition(other.entity.world_position.xy, "UI/schleem_hologram.png");
         }
     }
 
@@ -3099,11 +3099,11 @@ Player :: class : Player_Base {
             aspect = 1.0;
         }
 
-        world_offset := position - entity.world_position;
+        world_offset := position - entity.world_position.xy;
         distance := length(world_offset);
 
         target_screen := world_to_screen(position + v2{0, 1.5});
-        player_screen := world_to_screen(entity.world_position + v2{0, 1.5});
+        player_screen := world_to_screen(entity.world_position.xy + v2{0, 1.5});
 
         delta_screen := target_screen - player_screen;
         dir := v2{1, 0};

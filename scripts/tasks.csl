@@ -81,7 +81,7 @@ Task_Base :: class {
         // Local-only start SFX (avoid double-play on host/server).
         if player != null && player.is_local() {
             sfx := SFX.default_sfx_desc();
-            sfx.set_position(player.entity.world_position);
+            sfx.set_position(player.entity.world_position.xy);
             sfx.volume = 0.5;
             sfx.volume_perturb = 0.05;
             sfx.speed_perturb = 0.08;
@@ -102,7 +102,7 @@ Task_Base :: class {
             // Local-only completion SFX (avoid double-play on host/server).
             if player != null && player.is_local() {
                 sfx := SFX.default_sfx_desc();
-                sfx.set_position(player.entity.world_position);
+                sfx.set_position(player.entity.world_position.xy);
                 // Half as loud as before.
                 sfx.volume = 0.425;
                 sfx.volume_perturb = 0.1;
@@ -840,7 +840,7 @@ rr_task_sfx :: proc(player: Player, path: string, volume: float) {
     if player == null return;
     if !player.is_local() return;
     sfx := SFX.default_sfx_desc();
-    sfx.set_position(player.entity.world_position);
+    sfx.set_position(player.entity.world_position.xy);
     sfx.volume = volume;
     sfx.volume_perturb = 0.05;
     sfx.speed_perturb = 0.08;
@@ -1754,12 +1754,12 @@ draw_task_help_entry_row :: proc(entry: Task_Help_Entry) {
     UIK.panel_begin(text_panel);
 
     name_text := UIK.text_button();
-    #unsafe UIK.text_set_word_wrap(&name_text, false);
+    name_text.set_word_wrap(false);
     UIK.text(entry.entry_name, name_text);
 
     desc_text := UIK.text_body();
-    #unsafe UIK.text_set_color(&desc_text, v4{0.78, 0.8, 0.88, 0.95});
-    #unsafe UIK.text_set_word_wrap(&desc_text, true);
+    desc_text.set_color(v4{0.78, 0.8, 0.88, 0.95});
+    desc_text.set_word_wrap(true);
     UIK.text(entry.description, desc_text);
 
     UIK.panel_end();

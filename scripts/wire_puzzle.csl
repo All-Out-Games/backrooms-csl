@@ -81,12 +81,15 @@ play_blast_door_open_sfx :: proc() {
 
 get_wire_hint_position :: proc() -> v2 {
     gm := get_game_manager();
-    if #alive(gm) && #alive(gm.get_reconnect_wires_entity()) {
-        return gm.get_reconnect_wires_entity().world_position;
+    if #alive(gm) {
+        wires := gm.get_reconnect_wires_entity();
+        if #alive(wires) {
+            return wires.world_position.xy;
+        }
     }
 
     for wire: component_iterator(Wire_Puzzle) {
-        return wire.entity.world_position;
+        return wire.entity.world_position.xy;
     }
     return v2{8.5, 16.0};
 }
