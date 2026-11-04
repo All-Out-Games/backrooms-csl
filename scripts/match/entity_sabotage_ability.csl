@@ -106,7 +106,7 @@ get_toxic_rain_target_position_from_player :: proc(player: Player, aim_direction
     return origin_position + dir * clamped_aim_distance;
 }
 
-resolve_toxic_rain_target :: proc(player: Player, aim_direction: v2, aim_distance: float) -> v2, bool {
+resolve_toxic_rain_target :: proc(player: Player, aim_direction: v2, aim_distance: float) -> (v2, bool) {
     if player == null || !#alive(player.entity) {
         return v2{0.0, 0.0}, false;
     }

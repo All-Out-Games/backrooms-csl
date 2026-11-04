@@ -33,7 +33,7 @@ get_wall_seep_selected_position :: proc(player: Player, params: ref Ability_Upda
     return start_position + normalize(aim_direction) * distance;
 }
 
-resolve_wall_seep_target :: proc(player: Player, params: ref Ability_Update_Params, aim_direction: v2) -> v2, bool {
+resolve_wall_seep_target :: proc(player: Player, params: ref Ability_Update_Params, aim_direction: v2) -> (v2, bool) {
     if player == null || !#alive(player.entity) {
         return v2{0.0, 0.0}, false;
     }

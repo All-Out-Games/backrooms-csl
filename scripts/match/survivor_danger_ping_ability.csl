@@ -67,7 +67,7 @@ get_danger_ping_selected_position :: proc(player: Player, params: ref Ability_Up
     return start_position + normalize(aim_direction) * distance;
 }
 
-resolve_danger_ping_target :: proc(player: Player, params: ref Ability_Update_Params, aim_direction: v2) -> v2, bool {
+resolve_danger_ping_target :: proc(player: Player, params: ref Ability_Update_Params, aim_direction: v2) -> (v2, bool) {
     if player == null || !#alive(player.entity) {
         return v2{0.0, 0.0}, false;
     }
