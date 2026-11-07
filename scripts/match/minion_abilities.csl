@@ -51,10 +51,10 @@ find_downed_minion_conversion_target :: proc(entity_player: Player) -> Player {
 }
 
 convert_downed_player_to_minion :: proc(entity_player: Player, target: Player) -> bool {
-    if entity_player == null || !entity_player.is_round_entity() {
+    if !#alive(entity_player) || !entity_player.is_round_entity() {
         return false;
     }
-    if target == null || !target.is_round_downed() || target.is_round_minion() {
+    if !#alive(target) || !target.is_round_downed() || target.is_round_minion() {
         return false;
     }
     if !#alive(entity_player.entity) || !#alive(target.entity) {
