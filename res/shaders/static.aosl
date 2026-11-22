@@ -26,11 +26,15 @@ struct vs_out {
 
 vs_out vs_main(vs_in v)
 {
+#ifdef AO_WEBGPU
+    float4x4 model = final_model(v);
+#else
     float4x4 model;
     model[0] = matrices.Load(create_pixel_coord(v.matrix_index * 4 + 0));
     model[1] = matrices.Load(create_pixel_coord(v.matrix_index * 4 + 1));
     model[2] = matrices.Load(create_pixel_coord(v.matrix_index * 4 + 2));
     model[3] = matrices.Load(create_pixel_coord(v.matrix_index * 4 + 3));
+#endif
 
     vs_out o;
     o.pos   = mul(mvp, mul(model, float4(v.pos, 0, 1)));
